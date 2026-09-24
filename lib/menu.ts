@@ -28,7 +28,7 @@ export type MenuGroup = {
 
 export const MENU_REGISTRY: MenuGroup[] = [
   { id: "dashboard", label: "Dashboard", icon: "space_dashboard", children: [
-    { id: "dash.coll",    label: "Collection",   href: "/dashboard/collection" },
+    { id: "dash.coll",    label: "Collection",   href: "/dashboard/collection",   needs: "ctrl" },
     { id: "dash.mitra10", label: "Mitra 10",     href: "/dashboard/mitra10",      needs: "ctrl" },
     { id: "dash.tukar",   label: "Tukar Faktur", href: "/dashboard/tukar-faktur", phase: 2 },
   ]},

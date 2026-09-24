@@ -394,7 +394,168 @@ Supabase Auth tetap dipakai di belakang layar, supaya sesi cookie dan RLS berbas
 - PIN 6 digit tanpa username jauh lebih lemah dari OAuth. Rate limit mengurangi risiko, tetapi PIN tidak boleh dibagikan.
 - PIN Super Admin `060814` sudah tertulis di percakapan ini. Sebaiknya diganti lewat halaman Akun & PIN setelah login pertama.
 
-### Setelah §7 selesai
-Mulai **Fase 1** di branch `feat/collection`:
-- Migrasi `0004_ar_master.sql`: `business_partners`, `ar_invoices`, `ar_open_snapshot`, `notes`, `payment_promises`, `contacts`, `invoice_exchanges`, beserta RLS berdasarkan `private.has_menu()`, `private.my_kind()`, dan `private.my_collection()`.
-- Port `processExcelUpload` dari `Halaman Utama/Aplikasi Utama/Script.html`.
+**Status §7 (2026-09-25):** ✅ selesai.
+- Migrasi 0003 dan 0004 sudah diterapkan. 0004 memperbaiki guard signup: sekarang berupa constraint trigger deferred, karena Admin API mengisi `app_metadata` sesudah INSERT.
+- Akun Super Admin (PIN 060814) sudah dibuat.
+- Login PIN tampil di produksi.
+
+---
+
+## 8. Fase 1 — AR Collection (disetujui untuk dikerjakan 2026-09-25)
+
+### Context
+Fase 1 memindahkan inti **Aplikasi Utama** (GAS + Firebase) ke website:
+- upload tagihan Excel
+- tabel collection dengan catatan, janji bayar, kontak, WA, dan tukar faktur
+- Dashboard Controller
+- log Case/Administratif
+- Dashboard Mitra 10
+- template WA
+
+Spesifikasi diambil dari `Halaman Utama/Aplikasi Utama/Code.gs` dan `Script.html`, hasil eksplorasi 2026-09-25.
+
+Keputusan user: **Target bulanan berasal dari file upload terpisah.** Dulu file ini di-paste ke sheet `Tagihan` dengan kolom A = Target, C = Marketing, D = Collection, E = BP, F = Invoice, H = Due, J = Branch.
+
+Aturan dari sistem lama yang dipertahankan persis:
+- **Lunas** = sisa ≤ 1000.
+- **Aging** = hari ini (Asia/Jakarta) − Due Date. Bucket: ≤0 "Belum Jatuh Tempo", ≤30 "1-30 Hari", ≤60 "31-60 Hari", sisanya ">60 Hari". Tanpa due date → "-".
+- **Tukar faktur per invoice:** prioritas sumber Kolektor → Ekspedisi → Sistem → WA → Email. Di dalam sumber yang sama, record **paling awal** yang dipakai.
+- **Catatan terbaru per invoice:** record terakhir, berdasarkan `id` identity.
+- **Janji Bayar tidak masuk tabel catatan.** Janji Bayar = record `payment_promises` **terbaru** per invoice. Ini asumsi pengganti XLOOKUP di `Update_Tagihan!L`.
+- **Case KPI** = invoice yang **pernah** punya catatan kategori Case.
+
+Quirk lama yang **diperbaiki**:
+- Open Amt berformat teks `1.234.567` sekarang di-parse benar lewat parser angka ID/EN.
+- Aging dihitung saat ditampilkan, tidak basi lagi.
+- Tanggal tukar selalu bertipe `date`.
+- Baris "Tanpa Tanggal" ditaruh di urutan terakhir.
+
+### Migrasi `supabase/migrations/0005_collection.sql`
+**Tabel:**
+- **`ar_invoices`** (pengganti `Update_Tagihan`; diganti penuh setiap upload):
+  - kolom: `invoice_no` PK, `payment_group`, `marketing`, `collection_name`, `business_partner`, `bp_value text`, `invoice_date date`, `due_date date`, `open_amt numeric(18,2)`, `no_po text`, `no_sj text`
+  - index pada `collection_name`
+- **`ar_invoices_staging`**: `batch_id uuid` + kolom yang sama. Dipakai untuk upload bertahap, karena Blank_A4 bisa belasan ribu baris dan dikirim per 2.000 baris.
+- **`ar_targets`** (pengganti sheet `Tagihan`; dipakai juga oleh Mutasi Bank di Fase 5):
+  - kolom: `month char(7)`, `invoice_no`, `target numeric`, `marketing`, `collection_name`, `business_partner`, `due_date`, `branch`
+  - PK `(month, invoice_no)`
+- **`notes`**:
+  - kolom: `id` identity, `invoice_no`, `kategori` check (Reminder, No Respon, Case, Administratif), `business_partner`, `isi`, `collection_name`, `invoice_date`, `no_po`, `no_sj`, `done bool`, `closed_by text`, `closed_at`, `created_at`, `created_by uuid default auth.uid()`
+  - index `(invoice_no, id desc)` dan `(kategori)`
+- **`payment_promises`**: `id`, `invoice_no`, `business_partner`, `promise_date date`, `isi`, `created_at`, `created_by`
+- **`contacts`**: `business_partner` PK, `nama`, `no_wa`, `updated_at`, `updated_by`
+- **`invoice_exchanges`**:
+  - kolom: `id`, `invoice_no`, `metode` check (Kolektor, Ekspedisi, Sistem, WA, Email), `tanggal date`, `keterangan`, `resi`, `foto_path`, `kurir`, `created_at`, `created_by`
+  - Fase 2 (aplikasi kurir) menulis metode Kolektor ke tabel ini. Data lama Ekspedisi/Sistem/WA/Email diimpor di Fase 7.
+- **`data_versions`**: `key` PK, `updated_at`. Dipakai untuk badge "data baru", dengan key `ar_invoices` dan `ar_targets`.
+
+**Fungsi RLS baru:** `private.can_see_collection(text)` = role jenis sa/ctrl → semua collection; role jenis coll → hanya `collection_name` miliknya.
+
+**View** (`security_invoker = true`, supaya RLS tetap berlaku):
+- **`v_collection_rows`**: `ar_invoices` dengan open_amt > 1000, diperkaya dengan:
+  - aging dan days_overdue
+  - catatan terbaru (`"[Kategori] - isi"`)
+  - janji bayar terbaru
+  - tukar faktur (status, metode, tanggal, keterangan, no_resi, foto_path)
+- **`v_note_latest`**: catatan terbaru per invoice, untuk log Case/Administratif.
+
+**RPC** (security definer, dengan cek hak akses di dalamnya):
+- **Upload tagihan:** `ar_upload_start()`, `ar_upload_chunk(batch, rows jsonb)`, `ar_upload_finish(batch)`.
+  - Hanya untuk role jenis sa/ctrl yang punya menu `set.update`.
+  - `ar_upload_finish` berjalan dalam satu transaksi: kosongkan `ar_invoices`, insert dari staging, hapus staging, bump `data_versions`, dan catat `import_log`.
+- **Upload target:** `ar_target_replace(month, rows jsonb)`. Mengganti semua baris target bulan itu, dengan cek menu `set.target`.
+- **`get_spv_summary(p_month char(7)) returns jsonb`**: port persis `getSpvSummary`.
+  - Target dari `ar_targets` bulan itu. Sisa = `open_amt` terbaru di `ar_invoices`, atau 0 bila invoice sudah tidak ada (lunas).
+  - Output: `agData`, `caseData`, `byMarket`, `byBranch`, `byColl` (urut sisa ↓), `topOverdue` (10 teratas, juga per marketing), `forecastByDate`, `marketingList`, `lastTagihanUpdate`.
+- **Aksi grup catatan:** `note_group_update`, `note_group_delete`, `note_group_done(cat, bp, isi, …)`. Hanya untuk role jenis sa/ctrl; mengenai semua baris dengan kunci Kategori + BP + isi yang sama.
+
+**Policy:**
+- Baca `ar_invoices`, `notes`, `payment_promises`, `invoice_exchanges`: lewat `can_see_collection`.
+- Insert `notes` / `payment_promises` / `invoice_exchanges` (WA/Email) hanya bila invoice-nya terlihat oleh user (sama dengan validasi lama "invoice milik collection").
+- `contacts`: semua user yang login boleh baca dan upsert, sama seperti sebelumnya.
+- `ar_targets`: hanya sa/ctrl yang boleh baca.
+- `app_settings.wa_template` boleh diubah oleh Super Admin atau pemilik menu `set.watpl`.
+
+**Realtime:** tambahkan `notes`, `payment_promises`, `invoice_exchanges`, dan `data_versions` ke publikasi `supabase_realtime`.
+
+### Kode
+**Dependensi:** SheetJS (dari CDN resmi `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`, karena versi npm 0.18.5 punya CVE), `@tanstack/react-table`, `@tanstack/react-virtual`, `echarts`, `echarts-for-react`.
+
+**Logika murni** (`lib/modules/collection/`, dengan tes vitest):
+- `parse-blank-a4.ts`: port `processExcelUpload`.
+  - Kolom A,C,D,G,H,K,L,M,N,Z,AA.
+  - Whitelist marketing: 01-Traditional, 02-Modern Market, 03-Reseller, 16-Modern Market National, 04-Proyek.
+  - Invoice date harus > 01/01/2026.
+  - Dedup "lolos filter pertama menang".
+  - Ringkasan jumlah baris yang dilewati karena Date, Marketing, dan Duplikat.
+- `parse-target.ts`: mendeteksi header berdasarkan nama.
+  - Wajib: `Invoice No` dan `Target`/`Open Amt`.
+  - Opsional: Marketing, Collection Name, Business Partner, Due Date, Branch.
+  - Kolom yang tidak ada diisi dari `ar_invoices`.
+- `aging.ts`, `wa-message.ts`: port `buildMessage` dan `normalizePhone`, dengan format baris `inv | Jatuh Tempo dd/MM/yyyy | Rp x` dan placeholder `{{collection}}` / `{{total}}`.
+- `lib/parsers/number.ts` dan `lib/parsers/date.ts`: gabungan `rawNum_`/`ToNumber` dan `rawDate_`/`ToDate2`. Juga dipakai fase berikutnya.
+- `lib/format.ts`: `rupiah`, `monthLabel` (nama bulan Indonesia), `dd/MM/yyyy`.
+
+**Halaman:**
+- `pengaturan/update-tagihan` (`set.update`): pilih file, parse di browser, pratinjau ringkasan, upload bertahap dengan progress, lalu toast hasil.
+- `pengaturan/target` (menu baru **`set.target`** "Upload Target Bulanan", needs ctrl): pilih bulan dan file, pratinjau, lalu `ar_target_replace`.
+- `collection` (`coll.tagihan`):
+  - **Pemilih collection:** sa/ctrl memilih dari dropdown; role Collection dikunci ke miliknya.
+  - **Panel KPI** (bisa dilipat): 5 kartu aging, Rekap Tukar Faktur per bulan (sel bisa diklik sebagai filter), Rekap Jatuh Tempo per bulan, dan 5 kartu kategori.
+  - **Filter:** pencarian (debounce 250 ms), Payment Group, BP, rentang tanggal invoice, chip filter, dan pilihan kolom (8 kolom tampil default).
+  - **Tabel:** virtual scroll, checkbox, dan drag-select.
+  - **Toolbar pilihan:** Foto, Resi (TIKI), Catatan/Janji Bayar, Print (A4 landscape, dikelompokkan per BP dengan subtotal), Export Excel, nomor WA + pemilih kontak, Kirim WA, Edit Pesan WA (override di localStorage), Tukar Faktur (WA/Email + tanggal).
+  - **Realtime:** perubahan notes, janji bayar, dan tukar untuk collection itu langsung ditambal ke baris. `data_versions` berubah → titik merah di tombol Refresh.
+- `dashboard/collection` (`dash.coll`):
+  - Pemilih bulan target.
+  - 5 KPI: Target, Terkumpul, Sisa, Case, Janji Bayar.
+  - Donat Pencapaian dan Forecast; bar aging dengan persen.
+  - Janji Bayar per tanggal (bisa dibuka per marketing, lalu per BP).
+  - Top 10 BP jatuh tempo terlama, dengan filter marketing.
+  - Tab Rincian per Marketing / Branch / Collection.
+  - Realtime: catatan Case atau Janji Bayar baru → summary di-refresh (debounce 3 detik).
+- `case/administratif` dan `case/collection`:
+  - Log catatan dikelompokkan per Kategori + BP + isi.
+  - Filter Belum Selesai / Selesai / Semua.
+  - Detail per invoice, penanda "lewat bulan".
+  - Aksi Done/undo, Edit, Hapus.
+- `dashboard/mitra10` (`dash.mitra10`):
+  - Filter: collection "Yovita Ulfa" dan payment group yang diawali "catur mitra sejati sentosa". Nilai-nilai ini disimpan di `app_settings`, bukan hardcode.
+  - 3 KPI, 2 tabel per bulan invoice, dan log Administratif CMSS.
+- `pengaturan/wa-template` (`set.watpl`): header dan footer, simpan, reset default.
+- `pengaturan/database` (`set.database`): jumlah baris per tabel, upload terakhir, dan riwayat `import_log`.
+
+**Menu:**
+- Hapus `phase` dari item yang selesai.
+- Tambah `set.target`.
+- Placeholder tetap berlaku untuk menu yang belum dikerjakan.
+
+### Urutan kerja (branch `feat/collection`, push → preview Vercel)
+1. Migrasi 0005, lalu advisors dan generate types.
+2. Parser, `lib/parsers`, format, beserta tes.
+3. Update Tagihan dan Upload Target.
+4. Halaman Collection.
+5. Dashboard Controller, Case log, dan Mitra 10.
+6. Template WA dan halaman Database.
+7. Test, lint, build → push branch → user menguji di URL preview → merge ke `main`.
+
+### Verifikasi
+- **Vitest:**
+  - Parser Blank_A4 dengan fixture sintetis: filter marketing dan tanggal, dedup, angka `1.234.567`, serial Excel.
+  - Parser target.
+  - Batas aging (0, 30, 31, 60, 61, null).
+  - `buildMessage` (template default dan placeholder), `normalizePhone` (0812…, 812…, 62812…).
+- **SQL** (`execute_sql` dengan data uji di skema, lalu dihapus):
+  - Upload 3 batch, lalu finish menghasilkan jumlah baris yang tepat.
+  - Aturan lunas ≤1000.
+  - Prioritas tukar faktur.
+  - Janji Bayar terbaru.
+  - `get_spv_summary` cocok dengan hitungan manual.
+  - Akun role Collection hanya melihat collection-nya sendiri (uji lewat JWT akun uji).
+- **E2E di preview:**
+  - User meng-upload file Blank_A4 dan target asli.
+  - Total invoice dan nominal per collection dibandingkan dengan sheet lama (`Update_Tagihan` / Dashboard Controller GAS).
+  - Uji Realtime: dua browser; catatan dari satu browser muncul di browser lain tanpa reload.
+- `get_advisors` security dan performance.
+
+**Butuh dari user:** file **Blank_A4** asli dan **file target bulanan** (contoh) untuk uji E2E dan penyesuaian nama header target.

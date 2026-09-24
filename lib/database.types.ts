@@ -366,6 +366,10 @@ export type Database = {
       }
     }
     Views: {
+      v_target_months: {
+        Row: { month: string | null; invoices: number | null; total: number | null }
+        Relationships: []
+      }
       v_collection_summary: {
         Row: { collection_name: string | null; invoices: number | null; total: number | null }
         Relationships: []
