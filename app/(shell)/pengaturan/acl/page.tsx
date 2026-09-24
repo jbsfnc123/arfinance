@@ -1,12 +1,12 @@
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { MENU_REGISTRY } from "@/lib/menu";
-import { NoAccess } from "../no-access";
+import { NoAccess } from "@/components/no-access";
 import { RolesView } from "./roles-view";
 
 export default async function AclPage() {
   const { role: myRole } = await getSession();
-  if (myRole.kind !== "sa") return <NoAccess label="Role & Akses Menu" />;
+  if (myRole.kind !== "sa") return <NoAccess label="Role & Akses Menu" reason="Menu ini hanya untuk Super Admin." />;
 
   const supabase = await createClient();
   const [{ data: roles }, { data: menus }, { data: accounts }] = await Promise.all([

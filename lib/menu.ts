@@ -28,16 +28,16 @@ export type MenuGroup = {
 
 export const MENU_REGISTRY: MenuGroup[] = [
   { id: "dashboard", label: "Dashboard", icon: "space_dashboard", children: [
-    { id: "dash.coll",    label: "Collection",   href: "/dashboard/collection",   phase: 1 },
-    { id: "dash.mitra10", label: "Mitra 10",     href: "/dashboard/mitra10",      phase: 1, needs: "ctrl" },
+    { id: "dash.coll",    label: "Collection",   href: "/dashboard/collection" },
+    { id: "dash.mitra10", label: "Mitra 10",     href: "/dashboard/mitra10",      needs: "ctrl" },
     { id: "dash.tukar",   label: "Tukar Faktur", href: "/dashboard/tukar-faktur", phase: 2 },
   ]},
   { id: "collection", label: "Collection", icon: "groups", children: [
-    { id: "coll.tagihan", label: "Daftar Tagihan", href: "/collection", phase: 1 },
+    { id: "coll.tagihan", label: "Daftar Tagihan", href: "/collection" },
   ]},
   { id: "case", label: "Case", icon: "assignment_late", children: [
-    { id: "case.admin", label: "Administratif", href: "/case/administratif", phase: 1 },
-    { id: "case.coll",  label: "Collection",    href: "/case/collection",    phase: 1 },
+    { id: "case.admin", label: "Administratif", href: "/case/administratif", needs: "ctrl" },
+    { id: "case.coll",  label: "Collection",    href: "/case/collection",    needs: "ctrl" },
   ]},
   { id: "tukar", label: "Tukar Faktur", icon: "swap_horiz", children: [
     { id: "tukar.jadwal", label: "Jadwal Kolektor",   href: "/tukar-faktur/jadwal", phase: 2 },
@@ -70,13 +70,22 @@ export const MENU_REGISTRY: MenuGroup[] = [
       href: "https://script.google.com/a/macros/penguin.id/s/AKfycby2hZ2lsfsPzV9FUup3YTSV3IYt1BrrKBEgUlg7B977ibdRj0k4zA2lt0kRnmahrNIr3g/exec" },
   ]},
   { id: "set", label: "Pengaturan", icon: "settings", children: [
-    { id: "set.update",   label: "Update Tagihan (Excel)", href: "/pengaturan/update-tagihan", phase: 1, needs: "ctrl" },
+    { id: "set.update",   label: "Update Tagihan (Excel)", href: "/pengaturan/update-tagihan", needs: "ctrl" },
+    { id: "set.target",   label: "Upload Target Bulanan",  href: "/pengaturan/target",         needs: "ctrl" },
     { id: "set.akun",     label: "Akun & PIN",             href: "/pengaturan/akun",           needs: "sa" },
     { id: "set.acl",      label: "Role & Akses Menu",      href: "/pengaturan/acl",            needs: "sa" },
-    { id: "set.watpl",    label: "Template WA",            href: "/pengaturan/wa-template",    phase: 1, needs: "ctrl" },
-    { id: "set.database", label: "Database",               href: "/pengaturan/database",       phase: 1, needs: "sa" },
+    { id: "set.watpl",    label: "Template WA",            href: "/pengaturan/wa-template",    needs: "ctrl" },
+    { id: "set.database", label: "Database",               href: "/pengaturan/database",       needs: "sa" },
   ]},
 ];
+
+export function findMenuById(id: string) {
+  for (const group of MENU_REGISTRY) {
+    const item = group.children.find((c) => c.id === id);
+    if (item) return { group, item };
+  }
+  return null;
+}
 
 export function findMenuByHref(pathname: string) {
   for (const group of MENU_REGISTRY) {

@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/session";
 import { visibleMenu } from "@/lib/menu";
+import { ToastProvider } from "@/components/toast";
 import { Sidebar } from "./sidebar";
 
 export default async function ShellLayout({ children }: LayoutProps<"/">) {
@@ -32,7 +33,9 @@ export default async function ShellLayout({ children }: LayoutProps<"/">) {
       </header>
       <div className="flex min-h-0 flex-1">
         <Sidebar menu={menu} />
-        <main className="min-w-0 flex-1 overflow-auto p-6">{children}</main>
+        <main className="min-w-0 flex-1 overflow-auto p-6">
+          <ToastProvider>{children}</ToastProvider>
+        </main>
       </div>
     </div>
   );
