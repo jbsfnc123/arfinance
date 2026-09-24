@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AR Workspace (arfinance)
 
-## Getting Started
+Satu website pengganti aplikasi GAS dan macro Excel AR PT Penguin Trading:
+AR Collection, Tukar Faktur, Faktur Pajak, Billing, Cek Selisih Harga, XML CoreTax,
+Marketplace, Mutasi Bank, Mitra10, dan Presentasi AR.
 
-First, run the development server:
+Rencana dan urutan migrasi lengkap ada di [docs/RENCANA-MIGRASI.md](docs/RENCANA-MIGRASI.md).
+
+## Stack
+
+- **Next.js 16** (App Router). Middleware sekarang bernama `proxy.ts`, dan `cookies()`/`params` bersifat async. Baca `node_modules/next/dist/docs/` sebelum menulis kode.
+- **Supabase** project `arfinance` (ref `knytaubhwnahnpamkhgz`, region Singapore): Auth Google, Postgres dengan RLS, Storage, Realtime.
+- **Vercel**: deploy otomatis dari branch `main`, preview untuk setiap PR.
+
+## Menjalankan lokal
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local   # isi URL dan publishable key
+npm install
+npm run dev      # http://localhost:3000
+npm test         # vitest
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Struktur
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Path | Isi |
+|---|---|
+| `proxy.ts`, `lib/supabase/*` | Klien Supabase dan refresh sesi; user yang belum login diarahkan ke `/login` |
+| `lib/menu.ts` | Registry menu (ID submenu = kunci ACL, sama dengan aplikasi lama) |
+| `lib/session.ts` | Profil user dan ACL per request |
+| `app/(shell)/` | Layout sidebar/topbar; `[...slug]` = placeholder modul yang belum dimigrasi |
+| `supabase/migrations/` | Skema database. Diterapkan berurutan; jangan ubah file yang sudah diterapkan, buat file baru |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Akses
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Login:** hanya Google. Email `@penguin.id` diterima otomatis; email lain harus ada di tabel `email_allowlist`.
+- **Jenis akun (`profiles.kind`):**
+  - `sa`: Super Admin, melihat semua menu.
+  - `ctrl`: Controller.
+  - `coll`: Collection.
+  - `kurir`: Kurir.
+  - `user`: default untuk akun baru.
+- **Menu:** deny-by-default. Hak akses diatur per user di tabel `menu_acl` (kolom `submenu_id`).
+- **Super Admin awal:** `jobforkids@gmail.com`, lewat `email_allowlist`.

@@ -1,0 +1,108 @@
+// Registry menu tunggal, di-port dari MENU_REGISTRY di
+// Halaman Utama/Aplikasi Utama/AppShellScript.html.
+// ID submenu lama dipertahankan karena menjadi kunci ACL (tabel menu_acl).
+// Perubahan terhadap versi lama:
+//  - Iframe ke GAS diganti route internal; `phase` = fase migrasi yang akan mengisinya.
+//  - 'ext.batal' (form pembatalan) digabung ke 'inv.pengajuan'; 'ext.ltkp' pindah ke grup Faktur Pajak.
+//  - 'set.pin' dihapus karena login memakai Google.
+//  - Grup "Rekonsiliasi" & "Laporan" baru untuk aplikasi yang dulu berdiri sendiri.
+
+export type Needs = "ctrl" | "sa";
+
+export type MenuItem = {
+  id: string;
+  label: string;
+  href: string;
+  phase?: number;      // fase migrasi; undefined = sudah tersedia
+  needs?: Needs;
+  external?: boolean;  // link keluar (aplikasi di luar cakupan migrasi)
+};
+
+export type MenuGroup = {
+  id: string;
+  label: string;
+  icon: string;        // nama ikon Material Symbols
+  children: MenuItem[];
+};
+
+export const MENU_REGISTRY: MenuGroup[] = [
+  { id: "dashboard", label: "Dashboard", icon: "space_dashboard", children: [
+    { id: "dash.coll",    label: "Collection",   href: "/dashboard/collection",   phase: 1 },
+    { id: "dash.mitra10", label: "Mitra 10",     href: "/dashboard/mitra10",      phase: 1, needs: "ctrl" },
+    { id: "dash.tukar",   label: "Tukar Faktur", href: "/dashboard/tukar-faktur", phase: 2 },
+  ]},
+  { id: "collection", label: "Collection", icon: "groups", children: [
+    { id: "coll.tagihan", label: "Daftar Tagihan", href: "/collection", phase: 1 },
+  ]},
+  { id: "case", label: "Case", icon: "assignment_late", children: [
+    { id: "case.admin", label: "Administratif", href: "/case/administratif", phase: 1 },
+    { id: "case.coll",  label: "Collection",    href: "/case/collection",    phase: 1 },
+  ]},
+  { id: "tukar", label: "Tukar Faktur", icon: "swap_horiz", children: [
+    { id: "tukar.jadwal", label: "Jadwal Kolektor",   href: "/tukar-faktur/jadwal", phase: 2 },
+    { id: "tukar.detail", label: "Aplikasi Kolektor", href: "/tukar-faktur/kurir",  phase: 2 },
+    { id: "tukar.upload", label: "Upload Data",       href: "/tukar-faktur/upload", phase: 2 },
+  ]},
+  { id: "invoicing", label: "Faktur Pajak", icon: "request_quote", children: [
+    { id: "inv.pengajuan", label: "Pengajuan Pembatalan & Revisi", href: "/faktur/pengajuan", phase: 2 },
+    { id: "inv.batal",     label: "Daftar Pengajuan",              href: "/faktur/list",      phase: 2 },
+    { id: "inv.hold",      label: "Hold Faktur Pajak",             href: "/faktur/hold",      phase: 2 },
+    { id: "ext.ltkp",      label: "LTKP",                          href: "/faktur/ltkp",      phase: 2 },
+  ]},
+  { id: "billing", label: "Billing", icon: "receipt_long", children: [
+    { id: "bill.detail", label: "Tagihan Bulanan Detail", href: "/billing", phase: 4 },
+    { id: "bill.ecom",   label: "E-Commerce",             href: "/billing/ecommerce" },
+    { id: "bill.komisi", label: "Komisi dan Cashback",    href: "/billing/komisi" },
+  ]},
+  { id: "rekon", label: "Rekonsiliasi", icon: "rule", children: [
+    { id: "rek.cekharga",    label: "Cek Selisih Harga PO/SO", href: "/cek-harga",   phase: 3 },
+    { id: "rek.coretax",     label: "XML CoreTax",             href: "/coretax",     phase: 3 },
+    { id: "rek.marketplace", label: "Marketplace",             href: "/marketplace", phase: 3 },
+    { id: "rek.mutasi",      label: "Mutasi Bank vs Realisasi", href: "/mutasi-bank", phase: 5 },
+    { id: "rek.mitra10",     label: "Mitra10 Tukar Faktur",    href: "/mitra10",     phase: 5 },
+  ]},
+  { id: "laporan", label: "Laporan", icon: "slideshow", children: [
+    { id: "lap.presentasi", label: "AR Management Deck", href: "/presentasi", phase: 6 },
+  ]},
+  { id: "eksternal", label: "Eksternal", icon: "open_in_new", children: [
+    { id: "ext.modern", label: "Modern Market", external: true,
+      href: "https://script.google.com/a/macros/penguin.id/s/AKfycby2hZ2lsfsPzV9FUup3YTSV3IYt1BrrKBEgUlg7B977ibdRj0k4zA2lt0kRnmahrNIr3g/exec" },
+  ]},
+  { id: "set", label: "Pengaturan", icon: "settings", children: [
+    { id: "set.update",   label: "Update Tagihan (Excel)", href: "/pengaturan/update-tagihan", phase: 1, needs: "ctrl" },
+    { id: "set.akun",     label: "Manajemen Akun",         href: "/pengaturan/akun",           phase: 1, needs: "sa" },
+    { id: "set.acl",      label: "Akses Menu (ACL)",       href: "/pengaturan/acl",            phase: 1, needs: "sa" },
+    { id: "set.watpl",    label: "Template WA",            href: "/pengaturan/wa-template",    phase: 1, needs: "ctrl" },
+    { id: "set.database", label: "Database",               href: "/pengaturan/database",       phase: 1, needs: "sa" },
+  ]},
+];
+
+export function findMenuByHref(pathname: string) {
+  for (const group of MENU_REGISTRY) {
+    for (const item of group.children) {
+      if (!item.external && item.href === pathname) return { group, item };
+    }
+  }
+  return null;
+}
+
+export type Access = { kind: string; allowed: Set<string> };
+
+function meetsNeeds(item: MenuItem, kind: string) {
+  if (!item.needs) return true;
+  if (item.needs === "sa") return kind === "sa";
+  return kind === "sa" || kind === "ctrl";
+}
+
+// Deny-by-default: Super Admin melihat semua; user lain hanya submenu di menu_acl
+// yang juga memenuhi syarat role (needs).
+export function canAccess(item: MenuItem, access: Access) {
+  if (!meetsNeeds(item, access.kind)) return false;
+  return access.kind === "sa" || access.allowed.has(item.id);
+}
+
+export function visibleMenu(access: Access): MenuGroup[] {
+  return MENU_REGISTRY
+    .map((g) => ({ ...g, children: g.children.filter((c) => canAccess(c, access)) }))
+    .filter((g) => g.children.length > 0);
+}
