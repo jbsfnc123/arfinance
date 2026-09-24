@@ -9,13 +9,13 @@ export default async function HomePage() {
   return (
     <div className="mx-auto max-w-6xl">
       <h1 className="text-2xl font-medium">
-        Halo, {profile.display_name?.split(" ")[0] ?? profile.email}
+        Halo, {profile.display_name.split(" ")[0]}
       </h1>
       <p className="mt-1 text-sm text-fg-2">Pilih modul yang ingin dibuka.</p>
 
       {menu.length === 0 ? (
         <div className="mt-8 rounded-xl border border-line bg-surface p-6 text-sm text-fg-2">
-          Akun Anda belum diberi akses menu. Minta Super Admin mengatur akses di Pengaturan → Akses Menu.
+          Role Anda belum diberi akses menu. Minta Super Admin mengatur di Pengaturan → Role &amp; Akses Menu.
         </div>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

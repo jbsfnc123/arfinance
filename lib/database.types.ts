@@ -28,12 +28,6 @@ export type Database = {
           },
         ]
       }
-      email_allowlist: {
-        Row: { created_at: string; email: string; kind: string; note: string | null }
-        Insert: { created_at?: string; email: string; kind?: string; note?: string | null }
-        Update: { created_at?: string; email?: string; kind?: string; note?: string | null }
-        Relationships: []
-      }
       import_log: {
         Row: {
           at: string
@@ -75,56 +69,73 @@ export type Database = {
           },
         ]
       }
-      menu_acl: {
-        Row: { submenu_id: string; user_id: string }
-        Insert: { submenu_id: string; user_id: string }
-        Update: { submenu_id?: string; user_id?: string }
-        Relationships: [
-          {
-            foreignKeyName: "menu_acl_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           active: boolean
           collection_name: string | null
           created_at: string
-          display_name: string | null
+          display_name: string
           email: string
           id: string
-          kind: string
-          role: string | null
+          pin_hash: string | null
+          role_id: string
         }
         Insert: {
           active?: boolean
           collection_name?: string | null
           created_at?: string
-          display_name?: string | null
+          display_name: string
           email: string
           id: string
-          kind?: string
-          role?: string | null
+          pin_hash?: string | null
+          role_id: string
         }
         Update: {
           active?: boolean
           collection_name?: string | null
           created_at?: string
-          display_name?: string | null
+          display_name?: string
           email?: string
           id?: string
-          kind?: string
-          role?: string | null
+          pin_hash?: string | null
+          role_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_menus: {
+        Row: { role_id: string; submenu_id: string }
+        Insert: { role_id: string; submenu_id: string }
+        Update: { role_id?: string; submenu_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: "role_menus_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: { created_at: string; id: string; kind: string; name: string }
+        Insert: { created_at?: string; id?: string; kind: string; name: string }
+        Update: { created_at?: string; id?: string; kind?: string; name?: string }
         Relationships: []
       }
     }
     Views: { [_ in never]: never }
-    Functions: { [_ in never]: never }
+    Functions: {
+      admin_set_pin: { Args: { p_pin: string; p_user: string }; Returns: undefined }
+      pin_login: { Args: { p_ip: string; p_pin: string }; Returns: Json }
+    }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
   }

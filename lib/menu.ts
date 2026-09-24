@@ -4,7 +4,8 @@
 // Perubahan terhadap versi lama:
 //  - Iframe ke GAS diganti route internal; `phase` = fase migrasi yang akan mengisinya.
 //  - 'ext.batal' (form pembatalan) digabung ke 'inv.pengajuan'; 'ext.ltkp' pindah ke grup Faktur Pajak.
-//  - 'set.pin' dihapus karena login memakai Google.
+//  - 'set.pin' dihapus: PIN hanya diatur Super Admin lewat 'set.akun'.
+//  - Akses menu diatur per role (tabel role_menus), bukan per akun.
 //  - Grup "Rekonsiliasi" & "Laporan" baru untuk aplikasi yang dulu berdiri sendiri.
 
 export type Needs = "ctrl" | "sa";
@@ -70,8 +71,8 @@ export const MENU_REGISTRY: MenuGroup[] = [
   ]},
   { id: "set", label: "Pengaturan", icon: "settings", children: [
     { id: "set.update",   label: "Update Tagihan (Excel)", href: "/pengaturan/update-tagihan", phase: 1, needs: "ctrl" },
-    { id: "set.akun",     label: "Manajemen Akun",         href: "/pengaturan/akun",           phase: 1, needs: "sa" },
-    { id: "set.acl",      label: "Akses Menu (ACL)",       href: "/pengaturan/acl",            phase: 1, needs: "sa" },
+    { id: "set.akun",     label: "Akun & PIN",             href: "/pengaturan/akun",           needs: "sa" },
+    { id: "set.acl",      label: "Role & Akses Menu",      href: "/pengaturan/acl",            needs: "sa" },
     { id: "set.watpl",    label: "Template WA",            href: "/pengaturan/wa-template",    phase: 1, needs: "ctrl" },
     { id: "set.database", label: "Database",               href: "/pengaturan/database",       phase: 1, needs: "sa" },
   ]},
@@ -94,8 +95,8 @@ function meetsNeeds(item: MenuItem, kind: string) {
   return kind === "sa" || kind === "ctrl";
 }
 
-// Deny-by-default: Super Admin melihat semua; user lain hanya submenu di menu_acl
-// yang juga memenuhi syarat role (needs).
+// Deny-by-default: Super Admin melihat semua; user lain hanya submenu yang dicentang
+// untuk role-nya (role_menus) dan memenuhi syarat jenis role (needs).
 export function canAccess(item: MenuItem, access: Access) {
   if (!meetsNeeds(item, access.kind)) return false;
   return access.kind === "sa" || access.allowed.has(item.id);

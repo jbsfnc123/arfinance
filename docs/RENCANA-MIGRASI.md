@@ -17,7 +17,7 @@ Kondisi sekarang yang jadi masalah:
 **Tujuan:** satu website Next.js di Vercel, dengan satu database Postgres (Supabase), satu login (Google @penguin.id), satu sidebar menu dengan ACL (hak akses per menu), dan data master yang dipakai bersama semua modul.
 
 **Keputusan yang sudah diambil:**
-- Login: Google OAuth yang dibatasi ke domain penguin.id.
+- Login: **PIN 6 digit** saja. Keputusan 2026-09-25 menggantikan Google OAuth; detailnya di §7.
 - Supabase: buat **project baru**.
 - Email Billing: **tetap lewat endpoint GAS kecil**.
 - Data historis: **diimpor semua**.
@@ -273,3 +273,128 @@ Langkah:
 - Bila Vercel belum punya akses GitHub App ke repo `arfinance`, beri izin di pengaturan GitHub → Vercel.
 
 Setelah Fase 0 selesai: lanjut ke Fase 1 (AR Collection) di branch `feat/collection`, dengan PR dan preview Vercel.
+
+### Status Fase 0 (2026-09-25)
+- ✅ Supabase `arfinance` (ref `knytaubhwnahnpamkhgz`) dengan migrasi 0001 dan 0002 diterapkan; advisor security bersih.
+- ✅ Kode di-push ke `jbsfnc123/arfinance` (main).
+- ✅ Vercel dibuat manual oleh user karena connector mendapat 403. Domain: **https://arfinance-eight.vercel.app**. Sudah dicek: `/` → 307 ke `/login`, dan `/login` → 200 dengan halaman login tampil.
+- ❌ **Langkah Google OAuth di bawah DIBATALKAN.** User memilih login PIN (lihat §7). Bagian berikut disimpan hanya sebagai arsip.
+- (arsip) Langkah 2: Google Cloud Console → OAuth Client ID (Web application):
+  - Authorized JavaScript origins: `https://arfinance-eight.vercel.app`, `http://localhost:3000`
+  - Authorized redirect URI: `https://knytaubhwnahnpamkhgz.supabase.co/auth/v1/callback`
+  - OAuth consent screen: tipe **Internal** bila project Google Cloud berada di bawah Workspace penguin.id. Tipe Internal tidak mengizinkan akun @gmail.com; karena Super Admin awal adalah jobforkids@gmail.com, pilih **External** (mode Testing, tambahkan email sebagai test user) atau ganti Super Admin ke akun @penguin.id.
+- ⏳ Langkah 3 (user): Supabase Dashboard:
+  - Auth → Providers → Google: aktifkan, isi Client ID dan Secret.
+  - Auth → URL Configuration:
+    - Site URL = `https://arfinance-eight.vercel.app`
+    - Redirect URLs: `https://arfinance-eight.vercel.app/**`, `https://arfinance-*.vercel.app/**` (preview), `http://localhost:3000/**`
+
+---
+
+## 7. Login PIN 6 digit (menggantikan Google OAuth) — keputusan user 2026-09-25
+
+### Context
+User tidak mau memakai OAuth. Yang diinginkan:
+- Login cukup dengan **PIN 6 digit**, tanpa username.
+- Setiap PIN **melekat pada satu role**.
+- Hanya **Super Admin** yang bisa mengatur PIN dan role.
+- PIN Super Admin: `060814`.
+
+Keputusan tambahan dari user:
+- Hak akses menu diatur **per role**, bukan per akun.
+- **Semua akun, termasuk Collection, wajib memakai PIN.** Data yang dilihat akun Collection dibatasi ke `collection_name` miliknya.
+
+### Desain
+Supabase Auth tetap dipakai di belakang layar, supaya sesi cookie dan RLS berbasis `auth.uid()` tidak berubah:
+- Setiap akun = 1 user Supabase Auth dengan email sintetis `<uuid>@pin.arfinance.local`.
+- Password akun = `HMAC-SHA256(PIN_AUTH_SECRET, user_id)`, yang hanya diketahui server. User tidak pernah melihat password ini.
+- **PIN disimpan sebagai `HMAC(pin, pepper)` di `profiles.pin_hash`**, dengan UNIQUE index, sehingga PIN otomatis unik dan bisa dicari tanpa username.
+  - Pepper dibuat acak oleh migrasi di `private.config`. Nilainya tidak ada di repo.
+- Karena ruang PIN hanya 1 juta kombinasi, ada **proteksi brute-force** di fungsi `pin_login`:
+  - Maksimal 5 PIN salah per IP dalam 15 menit.
+  - Maksimal 50 PIN salah secara global dalam 10 menit. Setelah itu login dikunci sementara.
+  - Semua percobaan dicatat di `private.login_attempts`.
+
+**Alur login:**
+1. User mengetik 6 digit PIN.
+2. Server action memanggil RPC `pin_login(pin, ip)` memakai service role.
+3. RPC mengembalikan `user_id` bila cocok.
+4. Server memanggil `signInWithPassword(email sintetis, password turunan)` lewat klien SSR, sehingga cookie sesi terpasang.
+
+**Pengamanan pembuatan akun:** trigger `before insert` pada `auth.users` menolak user yang tidak punya `app_metadata.provisioned = true`. Nilai itu hanya bisa diset lewat Admin API, jadi pendaftaran publik lewat anon key tertutup.
+
+### Migrasi `supabase/migrations/0003_pin_auth.sql`
+**Dihapus:**
+- `email_allowlist`
+- trigger `on_auth_user_created` dan fungsi `handle_new_user`
+- `menu_acl`, diganti `role_menus`
+- kolom `profiles.kind` dan `profiles.role`
+
+**Dibuat:**
+- `public.roles(id uuid, name text unique, kind text check in ('sa','ctrl','coll','kurir'))`. Seed: Super Admin (sa), Manager (ctrl), Supervisor (ctrl), Collection (coll), Kurir (kurir).
+  - `kind` menentukan syarat menu (`needs`) dan cakupan data. Contoh: `coll` hanya melihat data `collection_name` miliknya (dipakai di Fase 1).
+- `public.role_menus(role_id, submenu_id)`. Super Admin melihat semua menu tanpa perlu entri.
+- Kolom baru `profiles.role_id` (FK ke `roles`) dan `profiles.pin_hash` (unique). `display_name` wajib diisi.
+- `private.config`: pepper, dengan `gen_random_bytes(32)` dari pgcrypto.
+- `private.pin_hash(text)`
+- `private.login_attempts(ip, success, at)`
+
+**Fungsi:**
+- `public.pin_login(p_pin text, p_ip text) returns jsonb` → `{status:'ok'|'invalid'|'locked', user_id, email}`. Security definer; EXECUTE hanya untuk `service_role`.
+- `public.admin_set_pin(p_user uuid, p_pin text)`: security definer, dengan cek `private.is_sa()` di dalamnya. Format harus `^\d{6}$`. Pelanggaran unique menghasilkan pesan "PIN sudah dipakai akun lain".
+- `private.is_sa()`, `private.has_menu()`, `private.my_kind()` dan `private.my_collection()` ditulis ulang supaya membaca `roles` dan `role_menus`.
+- RLS untuk `roles` dan `role_menus`: semua yang login bisa membaca; hanya Super Admin yang bisa menulis.
+
+### Kode
+**Baru:**
+- `lib/supabase/admin.ts`: klien service role, dengan `import "server-only"`.
+- `lib/auth/pin.ts`: `derivePassword(userId)` dan `isValidPin()`.
+- `app/login/page.tsx`: layar PIN dengan 6 kotak digit dan keypad angka (ramah layar sentuh untuk kurir). Submit otomatis saat digit ke-6 terisi. Pesan "PIN salah" atau "Terlalu banyak percobaan, coba lagi dalam 15 menit".
+- `app/login/actions.ts`: server action `loginWithPin`. IP diambil dari header `x-forwarded-for`.
+- `app/(shell)/pengaturan/akun/`: halaman dan server actions untuk Super Admin:
+  - daftar akun (nama, role, collection name, aktif)
+  - tambah akun (nama, role, collection name, PIN) lewat `auth.admin.createUser` dengan `app_metadata.provisioned=true`, lalu insert profil dan set PIN
+  - reset PIN, ganti role, nonaktifkan
+  - PIN tidak pernah ditampilkan ulang
+- `app/(shell)/pengaturan/acl/`: tambah, ubah, atau hapus role, dan matriks role × menu berupa centang, dengan daftar menu dari `MENU_REGISTRY`.
+- `scripts/create-account.mjs`: membuat akun Super Admin pertama lewat Admin API, dijalankan lokal dengan `.env.local`. PIN diberikan sebagai argumen, jadi `060814` **tidak pernah ditulis ke repo**.
+- Tes vitest: `derivePassword` deterministik dan berbeda per user; validasi format PIN; akses menu per role.
+
+**Diubah:**
+- `lib/session.ts`: profil di-join dengan `roles(kind, name)`; menu diambil dari `role_menus` berdasarkan `role_id`.
+- `lib/menu.ts`: `Access.kind` berasal dari role. Label menu jadi "Akun & PIN" (`set.akun`) dan "Role & Akses Menu" (`set.acl`). `set.pin` tetap dihapus, karena hanya Super Admin yang mengatur PIN.
+- `app/(shell)/layout.tsx`: menampilkan nama dan role.
+- `README.md`, `.env.local.example`, dan `docs/RENCANA-MIGRASI.md` disesuaikan.
+
+**Dihapus:** `app/login/login-button.tsx`, `app/auth/callback/route.ts`.
+
+### Environment variables baru (server-only)
+- `SUPABASE_SERVICE_ROLE_KEY`: **user menyalin** dari Supabase Dashboard → Project Settings → API Keys → `secret`/`service_role`. MCP tidak menyediakan kunci ini.
+- `PIN_AUTH_SECRET`: 32 byte acak yang dibuat Claude, lalu ditulis ke `.env.local`.
+- Keduanya perlu **ditambahkan user ke Vercel** (Settings → Environment Variables, Production + Preview), lalu redeploy.
+
+### Urutan eksekusi
+1. Tulis dan terapkan `0003_pin_auth.sql` (`apply_migration`), lalu `get_advisors` dan `generate_typescript_types`.
+2. Tulis kode di atas, lalu `npm test`, `npm run lint`, `npm run build`.
+3. User menempel `SUPABASE_SERVICE_ROLE_KEY` ke `.env.local` → Claude menjalankan `node scripts/create-account.mjs --name "Super Admin" --role "Super Admin" --pin 060814`.
+4. Commit dan push ke `main`. Aplikasi belum dipakai siapa pun, jadi tidak perlu branch terpisah.
+5. User menambahkan kedua env var di Vercel dan redeploy.
+
+### Verifikasi
+- `execute_sql`: akun Super Admin ada, `pin_hash` terisi (bukan plaintext), role = Super Admin.
+- Lokal (`npm run dev`) dan di https://arfinance-eight.vercel.app:
+  - Login dengan PIN 060814 → beranda dengan semua menu.
+  - PIN salah → "PIN salah".
+  - 5× salah → pesan terkunci, tercatat di `private.login_attempts`.
+- Buat akun uji role Collection dan beri 1 menu lewat matriks role. Login dengan PIN-nya: hanya menu itu yang tampil, dan halaman `/pengaturan/akun` menolak aksesnya.
+- `signUp` publik dengan anon key harus ditolak oleh trigger.
+- `get_advisors` security: 0 temuan.
+
+### Catatan keamanan untuk user
+- PIN 6 digit tanpa username jauh lebih lemah dari OAuth. Rate limit mengurangi risiko, tetapi PIN tidak boleh dibagikan.
+- PIN Super Admin `060814` sudah tertulis di percakapan ini. Sebaiknya diganti lewat halaman Akun & PIN setelah login pertama.
+
+### Setelah §7 selesai
+Mulai **Fase 1** di branch `feat/collection`:
+- Migrasi `0004_ar_master.sql`: `business_partners`, `ar_invoices`, `ar_open_snapshot`, `notes`, `payment_promises`, `contacts`, `invoice_exchanges`, beserta RLS berdasarkan `private.has_menu()`, `private.my_kind()`, dan `private.my_collection()`.
+- Port `processExcelUpload` dari `Halaman Utama/Aplikasi Utama/Script.html`.
