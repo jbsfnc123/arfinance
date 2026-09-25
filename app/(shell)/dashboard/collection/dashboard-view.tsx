@@ -3,6 +3,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { createClient } from "@/lib/supabase/client";
+import { cachedQuery } from "@/lib/cache/cached-query";
+import { todayJakarta } from "@/lib/parsers/date";
 import { fmtDate, fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { AGING_BUCKETS } from "@/lib/modules/collection/aging";
 import { forecastByDay, pctColor, round1, type GroupRow, type SpvSummary } from "@/lib/modules/collection/spv-summary";
@@ -20,14 +22,23 @@ export function DashboardView({ months, initialMonth }: { months: string[]; init
   const [data, setData] = useState<SpvSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const forceNext = useRef(false);
+
+  // Ringkasan di-cache per bulan & hari (aging relatif hari ini), berkunci versi data.
   useEffect(() => {
     let cancelled = false;
-    supabase.rpc("get_spv_summary", { p_month: month }).then(({ data: res, error }) => {
-      if (cancelled) return;
-      if (error) toast(`Gagal memuat ringkasan: ${error.message}`, "danger");
-      else setData(res as unknown as SpvSummary);
-      setLoading(false);
-    });
+    const force = forceNext.current;
+    forceNext.current = false;
+    cachedQuery(supabase, {
+      key: `spv:${month}:${todayJakarta()}`, deps: ["aging", "targets", "activity"], force,
+      load: async () => {
+        const { data: res, error } = await supabase.rpc("get_spv_summary", { p_month: month });
+        if (error) throw error;
+        return res as unknown as SpvSummary;
+      },
+    }).then(({ data: res }) => { if (!cancelled) setData(res); })
+      .catch((e: Error) => { if (!cancelled) toast(`Gagal memuat ringkasan: ${e.message}`, "danger"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => {
       cancelled = true;
     };
@@ -53,6 +64,7 @@ export function DashboardView({ months, initialMonth }: { months: string[]; init
   }, [supabase]);
 
   const reload = () => {
+    forceNext.current = true;
     setLoading(true);
     setReloadKey((k) => k + 1);
   };

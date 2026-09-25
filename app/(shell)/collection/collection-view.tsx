@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { cachedQuery } from "@/lib/cache/cached-query";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, rupiah } from "@/lib/format";
 import {
@@ -22,19 +23,27 @@ const PAGE = 1000;
 
 export type Patch = (invoiceNos: string[], fn: (r: CollectionRow) => CollectionRow) => void;
 
-// Semua baris satu collection, per halaman 1000 (batas PostgREST).
-async function fetchRows(supabase: ReturnType<typeof createClient>, name: string) {
+// Semua baris satu collection, per halaman 1000 (batas PostgREST). Baris mentah disimpan di
+// cache browser berkunci versi data (aging, aktivitas catatan/tukar, setting); aging dihitung
+// ulang dari tanggal hari ini setiap kali.
+async function fetchRows(supabase: ReturnType<typeof createClient>, name: string, force: boolean) {
+  const { data: raw } = await cachedQuery(supabase, {
+    key: `collection:${name}`, deps: ["aging", "activity", "settings"], force,
+    load: async () => {
+      const out: Parameters<typeof enrichRow>[0][] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from("v_collection_rows").select("*")
+          .eq("collection_name", name).order("invoice_no")
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        out.push(...data);
+        if (data.length < PAGE) return out;
+      }
+    },
+  });
   const today = todayJakarta();
-  const out: CollectionRow[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
-      .from("v_collection_rows").select("*")
-      .eq("collection_name", name).order("invoice_no")
-      .range(from, from + PAGE - 1);
-    if (error) throw error;
-    out.push(...data.map((r) => enrichRow(r, today)));
-    if (data.length < PAGE) return out;
-  }
+  return raw.map((r) => enrichRow(r, today));
 }
 
 export function CollectionView(props: {
@@ -56,11 +65,14 @@ export function CollectionView(props: {
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS);
   const [selection, setSelection] = useState<string[]>([]);
   const loadedAt = useRef<string | null>(null);
+  const forceNext = useRef(false); // tombol Muat ulang melewati cache
 
   useEffect(() => {
     if (!coll) return;
     let cancelled = false;
-    fetchRows(supabase, coll)
+    const force = forceNext.current;
+    forceNext.current = false;
+    fetchRows(supabase, coll, force)
       .then((out) => {
         if (cancelled) return;
         setRows(out);
@@ -74,6 +86,7 @@ export function CollectionView(props: {
   }, [coll, reloadKey, supabase, toast]);
 
   function reload() {
+    forceNext.current = true;
     setLoading(true);
     setNewData(false);
     setReloadKey((k) => k + 1);

@@ -48,11 +48,11 @@ describe("mutasi", () => {
       accounts: ["BCA-4888", "BCA-0780"], target: 1000, targetCount: 2, months: [],
       days: [
         { date: "2026-09-01", mut: { "BCA-4888": 100 }, alloc: 50, allocT: 40, inv: 7 },
-        { date: "2026-09-02", mut: { "BCA-0780": 30 }, alloc: 0, allocT: 0, inv: 0 },
+        { date: "2026-09-02", mut: { "BCA-0780": 30 }, alloc: 0, allocT: 0, inv: 0, exc: 500, excN: 1 },
         { date: "2026-09-03", mut: {}, alloc: 0, allocT: 0, inv: 0 },
       ],
     }, "2026-09-02");
-    expect(v).toMatchObject({ total: 130, alloc: 50, allocT: 40, inv: 7, realisasi: 0.04, perAccount: { "BCA-4888": 100, "BCA-0780": 30 } });
+    expect(v).toMatchObject({ excluded: 500, excludedCount: 1, total: 130, alloc: 50, allocT: 40, inv: 7, realisasi: 0.04, perAccount: { "BCA-4888": 100, "BCA-0780": 30 } });
     expect(v.daily.map((d) => d.cumTotal)).toEqual([100, 130, null]);
     expect(v.daily[1].cumAccount).toEqual({ "BCA-4888": 100, "BCA-0780": 30 });
   });

@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { createClient } from "@/lib/supabase/client";
+import { cachedQuery } from "@/lib/cache/cached-query";
 import { fmtDate, fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
+import { todayJakarta } from "@/lib/parsers/date";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { ImportLog } from "@/components/import-log";
 import { useToast } from "@/components/toast";
@@ -31,11 +33,15 @@ export function M10Dashboard({ version }: { version: number }) {
 
   useEffect(() => {
     let cancelled = false;
-    supabase.rpc("m10_dashboard", { p_month: month }).then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) return toast(`Gagal memuat: ${error.message}`, "danger");
-      setD(data as unknown as Dash);
-    });
+    cachedQuery(supabase, {
+      key: `m10:${month ?? "-"}:${todayJakarta()}`, deps: ["m10", "aging", "settings"],
+      load: async () => {
+        const { data, error } = await supabase.rpc("m10_dashboard", { p_month: month });
+        if (error) throw error;
+        return data as unknown as Dash;
+      },
+    }).then(({ data }) => { if (!cancelled) setD(data); })
+      .catch((e: Error) => { if (!cancelled) toast(`Gagal memuat: ${e.message}`, "danger"); });
     return () => { cancelled = true; };
   }, [month, version, supabase, toast]);
 

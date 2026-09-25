@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { cachedQuery } from "@/lib/cache/cached-query";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel, rupiah } from "@/lib/format";
 import { enrichRow, type CollectionRow } from "@/lib/modules/collection/view-model";
@@ -19,17 +20,23 @@ export function Mitra10View({ collection, prefix }: { collection: string; prefix
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const { data: raw } = await cachedQuery(supabase, {
+        key: `dash-m10:${collection}:${prefix}`, deps: ["aging", "activity", "settings"], force: reloadKey > 0,
+        load: async () => {
+          const out: Parameters<typeof enrichRow>[0][] = [];
+          for (let from = 0; ; from += 1000) {
+            const { data, error } = await supabase.from("v_collection_rows").select("*")
+              .eq("collection_name", collection).ilike("payment_group", `${prefix}%`)
+              .order("invoice_no").range(from, from + 999);
+            if (error) throw error;
+            out.push(...data);
+            if (data.length < 1000) break;
+          }
+          return out;
+        },
+      });
       const today = todayJakarta();
-      const out: CollectionRow[] = [];
-      for (let from = 0; ; from += 1000) {
-        const { data, error } = await supabase.from("v_collection_rows").select("*")
-          .eq("collection_name", collection).ilike("payment_group", `${prefix}%`)
-          .order("invoice_no").range(from, from + 999);
-        if (error) throw error;
-        out.push(...data.map((r) => enrichRow(r, today)));
-        if (data.length < 1000) break;
-      }
-      if (!cancelled) setRows(out);
+      if (!cancelled) setRows(raw.map((r) => enrichRow(r, today)));
     })().catch((e: Error) => !cancelled && toast(`Gagal memuat data: ${e.message}`, "danger"));
     return () => {
       cancelled = true;
