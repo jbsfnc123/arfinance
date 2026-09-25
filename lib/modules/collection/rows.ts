@@ -96,13 +96,21 @@ const nz = (s: string | null | undefined, d: string) => (s ?? "").trim() || d;
 
 export function computeSpvSummary(input: {
   month: string; today: string; targets: Target[]; ar: ArInvoice[]; promises: Promise_[]; notes: Note[]; lastTagihanUpdate: string | null;
+  // Seluruh baris aging snapshot terkini (tanpa filter Collection). Invoice target yang masih open
+  // tetapi tersaring filter Collection (mis. marketing lain) tidak boleh dianggap terkumpul.
+  agingAll?: AgingLine[];
 }): SpvSummary {
   const ar = new Map(input.ar.map((a) => [a.invoice_no, a]));
+  const openAll = new Map<string, { open: number; due: string | null }>();
+  for (const l of [...(input.agingAll ?? [])].sort((a, b) => a.line_no - b.line_no)) {
+    if (l.invoice_no && !openAll.has(l.invoice_no)) openAll.set(l.invoice_no, { open: num(l.open_amt), due: l.due_date });
+  }
   const jb = latestBy(input.promises);
   const r2 = input.targets.filter((t) => t.month === input.month).map((t) => {
     const a = ar.get(t.invoice_no);
-    const sisa = a ? a.open_amt : 0;
-    const due = t.due_date ?? a?.due_date ?? null;
+    const o = openAll.get(t.invoice_no);
+    const sisa = a ? a.open_amt : o ? o.open : 0;
+    const due = t.due_date ?? a?.due_date ?? o?.due ?? null;
     const days = due ? daysBetween(input.today, due) : null;
     const promise = jb.get(t.invoice_no)?.promise_date ?? null;
     return {

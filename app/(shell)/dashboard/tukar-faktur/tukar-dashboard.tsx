@@ -1,21 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { EChartsOption } from "echarts";
 import { useDataset } from "@/lib/local/store";
 import { todayJakarta } from "@/lib/parsers/date";
-import { monthLabel } from "@/lib/format";
+import { fmtDate, monthLabel } from "@/lib/format";
 import { tukarDays, tukarKpi, type TukarDay } from "@/lib/modules/tukar/dashboard";
-import { Chart, CHART_GRID } from "@/components/chart";
-import { card, inputCls } from "@/components/ui";
+import { card, inputCls, td, th } from "@/components/ui";
 
 type Raw = { months: string[]; kurirs: string[]; days: TukarDay[] };
 
-const SERIES: { key: keyof TukarDay; label: string; color: string; kpi: "Invoice" | "BP" | "Lokasi" }[] = [
-  { key: "inv", label: "Jumlah Invoice", color: "#8ab4f8", kpi: "Invoice" },
-  { key: "bp", label: "Jumlah Business Partner", color: "#81c995", kpi: "BP" },
-  { key: "lok", label: "Titik Lokasi", color: "#fdd663", kpi: "Lokasi" },
-];
 
 export function TukarDashboard() {
   const [month, setMonth] = useState(todayJakarta().slice(0, 7));
@@ -49,24 +42,44 @@ export function TukarDashboard() {
         </div>
       )}
 
-      {data && SERIES.map((s) => {
-        const option: EChartsOption = {
-          grid: { left: 8, right: 16, top: 16, bottom: 8, containLabel: true },
-          tooltip: { trigger: "axis" },
-          xAxis: { type: "category", data: data.days.map((d) => String(d.day)), boundaryGap: false },
-          yAxis: { type: "value", minInterval: 1, splitLine: { lineStyle: { color: CHART_GRID } } },
-          series: [{
-            type: "line", smooth: true, symbolSize: 5, data: data.days.map((d) => d[s.key]),
-            lineStyle: { color: s.color }, itemStyle: { color: s.color }, areaStyle: { color: s.color, opacity: 0.15 },
-          }],
-        };
-        return (
-          <section key={s.key} className={`${card} p-4`}>
-            <h2 className="text-sm font-medium">{s.label} per Hari</h2>
-            <Chart option={option} height={200} />
-          </section>
-        );
-      })}
+      {data && kpi && (
+        <section className={`${card} overflow-hidden`}>
+          <h2 className="px-4 pt-4 text-sm font-medium">Tukar Faktur per Hari · {monthLabel(month)}</h2>
+          <div className="mt-2 max-h-[65vh] overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-surface">
+                <tr className="border-b border-line">
+                  <th className={th}>Tanggal</th>
+                  <th className={`${th} text-right`}>Jumlah Invoice</th>
+                  <th className={`${th} text-right`}>Jumlah Business Partner</th>
+                  <th className={`${th} text-right`}>Titik Lokasi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.days.map((d) => {
+                  const idle = !d.inv && !d.bp && !d.lok;
+                  return (
+                    <tr key={d.day} className={`border-b border-line/50 ${idle ? "text-fg-2 opacity-60" : ""}`}>
+                      <td className={td}>{fmtDate(`${month}-${String(d.day).padStart(2, "0")}`)}</td>
+                      <td className={`${td} text-right`}>{d.inv.toLocaleString("id-ID")}</td>
+                      <td className={`${td} text-right`}>{d.bp.toLocaleString("id-ID")}</td>
+                      <td className={`${td} text-right`}>{d.lok.toLocaleString("id-ID")}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="sticky bottom-0 bg-surface font-medium">
+                <tr className="border-t border-line">
+                  <td className={td}>Total ({kpi.activeDays} hari aktif)</td>
+                  <td className={`${td} text-right`}>{kpi.totalInvoice.toLocaleString("id-ID")}</td>
+                  <td className={`${td} text-right`}>{kpi.totalBP.toLocaleString("id-ID")}</td>
+                  <td className={`${td} text-right`}>{kpi.totalLokasi.toLocaleString("id-ID")}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -10,7 +10,6 @@ import { buildMutasi, type MutasiRaw } from "@/lib/modules/mutasi/dashboard";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { card, inputCls, td, th } from "@/components/ui";
 
-const COLORS = ["#8ab4f8", "#81c995", "#fdd663", "#f28b82", "#c58af9", "#78d9ec", "#fcad70"];
 const juta = (n: number | null) => (n === null ? null : Math.round(n / 1e4) / 100);
 const num = (n: number) => Math.round(n).toLocaleString("id-ID");
 
@@ -58,14 +57,6 @@ export function MutasiDashboard() {
             <Kpi label="Dikecualikan manual" value={rupiah(v.excluded)} sub={`${v.excludedCount.toLocaleString("id-ID")} transaksi tidak dihitung sebagai uang masuk`} />
             {raw.accounts.map((a) => <Kpi key={a} label={`Uang masuk ${a}`} value={rupiah(v.perAccount[a])} />)}
           </div>
-
-          <section className={`${card} p-4`}>
-            <h2 className="text-sm font-medium">Kumulatif uang masuk per rekening (juta)</h2>
-            <Chart height={300} option={lineBase([
-              ...raw.accounts.map((a, i) => ({ name: a, type: "line" as const, symbolSize: 4, data: v.daily.map((d) => juta(d.cumAccount[a])), itemStyle: { color: COLORS[i % COLORS.length] } })),
-              { name: "Total", type: "line" as const, symbolSize: 4, lineStyle: { width: 3 }, data: v.daily.map((d) => juta(d.cumTotal)), itemStyle: { color: "#e8eaed" } },
-            ])} />
-          </section>
 
           <section className={`${card} p-4`}>
             <h2 className="text-sm font-medium">Kumulatif Total vs Allocated vs Allocated in Target (juta)</h2>

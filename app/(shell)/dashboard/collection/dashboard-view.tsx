@@ -4,10 +4,12 @@ import { Fragment, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { useDataset } from "@/lib/local/store";
 import { arInvoices, computeSpvSummary, filterOf } from "@/lib/modules/collection/rows";
+import { allocationSeries, reconcileCollected } from "@/lib/modules/collection/reconcile";
+import { DataTableModal, type TableSpec } from "@/components/data-table-modal";
 import { todayJakarta } from "@/lib/parsers/date";
-import { fmtDate, fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
+import { fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { AGING_BUCKETS } from "@/lib/modules/collection/aging";
-import { forecastByDay, pctColor, round1, type GroupRow, type SpvSummary } from "@/lib/modules/collection/spv-summary";
+import { pctColor, round1, type GroupRow, type SpvSummary } from "@/lib/modules/collection/spv-summary";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { btnGhost, card, inputCls, td, th } from "@/components/ui";
 
@@ -19,6 +21,7 @@ export function DashboardView({ months, initialMonth }: { months: string[]; init
   const targets = useDataset("targets");
   const activity = useDataset("activity");
   const settings = useDataset("settings");
+  const erp = useDataset("erp");
   // Ringkasan dihitung di browser (port get_spv_summary) dan ikut berubah saat dataset diperbarui.
   const data: SpvSummary | null = useMemo(() => {
     if (!aging.data || !targets.data || !activity.data) return null;
@@ -26,8 +29,16 @@ export function DashboardView({ months, initialMonth }: { months: string[]; init
       month, today: todayJakarta(), targets: targets.data.targets, promises: activity.data.promises, notes: activity.data.notes,
       ar: arInvoices(aging.data.lines, filterOf(settings.data)),
       lastTagihanUpdate: (settings.data?.last_tagihan_update as string | undefined) ?? aging.data.uploadedAt,
+      agingAll: aging.data.lines,
     });
   }, [month, aging.data, targets.data, activity.data, settings.data]);
+  // Alokasi Target & rekonsiliasi dari pembayaran ERP (data Mutasi vs Realisasi).
+  const alloc = useMemo(() => (targets.data && erp.data
+    ? allocationSeries({ month, today: todayJakarta(), targets: targets.data.targets, payments: erp.data.payments }) : null),
+  [month, targets.data, erp.data]);
+  const recon = useMemo(() => (targets.data && erp.data && aging.data
+    ? reconcileCollected({ month, targets: targets.data.targets, agingAll: aging.data.lines, payments: erp.data.payments }) : null),
+  [month, targets.data, erp.data, aging.data]);
   const loading = !data || aging.loading || targets.loading;
   const reload = () => { void aging.reload(); void targets.reload(); void activity.reload(); };
 
@@ -62,9 +73,10 @@ export function DashboardView({ months, initialMonth }: { months: string[]; init
             <AgingCard d={data} />
           </div>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <ForecastTable d={data} />
+            <AllocationCard a={alloc} />
             <TopOverdue d={data} />
           </div>
+          {recon && <ReconCard r={recon} />}
           <Breakdown d={data} />
         </div>
       )}
@@ -117,13 +129,15 @@ function DonutCard({ title, d, kind }: { title: string; d: SpvSummary; kind: "pe
       text: `${center}%`,
       subtext: kind === "pencapaian" ? "PENCAPAIAN" : "TERKUMPUL + JANJI",
       left: "center",
-      top: "38%",
-      textStyle: { fontSize: 26, fontWeight: 700, color: kind === "pencapaian" ? pctColor(pct) : "#8ab4f8" },
+      top: "center",
+      itemGap: 4,
+      textStyle: { fontSize: 20, fontWeight: 700, color: kind === "pencapaian" ? pctColor(pct) : "#8ab4f8" },
       subtextStyle: { fontSize: 11 },
     },
     series: [{
       type: "pie",
-      radius: ["74%", "92%"],
+      radius: ["58%", "78%"],
+      center: ["50%", "50%"],
       silent: true,
       label: { show: false },
       data: values.map((v) => ({ value: v.value, itemStyle: { color: v.color } })),
@@ -183,57 +197,6 @@ function AgingCard({ d }: { d: SpvSummary }) {
         ))}
       </ul>
     </div>
-  );
-}
-
-function ForecastTable({ d }: { d: SpvSummary }) {
-  const days = useMemo(() => forecastByDay(d.forecastByDate), [d.forecastByDate]);
-  const [open, setOpen] = useState<string | null>(null);
-
-  return (
-    <section className={`${card} overflow-hidden`}>
-      <h2 className="px-4 pt-4 text-sm font-medium">Janji Bayar · per Tanggal</h2>
-      <div className="mt-2 max-h-96 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-surface">
-            <tr><th className={th}>Tanggal / Marketing</th><th className={`${th} text-right`}>Inv</th><th className={`${th} text-right`}>Nominal</th></tr>
-          </thead>
-          <tbody>
-            {days.map((day) => (
-              <Fragment key={day.date}>
-                <tr className="border-t border-line bg-pill/30 font-medium">
-                  <td className={td}>{fmtDate(day.date)}</td>
-                  <td className={`${td} text-right`}>{day.count}</td>
-                  <td className={`${td} text-right`}>{rupiah(day.nom)}</td>
-                </tr>
-                {day.markets.map((m) => {
-                  const key = `${day.date}|${m.market}`;
-                  return (
-                    <Fragment key={key}>
-                      <tr className="cursor-pointer border-t border-line hover:bg-surface-2" onClick={() => setOpen(open === key ? null : key)}>
-                        <td className={`${td} pl-6`}>
-                          <span className="material-symbols-outlined !text-base align-middle">{open === key ? "expand_less" : "expand_more"}</span> {m.market}
-                        </td>
-                        <td className={`${td} text-right`}>{m.count}</td>
-                        <td className={`${td} text-right`}>{rupiah(m.nom)}</td>
-                      </tr>
-                      {open === key && m.bps.map((b) => (
-                        <tr key={b.bp} className="text-xs text-fg-2">
-                          <td className={`${td} pl-12`}>{b.bp}</td>
-                          <td className={`${td} text-right`}>{b.count}</td>
-                          <td className={`${td} text-right`}>{rupiah(b.nom)}</td>
-                        </tr>
-                      ))}
-                    </Fragment>
-                  );
-                })}
-              </Fragment>
-            ))}
-            {days.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={3}>Belum ada janji bayar tercatat.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </section>
   );
 }
 
@@ -324,6 +287,72 @@ function Breakdown({ d }: { d: SpvSummary }) {
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+const juta = (n: number | null) => (n === null ? null : Math.round(n / 1e4) / 100);
+
+// Pengganti "Janji Bayar per tanggal": pergerakan Alokasi Target per tanggal (data Mutasi vs Realisasi).
+function AllocationCard({ a }: { a: ReturnType<typeof allocationSeries> | null }) {
+  if (!a) return <section className={`${card} p-4 text-sm text-fg-2`}>Memuat data alokasi…</section>;
+  const option: EChartsOption = {
+    grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
+    tooltip: { trigger: "axis", valueFormatter: (x) => (x == null ? "-" : `${Number(x).toLocaleString("id-ID")} jt`) },
+    legend: { top: 0, textStyle: { color: "#9aa0a6" } },
+    xAxis: { type: "category", data: a.days.map((d) => String(Number(d.date.slice(8)))) },
+    yAxis: { type: "value", name: "Juta", splitLine: { lineStyle: { color: CHART_GRID } } },
+    series: [
+      { name: "Alloc in Target / hari", type: "bar", data: a.days.map((d) => juta(d.allocT)), itemStyle: { color: "#5f8fd8" }, barMaxWidth: 14 },
+      { name: "Kumulatif Alloc in Target", type: "line", symbolSize: 4, data: a.days.map((d) => juta(d.cumAllocT)), itemStyle: { color: "#81c995" }, lineStyle: { width: 3 } },
+      { name: "Kumulatif Allocated", type: "line", symbolSize: 3, data: a.days.map((d) => juta(d.cumAlloc)), itemStyle: { color: "#fdd663" }, lineStyle: { type: "dashed" } },
+      { name: "Target", type: "line", symbol: "none", data: a.days.map(() => juta(a.target)), itemStyle: { color: "#f28b82" }, lineStyle: { type: "dotted" } },
+    ],
+  };
+  return (
+    <section className={`${card} p-4`}>
+      <h2 className="text-sm font-medium">Alokasi Target · per Tanggal</h2>
+      <p className="text-xs text-fg-2">Allocated in Target {rupiah(a.totalAllocT)} dari target {rupiah(a.target)} ({a.target ? round1((a.totalAllocT / a.target) * 100) : 0}%)</p>
+      <Chart option={option} height={300} />
+    </section>
+  );
+}
+
+// Rekonsiliasi Terkumpul (target − sisa aging) vs Allocated in Target (pembayaran ERP) + penyebab selisih.
+function ReconCard({ r }: { r: ReturnType<typeof reconcileCollected> }) {
+  const [spec, setSpec] = useState<TableSpec | null>(null);
+  return (
+    <section className={`${card} mt-4 overflow-hidden`}>
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 px-4 pt-4">
+        <h2 className="text-sm font-medium">Rekonsiliasi Terkumpul vs Allocated in Target</h2>
+        <span className="text-xs text-fg-2">Terkumpul <b className="text-fg">{rupiah(r.terkumpul)}</b></span>
+        <span className="text-xs text-fg-2">Allocated in Target <b className="text-fg">{rupiah(r.allocT)}</b></span>
+        <span className="text-xs text-fg-2">Selisih <b className={Math.abs(r.selisih) >= 1 ? "text-warning" : "text-success"}>{rupiah(r.selisih)}</b></span>
+      </div>
+      <table className="mt-2 w-full text-sm">
+        <thead><tr><th className={th}>Kemungkinan penyebab</th><th className={`${th} text-right`}>Invoice</th><th className={`${th} text-right`}>Selisih</th></tr></thead>
+        <tbody>
+          {r.categories.map((c) => (
+            <tr key={c.category} className="cursor-pointer border-t border-line hover:bg-surface-2"
+              onClick={() => setSpec({
+                title: c.label,
+                cols: [
+                  { k: "invoice_no", l: "Invoice" }, { k: "business_partner", l: "Business Partner" },
+                  { k: "target", l: "Target", n: true }, { k: "sisa", l: "Sisa Aging", n: true },
+                  { k: "terkumpul", l: "Terkumpul", n: true }, { k: "dibayar", l: "Dibayar (bulan ini)", n: true },
+                  { k: "dibayarLain", l: "Dibayar (bulan lain)", n: true }, { k: "selisih", l: "Selisih", n: true },
+                ],
+                rows: c.rows,
+              })}>
+              <td className={td}>{c.label}</td>
+              <td className={`${td} text-right`}>{c.count.toLocaleString("id-ID")}</td>
+              <td className={`${td} text-right`}>{rupiah(c.selisih)}</td>
+            </tr>
+          ))}
+          {!r.categories.length && <tr><td className={`${td} text-fg-2`} colSpan={3}>Tidak ada selisih.</td></tr>}
+        </tbody>
+      </table>
+      <DataTableModal spec={spec} onClose={() => setSpec(null)} />
     </section>
   );
 }

@@ -19,8 +19,8 @@ describe("ACL menu", () => {
   });
 
   it("menu 'ctrl' tersembunyi untuk collection walau ada di ACL", () => {
-    expect(canAccess(item("dash.mitra10"), { kind: "coll", allowed: new Set(["dash.mitra10"]) })).toBe(false);
-    expect(canAccess(item("dash.mitra10"), { kind: "ctrl", allowed: new Set(["dash.mitra10"]) })).toBe(true);
+    expect(canAccess(item("dash.coll"), { kind: "coll", allowed: new Set(["dash.coll"]) })).toBe(false);
+    expect(canAccess(item("dash.coll"), { kind: "ctrl", allowed: new Set(["dash.coll"]) })).toBe(true);
   });
 
   it("ID submenu unik dan href internal unik", () => {
