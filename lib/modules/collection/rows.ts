@@ -50,7 +50,7 @@ function latestBy<T extends { id: number; invoice_no: string }>(rows: T[]) {
 const TUKAR_ORDER = ["Kolektor", "Ekspedisi", "Sistem", "WA", "Email"];
 
 // v_collection_rows: invoice open (> 1.000) + catatan terbaru, janji bayar terbaru, tukar faktur terpilih.
-export function collectionRows(ar: ArInvoice[], act: Datasets["activity"]): RawRow[] {
+export function collectionRows(ar: ArInvoice[], act: Datasets["activity"], remarks?: Map<string, string>): RawRow[] {
   const note = latestBy(act.notes);
   const promise = latestBy(act.promises);
   const ex = new Map<string, Datasets["activity"]["exchanges"][number]>();
@@ -67,7 +67,8 @@ export function collectionRows(ar: ArInvoice[], act: Datasets["activity"]): RawR
       catatan: n ? `[${n.kategori}]${n.isi ? " - " + n.isi : ""}` : null,
       janji_bayar: promise.get(a.invoice_no)?.promise_date ?? null,
       metode_tukar: x?.metode ?? null, tanggal_tukar: x?.tanggal ?? null,
-      keterangan: x ? x.keterangan ?? x.resi : null, resi: x?.resi ?? null, foto_path: x?.foto_path ?? null,
+      keterangan: remarks?.get(a.invoice_no) ?? null,
+      keterangan_tukar: x ? x.keterangan ?? x.resi : null, resi: x?.resi ?? null, foto_path: x?.foto_path ?? null,
     };
   });
 }

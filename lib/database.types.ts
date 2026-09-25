@@ -205,7 +205,6 @@ export type Database = {
           id: number
           invoice_date: string | null
           invoice_no: string
-          keterangan: string
           no_sj: string | null
           updated_at: string | null
         }
@@ -217,7 +216,6 @@ export type Database = {
           id?: never
           invoice_date?: string | null
           invoice_no: string
-          keterangan: string
           no_sj?: string | null
           updated_at?: string | null
         }
@@ -229,7 +227,6 @@ export type Database = {
           id?: never
           invoice_date?: string | null
           invoice_no?: string
-          keterangan?: string
           no_sj?: string | null
           updated_at?: string | null
         }
@@ -332,7 +329,6 @@ export type Database = {
           branch: string | null
           no_po: string | null
           no_sj: string
-          keterangan: string | null
           created_at: string
         }
         Insert: never
@@ -976,6 +972,8 @@ export type Database = {
       }
     }
     Functions: {
+      set_invoice_remark: { Args: { p_invoices: string[]; p_text: string; p_source: string }; Returns: number }
+      pack_remarks: { Args: Record<string, never>; Returns: Json }
       pack_aging: { Args: Record<string, never>; Returns: Json }
       pack_activity: { Args: Record<string, never>; Returns: Json }
       pack_targets: { Args: Record<string, never>; Returns: Json }

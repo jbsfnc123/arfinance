@@ -9,7 +9,7 @@ const line = (p: Partial<AgingLine>): AgingLine => ({
 });
 const ws = (p: Partial<Worksheet>): Worksheet => ({
   id: 1, payment_group: null, business_partner: null, invoice_no: null, invoice_date: null, due_date: null, open_amt: 0,
-  branch: null, no_po: null, no_sj: "", keterangan: null, ...p,
+  branch: null, no_po: null, no_sj: "", ...p,
 });
 const gr = (p: Partial<Gr>): Gr => ({
   id: 1, no: null, store_no: null, delivery_to: null, gr_no: null, gr_date: null, po_no: null, po_date: null, vendor_ship_no: null,
@@ -33,9 +33,10 @@ describe("Mitra10 compute", () => {
   ], " catur mitra sejati sentosa ");
   const c = computeM10({
     aging,
+    remarks: new Map([["SI2", "ltkp"]]),
     worksheet: [
       ws({ id: 1, payment_group: "CMSS - Pengu338", invoice_no: "SI1", invoice_date: "2026-09-03", open_amt: 2000000, no_sj: "SJ/1" }),
-      ws({ id: 2, invoice_no: "SI2", invoice_date: "2026-09-04", open_amt: 50000, no_sj: "SJ/2", keterangan: "ltkp" }),
+      ws({ id: 2, invoice_no: "SI2", invoice_date: "2026-09-04", open_amt: 50000, no_sj: "SJ/2" }),
       ws({ id: 3, invoice_no: "SI3", invoice_date: "2026-08-04", open_amt: 70000, no_sj: "SJ/3" }),
     ],
     gr: [gr({ id: 1, sj_no: "SJ/1", po_no: "po1" }), gr({ id: 2, sj_no: "SJ/2", po_no: "POX" }), gr({ id: 3, sj_no: "SJ/7", po_no: "" })],

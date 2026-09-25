@@ -8,7 +8,7 @@ import { monthLabel, rupiah } from "@/lib/format";
 import { enrichRow, type CollectionRow } from "@/lib/modules/collection/view-model";
 import { mitra10Summary, type Mitra10Month } from "@/lib/modules/collection/mitra10";
 import { btnGhost, card, td, th } from "@/components/ui";
-import { NoteLog } from "../../case/note-log";
+import { NoteLog } from "../../collection/case/note-log";
 
 export function Mitra10View({ collection, prefix }: { collection: string; prefix: string }) {
   const aging = useDataset("aging");

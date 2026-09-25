@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useDataset } from "@/lib/local/store";
 import { computeM10, m10AgingLines, TAX_DEFAULT } from "@/lib/modules/m10/compute";
+import { useRemarks } from "@/lib/modules/remarks";
 
 // Data Mitra10 lengkap di browser: paket m10 + aging snapshot terkini + Tax Name,
 // lalu semua kolom rumus dihitung lokal (dan ikut berubah seketika saat diedit).
@@ -10,10 +11,11 @@ export function useM10() {
   const m10 = useDataset("m10");
   const aging = useDataset("aging");
   const settings = useDataset("settings");
+  const remarks = useRemarks();
   const taxName = typeof settings.data?.m10_tax_name === "string" ? settings.data.m10_tax_name : TAX_DEFAULT;
 
   const agingLines = useMemo(() => (aging.data ? m10AgingLines(aging.data.lines, taxName) : []), [aging.data, taxName]);
-  const computed = useMemo(() => (m10.data ? computeM10({ ...m10.data, aging: agingLines }) : null), [m10.data, agingLines]);
+  const computed = useMemo(() => (m10.data ? computeM10({ ...m10.data, aging: agingLines, remarks: remarks.map }) : null), [m10.data, agingLines, remarks.map]);
 
   return {
     computed,
