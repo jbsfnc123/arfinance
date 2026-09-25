@@ -38,7 +38,7 @@ export function parseDate(value: unknown): string | null {
   let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
   if (m) return iso(+m[1], +m[2], +m[3]);
 
-  m = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2}|\d{4})$/.exec(s);
+  m = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2}|\d{4})(?:\s+\d{1,2}[:.]\d{2}(?:[:.]\d{2})?)?$/.exec(s);
   if (m) return iso(+m[3], +m[2], +m[1]);
 
   m = /^(\d{1,2})\s+([A-Za-z]+)\s*,?\s*(\d{4})$/.exec(s);

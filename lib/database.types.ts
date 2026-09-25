@@ -342,6 +342,166 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          code: string
+          last4: string
+          sort: number
+          active: boolean
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      bank_mutations: {
+        Row: {
+          id: number
+          account: string
+          tx_date: string
+          amount: number
+          keterangan: string | null
+          catatan: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      erp_invoices: {
+        Row: {
+          invoice_no: string
+          invoice_date: string
+          amount: number
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      erp_payments: {
+        Row: {
+          id: number
+          invoice_no: string | null
+          payment_doc: string | null
+          payment_date: string
+          amount: number
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      m10_aging: {
+        Row: {
+          id: number
+          payment_group: string | null
+          marketing: string | null
+          collection_name: string | null
+          sales_name: string | null
+          business_partner: string | null
+          tax_name: string | null
+          invoice_no: string | null
+          invoice_date: string | null
+          due_date: string | null
+          open_amt: number
+          cur_0_30: number
+          cur_31_60: number
+          due_1_7: number
+          due_8_30: number
+          due_31_60: number
+          due_61_90: number
+          due_90: number
+          days: number | null
+          branch: string | null
+          no_po: string | null
+          no_sj: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      m10_bp_users: {
+        Row: {
+          business_partner: string
+          payment_group: string | null
+          username: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      m10_worksheet: {
+        Row: {
+          id: number
+          business_partner: string | null
+          invoice_no: string | null
+          invoice_date: string | null
+          due_date: string | null
+          open_amt: number
+          branch: string | null
+          no_po: string | null
+          no_sj: string
+          keterangan: string | null
+          created_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      m10_gr: {
+        Row: {
+          id: number
+          no: string | null
+          store_no: string | null
+          delivery_to: string | null
+          gr_no: string | null
+          gr_date: string | null
+          po_no: string | null
+          po_date: string | null
+          vendor_ship_no: string | null
+          item_code: string | null
+          item_name: string | null
+          uom: string | null
+          qty_order: number | null
+          qty_received: number | null
+          status: string | null
+          sj_no: string | null
+          created_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      m10_kwitansi: {
+        Row: {
+          id: number
+          username: string | null
+          invoice_no: string
+          vendor_invoice_no: string | null
+          invoice_date: string | null
+          kuitansi_no: string | null
+          kuitansi_date: string | null
+          accepted_date: string | null
+          pfi_no: string | null
+          gr_no: string | null
+          po_no: string | null
+          total_net: number
+          created_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      m10_payment_schedule: {
+        Row: {
+          no_kw: string
+          spp: string | null
+          nilai_kw: number
+          tgl_tukar_faktur: string | null
+          jadwal_transfer: string | null
+          notes: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       so_master: {
         Row: {
           id: number
@@ -730,6 +890,36 @@ export type Database = {
       }
     }
     Views: {
+      v_m10_gr: {
+        Row: Database["public"]["Tables"]["m10_gr"]["Row"] & { po_aging: string; check_status: string }
+        Relationships: []
+      }
+      v_m10_kwitansi: {
+        Row: Database["public"]["Tables"]["m10_kwitansi"]["Row"] & { jadwal_bayar: string | null; aging: number; selisih: number }
+        Relationships: []
+      }
+      v_m10_worksheet: {
+        Row: {
+          id: number
+          username: string
+          business_partner: string | null
+          invoice_no: string | null
+          invoice_date: string | null
+          due_date: string | null
+          open_amt: number
+          branch: string | null
+          no_po: string | null
+          no_sj: string
+          gr: string
+          tukar_faktur: string
+          selisih: number
+          keterangan: string | null
+          status: string
+          jadwal_bayar: string | null
+          lama_tf: number | null
+        }
+        Relationships: []
+      }
       v_courier_pending: {
         Row: Database["public"]["Tables"]["courier_schedules"]["Row"]
         Relationships: []
@@ -786,6 +976,20 @@ export type Database = {
       }
     }
     Functions: {
+      mutasi_import: { Args: { p_sheets: Json; p_file_name: string }; Returns: number }
+      erp_invoice_import: { Args: { p_rows: Json; p_file_name: string }; Returns: number }
+      erp_payment_import: { Args: { p_rows: Json; p_file_name: string }; Returns: number }
+      mutasi_dashboard: { Args: { p_month: string }; Returns: Json }
+      m10_aging_stage: { Args: { p_batch: string; p_rows: Json }; Returns: number }
+      m10_aging_commit: { Args: { p_batch: string; p_file_name: string }; Returns: Json }
+      m10_gr_add: { Args: { p_rows: Json; p_file_name: string; p_first: boolean }; Returns: number }
+      m10_kw_add: { Args: { p_rows: Json; p_username: string; p_file_name: string }; Returns: Json }
+      m10_schedule_upsert: { Args: { p_rows: Json }; Returns: number }
+      m10_schedule_delete: { Args: { p_no_kw: string[] }; Returns: number }
+      m10_set_keterangan: { Args: { p_ids: number[]; p_text: string }; Returns: number }
+      m10_bp_replace: { Args: { p_rows: Json }; Returns: number }
+      m10_set_tax_name: { Args: { p_value: string }; Returns: undefined }
+      m10_dashboard: { Args: { p_month: string | null }; Returns: Json }
       admin_set_pin: { Args: { p_pin: string; p_user: string }; Returns: undefined }
       ar_target_replace: {
         Args: { p_file_name: string; p_month: string; p_rows: Json }

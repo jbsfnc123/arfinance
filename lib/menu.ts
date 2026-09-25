@@ -59,8 +59,8 @@ export const MENU_REGISTRY: MenuGroup[] = [
     { id: "rek.cekharga",    label: "Cek Selisih Harga PO/SO", href: "/cek-harga" },
     { id: "rek.coretax",     label: "XML CoreTax",             href: "/coretax" },
     { id: "rek.marketplace", label: "Marketplace",             href: "/marketplace" },
-    { id: "rek.mutasi",      label: "Mutasi Bank vs Realisasi", href: "/mutasi-bank", phase: 5 },
-    { id: "rek.mitra10",     label: "Mitra10 Tukar Faktur",    href: "/mitra10",     phase: 5 },
+    { id: "rek.mutasi",      label: "Mutasi Bank vs Realisasi", href: "/mutasi-bank" },
+    { id: "rek.mitra10",     label: "Mitra10 Tukar Faktur",    href: "/mitra10" },
   ]},
   { id: "laporan", label: "Laporan", icon: "slideshow", children: [
     { id: "lap.presentasi", label: "AR Management Deck", href: "/presentasi", phase: 6 },
