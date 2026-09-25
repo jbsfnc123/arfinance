@@ -1,9 +1,13 @@
-import type { Tables } from "@/lib/database.types";
 
 // Port buildNoteGroups (Aplikasi Utama/Script.html): catatan terbaru per invoice
 // dikelompokkan per Kategori + BP + isi. Grup mengikuti urutan catatan terbaru.
 
-export type NoteLatest = Tables<"v_note_latest">;
+// Catatan terbaru per invoice + nominal open (dihitung di browser, lib/modules/collection/rows.ts).
+export type NoteLatest = {
+  id: number | null; invoice_no: string | null; kategori: string | null; business_partner: string | null; isi: string | null;
+  collection_name: string | null; invoice_date: string | null; no_po: string | null; no_sj: string | null; done: boolean | null;
+  closed_by: string | null; closed_at: string | null; created_at: string | null; nominal: number | null;
+};
 
 export type NoteGroup = {
   key: string;

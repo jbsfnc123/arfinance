@@ -1,11 +1,16 @@
 import { agingOf, AGING_BUCKETS, type AgingBucket } from "./aging";
 import { fmtDate, monthKey } from "@/lib/format";
-import type { Tables } from "@/lib/database.types";
 
 // Logika tampilan halaman Collection, di-port dari Aplikasi Utama/Script.html
 // (renderCollAgingCards, rekap tukar/jatuh tempo, rowPassesOtherFilters, kategori).
 
-export type RawRow = Tables<"v_collection_rows">;
+// Baris collection (hasil lib/modules/collection/rows.ts#collectionRows).
+export type RawRow = {
+  invoice_no: string | null; payment_group: string | null; marketing: string | null; collection_name: string | null;
+  business_partner: string | null; bp_value: string | null; invoice_date: string | null; due_date: string | null;
+  open_amt: number | null; no_po: string | null; no_sj: string | null; catatan: string | null; janji_bayar: string | null;
+  metode_tukar: string | null; tanggal_tukar: string | null; keterangan: string | null; resi: string | null; foto_path: string | null;
+};
 
 export type CollectionRow = {
   invoice_no: string;

@@ -1,49 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
-import { createClient } from "@/lib/supabase/client";
-import { cachedQuery } from "@/lib/cache/cached-query";
 import { fmtDate, fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { todayJakarta } from "@/lib/parsers/date";
+import { m10Dashboard, type Stat } from "@/lib/modules/m10/compute";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { ImportLog } from "@/components/import-log";
-import { useToast } from "@/components/toast";
 import { card, inputCls, td, th } from "@/components/ui";
-
-type Stat = { invoice: number; done: number; avgLama: number | null };
-type Dash = {
-  month: string; months: string[]; prevMonth: string; curMonth: string;
-  summary: Record<string, number>;
-  grCheck: number; agingNotInWorksheet: number;
-  aging: { count: number; totalOpen: number; buckets: { label: string; value: number }[]; avgDays: number };
-  monthly: (Stat & { month: string })[];
-  daily: (Stat & { date: string; jadwal: number })[];
-  scheduleAvgDays: number | null; lastAging: string | null;
-};
+import { useM10 } from "./use-m10";
 
 const pct = (a: number, b: number) => (b ? `${(Math.floor((a / b) * 1000) / 10).toFixed(1)}%` : "0%");
 
-// Port sheet Dashboard (semua angka dulunya rumus workbook).
-export function M10Dashboard({ version }: { version: number }) {
-  const supabase = useMemo(() => createClient(), []);
-  const toast = useToast();
+// Port sheet Dashboard: dihitung di browser dari data lokal (dulu RPC SQL yang timeout).
+export function M10Dashboard() {
+  const m = useM10();
   const [month, setMonth] = useState<string | null>(null);
-  const [d, setD] = useState<Dash | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    cachedQuery(supabase, {
-      key: `m10:${month ?? "-"}:${todayJakarta()}`, deps: ["m10", "aging", "settings"],
-      load: async () => {
-        const { data, error } = await supabase.rpc("m10_dashboard", { p_month: month });
-        if (error) throw error;
-        return data as unknown as Dash;
-      },
-    }).then(({ data }) => { if (!cancelled) setD(data); })
-      .catch((e: Error) => { if (!cancelled) toast(`Gagal memuat: ${e.message}`, "danger"); });
-    return () => { cancelled = true; };
-  }, [month, version, supabase, toast]);
+  const d = useMemo(() => (m.computed ? m10Dashboard(m.computed, m.agingLines, m.schedule, { month, today: todayJakarta(), lastAging: m.lastAging }) : null),
+    [m.computed, m.agingLines, m.schedule, m.lastAging, month]);
 
   if (!d) return <div className="h-40 animate-pulse rounded-xl bg-surface-2" />;
   const s = d.summary;
@@ -121,7 +95,7 @@ export function M10Dashboard({ version }: { version: number }) {
         <StatTable first="Tanggal" jadwal rows={d.daily.map((x) => ({ ...x, key: x.date, label: fmtDate(x.date) }))} />
       </section>
 
-      <ImportLog module="mitra10" version={version} />
+      <ImportLog module={["mitra10", "data"]} version={0} />
     </div>
   );
 }

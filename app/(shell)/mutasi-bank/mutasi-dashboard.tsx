@@ -1,40 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
-import { createClient } from "@/lib/supabase/client";
-import { cachedQuery } from "@/lib/cache/cached-query";
+import { useDataset } from "@/lib/local/store";
+import { mutasiRaw } from "@/lib/modules/mutasi/compute";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel, rupiah } from "@/lib/format";
 import { buildMutasi, type MutasiRaw } from "@/lib/modules/mutasi/dashboard";
 import { Chart, CHART_GRID } from "@/components/chart";
-import { useToast } from "@/components/toast";
 import { card, inputCls, td, th } from "@/components/ui";
 
 const COLORS = ["#8ab4f8", "#81c995", "#fdd663", "#f28b82", "#c58af9", "#78d9ec", "#fcad70"];
 const juta = (n: number | null) => (n === null ? null : Math.round(n / 1e4) / 100);
 const num = (n: number) => Math.round(n).toLocaleString("id-ID");
 
-export function MutasiDashboard({ version }: { version: number }) {
-  const supabase = useMemo(() => createClient(), []);
-  const toast = useToast();
+export function MutasiDashboard() {
   const today = todayJakarta();
   const [month, setMonth] = useState(today.slice(0, 7));
-  const [raw, setRaw] = useState<MutasiRaw | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    cachedQuery(supabase, {
-      key: `mutasi:${month}`, deps: ["mutasi", "erp", "targets"],
-      load: async () => {
-        const { data, error } = await supabase.rpc("mutasi_dashboard", { p_month: month });
-        if (error) throw error;
-        return data as unknown as MutasiRaw;
-      },
-    }).then(({ data }) => { if (!cancelled) setRaw(data); })
-      .catch((e: Error) => { if (!cancelled) toast(`Gagal memuat: ${e.message}`, "danger"); });
-    return () => { cancelled = true; };
-  }, [month, version, supabase, toast]);
+  const mutasi = useDataset("mutasi");
+  const erp = useDataset("erp");
+  const targets = useDataset("targets");
+  // Dihitung di browser dari data lokal (port mutasi_dashboard); ikut berubah saat data diperbarui.
+  const raw: MutasiRaw | null = useMemo(() => (mutasi.data && erp.data && targets.data
+    ? mutasiRaw({ month, today, mutasi: mutasi.data, erp: erp.data, targets: targets.data.targets }) : null),
+  [month, today, mutasi.data, erp.data, targets.data]);
 
   const v = raw ? buildMutasi(raw, today) : null;
   const days = v?.daily.map((d) => String(Number(d.date.slice(8)))) ?? [];

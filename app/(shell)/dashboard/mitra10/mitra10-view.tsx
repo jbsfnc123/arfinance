@@ -1,47 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { cachedQuery } from "@/lib/cache/cached-query";
+import { useMemo } from "react";
+import { useDataset } from "@/lib/local/store";
+import { arInvoices, collectionRows, filterOf } from "@/lib/modules/collection/rows";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel, rupiah } from "@/lib/format";
 import { enrichRow, type CollectionRow } from "@/lib/modules/collection/view-model";
 import { mitra10Summary, type Mitra10Month } from "@/lib/modules/collection/mitra10";
-import { useToast } from "@/components/toast";
 import { btnGhost, card, td, th } from "@/components/ui";
 import { NoteLog } from "../../case/note-log";
 
 export function Mitra10View({ collection, prefix }: { collection: string; prefix: string }) {
-  const supabase = useMemo(() => createClient(), []);
-  const toast = useToast();
-  const [rows, setRows] = useState<CollectionRow[] | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data: raw } = await cachedQuery(supabase, {
-        key: `dash-m10:${collection}:${prefix}`, deps: ["aging", "activity", "settings"], force: reloadKey > 0,
-        load: async () => {
-          const out: Parameters<typeof enrichRow>[0][] = [];
-          for (let from = 0; ; from += 1000) {
-            const { data, error } = await supabase.from("v_collection_rows").select("*")
-              .eq("collection_name", collection).ilike("payment_group", `${prefix}%`)
-              .order("invoice_no").range(from, from + 999);
-            if (error) throw error;
-            out.push(...data);
-            if (data.length < 1000) break;
-          }
-          return out;
-        },
-      });
-      const today = todayJakarta();
-      if (!cancelled) setRows(raw.map((r) => enrichRow(r, today)));
-    })().catch((e: Error) => !cancelled && toast(`Gagal memuat data: ${e.message}`, "danger"));
-    return () => {
-      cancelled = true;
-    };
-  }, [collection, prefix, reloadKey, supabase, toast]);
+  const aging = useDataset("aging");
+  const activity = useDataset("activity");
+  const settings = useDataset("settings");
+  // Baris collection CMSS dihitung di browser dari dataset lokal.
+  const rows = useMemo<CollectionRow[] | null>(() => {
+    if (!aging.data || !activity.data) return null;
+    const p = prefix.toLowerCase();
+    const ar = arInvoices(aging.data.lines, filterOf(settings.data))
+      .filter((a) => a.collection_name === collection && (a.payment_group ?? "").toLowerCase().startsWith(p));
+    const today = todayJakarta();
+    return collectionRows(ar, activity.data).map((r) => enrichRow(r, today));
+  }, [aging.data, activity.data, settings.data, collection, prefix]);
+  const reload = () => { void aging.reload(); void activity.reload(); };
 
   const s = useMemo(() => (rows ? mitra10Summary(rows) : null), [rows]);
   const invoiceSet = useMemo(() => (rows ? new Set(rows.map((r) => r.invoice_no)) : null), [rows]);
@@ -55,7 +37,7 @@ export function Mitra10View({ collection, prefix }: { collection: string; prefix
             {s ? `${s.totalInv} invoice Catur Mitra Sejati Sentosa` : "Memuat…"} · sumber Collection {collection}
           </p>
         </div>
-        <button type="button" className={`${btnGhost} ml-auto`} onClick={() => setReloadKey((k) => k + 1)}>
+        <button type="button" className={`${btnGhost} ml-auto`} onClick={reload}>
           <span className="material-symbols-outlined">refresh</span>Refresh
         </button>
       </div>

@@ -121,15 +121,3 @@ export function parseSchedule(rows: unknown[][]) {
     }))
     .filter((r) => r.no_kw);
 }
-
-export type BpUserRow = { business_partner: string; payment_group: string; username: string };
-
-// Tabel "Add": Business Partner, Payment Group, Username.
-export function parseBpUsers(rows: unknown[][]) {
-  const h = headerMap(rows, ["business partner", "username"]);
-  if (!h) throw new Error("Header 'Business Partner' / 'Username' tidak ditemukan.");
-  const g = (r: unknown[], name: string) => (h.m.has(name) ? r[h.m.get(name)!] : "");
-  return rows.slice(h.row + 1)
-    .map((r): BpUserRow => ({ business_partner: str(g(r, "business partner")), payment_group: str(g(r, "payment group")), username: str(g(r, "username")) }))
-    .filter((r) => r.business_partner);
-}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { cachedQuery } from "@/lib/cache/cached-query";
+import { useDataset } from "@/lib/local/store";
+import { arInvoices, collectionRows, collectionSummary, filterOf } from "@/lib/modules/collection/rows";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, rupiah } from "@/lib/format";
 import {
@@ -11,91 +12,66 @@ import {
   type CollectionRow, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
 import type { WaTemplate } from "@/lib/modules/collection/wa-message";
-import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls } from "@/components/ui";
 import { KpiPanel, CategoryCards } from "./kpi-panel";
 import { FilterBar } from "./filter-bar";
 import { RowsTable } from "./rows-table";
 import { ActionBar } from "./action-bar";
 
-type CollectionInfo = { name: string; invoices: number; total: number };
-const PAGE = 1000;
-
 export type Patch = (invoiceNos: string[], fn: (r: CollectionRow) => CollectionRow) => void;
 
-// Semua baris satu collection, per halaman 1000 (batas PostgREST). Baris mentah disimpan di
-// cache browser berkunci versi data (aging, aktivitas catatan/tukar, setting); aging dihitung
-// ulang dari tanggal hari ini setiap kali.
-async function fetchRows(supabase: ReturnType<typeof createClient>, name: string, force: boolean) {
-  const { data: raw } = await cachedQuery(supabase, {
-    key: `collection:${name}`, deps: ["aging", "activity", "settings"], force,
-    load: async () => {
-      const out: Parameters<typeof enrichRow>[0][] = [];
-      for (let from = 0; ; from += PAGE) {
-        const { data, error } = await supabase
-          .from("v_collection_rows").select("*")
-          .eq("collection_name", name).order("invoice_no")
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        out.push(...data);
-        if (data.length < PAGE) return out;
-      }
-    },
-  });
-  const today = todayJakarta();
-  return raw.map((r) => enrichRow(r, today));
-}
-
+// Baris collection dihitung di browser dari dataset lokal (aging snapshot + aktivitas + setting);
+// perubahan dari aksi/realtime ditambal sebagai "override" sampai dataset versi baru tiba.
 export function CollectionView(props: {
-  collections: CollectionInfo[];
   initial: string;
   locked: boolean;
+  own: string | null;
   serverTemplate: Partial<WaTemplate> | null;
   lastUpdate: string | null;
 }) {
   const router = useRouter();
-  const toast = useToast();
   const supabase = useMemo(() => createClient(), []);
+  const aging = useDataset("aging");
+  const activity = useDataset("activity");
+  const settings = useDataset("settings");
   const [coll, setColl] = useState(props.initial);
-  const [rows, setRows] = useState<CollectionRow[]>([]);
-  const [loading, setLoading] = useState(!!props.initial);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [newData, setNewData] = useState(false);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS);
   const [selection, setSelection] = useState<string[]>([]);
-  const loadedAt = useRef<string | null>(null);
-  const forceNext = useRef(false); // tombol Muat ulang melewati cache
 
-  useEffect(() => {
-    if (!coll) return;
-    let cancelled = false;
-    const force = forceNext.current;
-    forceNext.current = false;
-    fetchRows(supabase, coll, force)
-      .then((out) => {
-        if (cancelled) return;
-        setRows(out);
-        loadedAt.current = new Date().toISOString();
-      })
-      .catch((e: Error) => !cancelled && toast(`Gagal memuat data: ${e.message}`, "danger"))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [coll, reloadKey, supabase, toast]);
+  const ar = useMemo(() => (aging.data ? arInvoices(aging.data.lines, filterOf(settings.data)) : []), [aging.data, settings.data]);
+  const collections = useMemo(() => {
+    const list = collectionSummary(ar).filter((c) => !props.locked || c.name === props.own);
+    if (props.locked && props.own && !list.length) list.push({ name: props.own, invoices: 0, total: 0 });
+    return list;
+  }, [ar, props.locked, props.own]);
+  const base = useMemo(() => {
+    if (!coll || !activity.data) return [];
+    const today = todayJakarta();
+    return collectionRows(ar.filter((a) => a.collection_name === coll), activity.data).map((r) => enrichRow(r, today));
+  }, [ar, activity.data, coll]);
+
+  const [overrides, setOverrides] = useState<{ base: CollectionRow[]; map: Map<string, CollectionRow> }>({ base, map: new Map() });
+  if (overrides.base !== base) setOverrides({ base, map: new Map() }); // data versi baru → override lama dibuang
+  const rows = useMemo(() => (overrides.map.size ? base.map((r) => overrides.map.get(r.invoice_no) ?? r) : base), [base, overrides]);
+  const loading = !aging.data || !activity.data || aging.loading;
 
   function reload() {
-    forceNext.current = true;
-    setLoading(true);
-    setNewData(false);
-    setReloadKey((k) => k + 1);
-    router.refresh();
+    void aging.reload();
+    void activity.reload();
+    void settings.reload();
   }
 
   const patch: Patch = useCallback((invoiceNos, fn) => {
-    const set = new Set(invoiceNos);
-    setRows((prev) => prev.map((r) => (set.has(r.invoice_no) ? fn(r) : r)));
+    setOverrides((prev) => {
+      const map = new Map(prev.map);
+      const byInv = new Map(prev.base.map((r) => [r.invoice_no, r]));
+      for (const inv of invoiceNos) {
+        const cur = map.get(inv) ?? byInv.get(inv);
+        if (cur) map.set(inv, fn(cur));
+      }
+      return { base: prev.base, map };
+    });
   }, []);
 
   // Realtime: catatan / janji bayar / tukar faktur dari pengguna lain langsung ditambal ke baris.
@@ -114,9 +90,6 @@ export function CollectionView(props: {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "invoice_exchanges", filter }, ({ new: x }) => {
         patch([x.invoice_no], (r) => applyExchange(r, x as Parameters<typeof applyExchange>[1]));
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "data_versions" }, ({ new: v }) => {
-        if (v.key === "ar_invoices" && loadedAt.current && v.updated_at > loadedAt.current) setNewData(true);
-      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -134,9 +107,6 @@ export function CollectionView(props: {
     // Ganti collection: kosongkan filter, pilihan, dan data (seperti showApp lama).
     setFilters(EMPTY_FILTERS);
     setSelection([]);
-    setRows([]);
-    setNewData(false);
-    setLoading(!!name);
     setColl(name);
     router.replace(name ? `/collection?c=${encodeURIComponent(name)}` : "/collection");
   }
@@ -145,9 +115,9 @@ export function CollectionView(props: {
     return (
       <div className="mx-auto max-w-5xl">
         <h1 className="text-2xl font-medium">Collection</h1>
-        <p className="mt-1 text-sm text-fg-2">Pilih collection. Data per: {fmtTimestamp(props.lastUpdate)}</p>
+        <p className="mt-1 text-sm text-fg-2">Pilih collection. Data per: {fmtTimestamp(aging.data?.uploadedAt ?? props.lastUpdate)}</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {props.collections.map((c) => (
+          {collections.map((c) => (
             <button key={c.name} type="button" onClick={() => pick(c.name)} className={`${card} p-4 text-left hover:border-accent`}>
               <div className="font-medium">{c.name}</div>
               <div className="mt-1 text-sm text-fg-2">
@@ -155,8 +125,8 @@ export function CollectionView(props: {
               </div>
             </button>
           ))}
-          {props.collections.length === 0 && (
-            <p className="text-sm text-fg-2">Belum ada data tagihan. Upload lewat Pengaturan → Update Tagihan.</p>
+          {collections.length === 0 && (
+            <p className="text-sm text-fg-2">{loading ? "Memuat data…" : "Belum ada data tagihan. Upload lewat Pengaturan → Pusat Upload Data."}</p>
           )}
         </div>
       </div>
@@ -170,16 +140,15 @@ export function CollectionView(props: {
           <h1 className="text-xl font-medium">{coll}</h1>
         ) : (
           <select value={coll} onChange={(e) => pick(e.target.value)} className={`${inputCls} !w-auto text-base font-medium`}>
-            {props.collections.map((c) => (
+            {collections.map((c) => (
               <option key={c.name} value={c.name}>{c.name}</option>
             ))}
           </select>
         )}
-        <span className="text-xs text-fg-2">Data per: {fmtTimestamp(props.lastUpdate)}</span>
+        <span className="text-xs text-fg-2">Data per: {fmtTimestamp(aging.data?.uploadedAt ?? props.lastUpdate)}</span>
         <button type="button" className={`${btnGhost} relative ml-auto`} onClick={reload} disabled={loading}>
           <span className="material-symbols-outlined">refresh</span>
           Refresh
-          {newData && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-danger" title="Ada data baru" />}
         </button>
       </div>
 

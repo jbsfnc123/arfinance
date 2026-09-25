@@ -1,79 +1,41 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
-import { createClient } from "@/lib/supabase/client";
-import { cachedQuery } from "@/lib/cache/cached-query";
+import { useDataset } from "@/lib/local/store";
+import { arInvoices, computeSpvSummary, filterOf } from "@/lib/modules/collection/rows";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtDate, fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { AGING_BUCKETS } from "@/lib/modules/collection/aging";
 import { forecastByDay, pctColor, round1, type GroupRow, type SpvSummary } from "@/lib/modules/collection/spv-summary";
 import { Chart, CHART_GRID } from "@/components/chart";
-import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls, td, th } from "@/components/ui";
 
 const AGING_COLOR = ["#23ad7a", "#eebb3c", "#f08a3f", "#e25b5b"];
 
 export function DashboardView({ months, initialMonth }: { months: string[]; initialMonth: string }) {
-  const supabase = useMemo(() => createClient(), []);
-  const toast = useToast();
   const [month, setMonth] = useState(initialMonth);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [data, setData] = useState<SpvSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const forceNext = useRef(false);
-
-  // Ringkasan di-cache per bulan & hari (aging relatif hari ini), berkunci versi data.
-  useEffect(() => {
-    let cancelled = false;
-    const force = forceNext.current;
-    forceNext.current = false;
-    cachedQuery(supabase, {
-      key: `spv:${month}:${todayJakarta()}`, deps: ["aging", "targets", "activity"], force,
-      load: async () => {
-        const { data: res, error } = await supabase.rpc("get_spv_summary", { p_month: month });
-        if (error) throw error;
-        return res as unknown as SpvSummary;
-      },
-    }).then(({ data: res }) => { if (!cancelled) setData(res); })
-      .catch((e: Error) => { if (!cancelled) toast(`Gagal memuat ringkasan: ${e.message}`, "danger"); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => {
-      cancelled = true;
-    };
-  }, [month, reloadKey, supabase, toast]);
-
-  // Catatan Case / Janji Bayar baru → segarkan ringkasan (ditunda 3 detik, seperti versi lama).
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    const bump = () => {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setReloadKey((k) => k + 1), 3000);
-    };
-    const channel = supabase
-      .channel("dashboard-collection")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notes", filter: "kategori=eq.Case" }, bump)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "payment_promises" }, bump)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "data_versions" }, bump)
-      .subscribe();
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-      supabase.removeChannel(channel);
-    };
-  }, [supabase]);
-
-  const reload = () => {
-    forceNext.current = true;
-    setLoading(true);
-    setReloadKey((k) => k + 1);
-  };
+  const aging = useDataset("aging");
+  const targets = useDataset("targets");
+  const activity = useDataset("activity");
+  const settings = useDataset("settings");
+  // Ringkasan dihitung di browser (port get_spv_summary) dan ikut berubah saat dataset diperbarui.
+  const data: SpvSummary | null = useMemo(() => {
+    if (!aging.data || !targets.data || !activity.data) return null;
+    return computeSpvSummary({
+      month, today: todayJakarta(), targets: targets.data.targets, promises: activity.data.promises, notes: activity.data.notes,
+      ar: arInvoices(aging.data.lines, filterOf(settings.data)),
+      lastTagihanUpdate: (settings.data?.last_tagihan_update as string | undefined) ?? aging.data.uploadedAt,
+    });
+  }, [month, aging.data, targets.data, activity.data, settings.data]);
+  const loading = !data || aging.loading || targets.loading;
+  const reload = () => { void aging.reload(); void targets.reload(); void activity.reload(); };
 
   return (
     <div className="mx-auto max-w-7xl">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-medium">Dashboard Collection</h1>
-        <select value={month} onChange={(e) => { setLoading(true); setMonth(e.target.value); }} className={`${inputCls} !w-auto`}>
+        <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} !w-auto`}>
           {(months.includes(month) ? months : [month, ...months]).map((m) => (
             <option key={m} value={m}>Target {monthLabel(m)}</option>
           ))}
