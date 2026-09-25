@@ -130,6 +130,218 @@ export type Database = {
         }
         Relationships: []
       }
+      courier_schedules: {
+        Row: {
+          business_partner: string | null
+          invoice_date: string | null
+          invoice_no: string
+          marketing: string | null
+          open_amt: number
+          payment_group: string | null
+          send_date: string
+          uploaded_at: string
+        }
+        Insert: {
+          business_partner?: string | null
+          invoice_date?: string | null
+          invoice_no: string
+          marketing?: string | null
+          open_amt?: number
+          payment_group?: string | null
+          send_date: string
+          uploaded_at?: string
+        }
+        Update: {
+          business_partner?: string | null
+          invoice_date?: string | null
+          invoice_no?: string
+          marketing?: string | null
+          open_amt?: number
+          payment_group?: string | null
+          send_date?: string
+          uploaded_at?: string
+        }
+        Relationships: []
+      }
+      courier_updates: {
+        Row: {
+          business_partner: string | null
+          created_at: string
+          created_by: string | null
+          foto_path: string | null
+          id: number
+          invoice_date: string | null
+          invoice_no: string
+          keterangan: string | null
+          kode: string | null
+          kurir: string
+          open_amt: number
+          status: string
+          tanggal_tukar: string
+        }
+        Insert: {
+          business_partner?: string | null
+          created_at?: string
+          created_by?: string | null
+          foto_path?: string | null
+          id?: never
+          invoice_date?: string | null
+          invoice_no: string
+          keterangan?: string | null
+          kode?: string | null
+          kurir: string
+          open_amt?: number
+          status: string
+          tanggal_tukar: string
+        }
+        Update: {
+          business_partner?: string | null
+          created_at?: string
+          created_by?: string | null
+          foto_path?: string | null
+          id?: never
+          invoice_date?: string | null
+          invoice_no?: string
+          keterangan?: string | null
+          kode?: string | null
+          kurir?: string
+          open_amt?: number
+          status?: string
+          tanggal_tukar?: string
+        }
+        Relationships: []
+      }
+      ltkp_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          file_name: string | null
+          id: number
+          no_ltkp: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          file_name?: string | null
+          id?: never
+          no_ltkp: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          file_name?: string | null
+          id?: never
+          no_ltkp?: string
+          storage_path?: string
+        }
+        Relationships: []
+      }
+      tax_invoice_holds: {
+        Row: {
+          bp_value: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          id: number
+          invoice_date: string | null
+          invoice_no: string
+          keterangan: string
+          no_sj: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bp_value: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: never
+          invoice_date?: string | null
+          invoice_no: string
+          keterangan: string
+          no_sj?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bp_value?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: never
+          invoice_date?: string | null
+          invoice_no?: string
+          keterangan?: string
+          no_sj?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tax_invoice_requests: {
+        Row: {
+          bp_value: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          id: number
+          invoice_date: string | null
+          invoice_no: string
+          keterangan: string
+          ltkp_id: number | null
+          no_sj: string | null
+          processed_at: string | null
+          processed_by_name: string | null
+          reason: string
+          request: string
+          tax_no: string
+        }
+        Insert: {
+          bp_value: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: never
+          invoice_date?: string | null
+          invoice_no: string
+          keterangan: string
+          ltkp_id?: number | null
+          no_sj?: string | null
+          processed_at?: string | null
+          processed_by_name?: string | null
+          reason: string
+          request: string
+          tax_no: string
+        }
+        Update: {
+          bp_value?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: never
+          invoice_date?: string | null
+          invoice_no?: string
+          keterangan?: string
+          ltkp_id?: number | null
+          no_sj?: string | null
+          processed_at?: string | null
+          processed_by_name?: string | null
+          reason?: string
+          request?: string
+          tax_no?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_invoice_requests_ltkp_id_fkey"
+            columns: ["ltkp_id"]
+            isOneToOne: false
+            referencedRelation: "ltkp_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_versions: {
         Row: { key: string; updated_at: string }
         Insert: { key: string; updated_at?: string }
@@ -366,6 +578,10 @@ export type Database = {
       }
     }
     Views: {
+      v_courier_pending: {
+        Row: Database["public"]["Tables"]["courier_schedules"]["Row"]
+        Relationships: []
+      }
       v_target_months: {
         Row: { month: string | null; invoices: number | null; total: number | null }
         Relationships: []
@@ -437,6 +653,34 @@ export type Database = {
         Returns: number
       }
       pin_login: { Args: { p_ip: string; p_pin: string }; Returns: Json }
+      courier_dates: { Args: never; Returns: { invoices: number; send_date: string }[] }
+      courier_names: { Args: never; Returns: { name: string }[] }
+      courier_submit: {
+        Args: {
+          p_foto_path: string
+          p_invoices: Json
+          p_ket_done: string
+          p_ket_pending: string
+          p_kurir: string
+          p_tanggal: string
+        }
+        Returns: Json
+      }
+      jadwal_dates: { Args: never; Returns: { send_date: string }[] }
+      jadwal_kolektor: {
+        Args: { p_date: string }
+        Returns: { business_partner: string; invoice_date: string; invoice_no: string; kolektor: string; tukar: boolean }[]
+      }
+      lookup_invoice: {
+        Args: { p_invoice_no: string }
+        Returns: { bp_value: string; invoice_date: string; invoice_no: string; no_sj: string }[]
+      }
+      recent_tukar: {
+        Args: never
+        Returns: { invoices: number; kolektor: string; lokasi: number; tanggal: string }[]
+      }
+      schedule_replace: { Args: { p_file_name: string; p_rows: Json }; Returns: number }
+      tukar_dashboard: { Args: { p_kurir: string; p_month: string }; Returns: Json }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

@@ -30,7 +30,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
   { id: "dashboard", label: "Dashboard", icon: "space_dashboard", children: [
     { id: "dash.coll",    label: "Collection",   href: "/dashboard/collection",   needs: "ctrl" },
     { id: "dash.mitra10", label: "Mitra 10",     href: "/dashboard/mitra10",      needs: "ctrl" },
-    { id: "dash.tukar",   label: "Tukar Faktur", href: "/dashboard/tukar-faktur", phase: 2 },
+    { id: "dash.tukar",   label: "Tukar Faktur", href: "/dashboard/tukar-faktur" },
   ]},
   { id: "collection", label: "Collection", icon: "groups", children: [
     { id: "coll.tagihan", label: "Daftar Tagihan", href: "/collection" },
@@ -40,15 +40,15 @@ export const MENU_REGISTRY: MenuGroup[] = [
     { id: "case.coll",  label: "Collection",    href: "/case/collection",    needs: "ctrl" },
   ]},
   { id: "tukar", label: "Tukar Faktur", icon: "swap_horiz", children: [
-    { id: "tukar.jadwal", label: "Jadwal Kolektor",   href: "/tukar-faktur/jadwal", phase: 2 },
-    { id: "tukar.detail", label: "Aplikasi Kolektor", href: "/tukar-faktur/kurir",  phase: 2 },
-    { id: "tukar.upload", label: "Upload Data",       href: "/tukar-faktur/upload", phase: 2 },
+    { id: "tukar.jadwal", label: "Jadwal Kolektor",   href: "/tukar-faktur/jadwal" },
+    { id: "tukar.detail", label: "Aplikasi Kolektor", href: "/tukar-faktur/kurir" },
+    { id: "tukar.upload", label: "Upload Jadwal",     href: "/tukar-faktur/upload", needs: "ctrl" },
   ]},
   { id: "invoicing", label: "Faktur Pajak", icon: "request_quote", children: [
-    { id: "inv.pengajuan", label: "Pengajuan Pembatalan & Revisi", href: "/faktur/pengajuan", phase: 2 },
-    { id: "inv.batal",     label: "Daftar Pengajuan",              href: "/faktur/list",      phase: 2 },
-    { id: "inv.hold",      label: "Hold Faktur Pajak",             href: "/faktur/hold",      phase: 2 },
-    { id: "ext.ltkp",      label: "LTKP",                          href: "/faktur/ltkp",      phase: 2 },
+    { id: "inv.pengajuan", label: "Pengajuan Pembatalan & Revisi", href: "/faktur/pengajuan" },
+    { id: "inv.batal",     label: "Daftar Pengajuan",              href: "/faktur/list" },
+    { id: "inv.hold",      label: "Hold Faktur Pajak",             href: "/faktur/hold" },
+    { id: "ext.ltkp",      label: "LTKP",                          href: "/faktur/ltkp" },
   ]},
   { id: "billing", label: "Billing", icon: "receipt_long", children: [
     { id: "bill.detail", label: "Tagihan Bulanan Detail", href: "/billing", phase: 4 },
