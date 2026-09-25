@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { createClient } from "@/lib/supabase/client";
+import { cachedQuery } from "@/lib/cache/cached-query";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel } from "@/lib/format";
 import { tukarKpi, type TukarDay } from "@/lib/modules/tukar/dashboard";
@@ -27,11 +28,15 @@ export function TukarDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    supabase.rpc("tukar_dashboard", { p_month: month, p_kurir: kurir }).then(({ data: res, error }) => {
-      if (cancelled) return;
-      if (error) return toast(`Gagal memuat: ${error.message}`, "danger");
-      setData(res as unknown as Raw);
-    });
+    cachedQuery(supabase, {
+      key: `tukar:${month}:${kurir}`, deps: ["tukar"],
+      load: async () => {
+        const { data: res, error } = await supabase.rpc("tukar_dashboard", { p_month: month, p_kurir: kurir });
+        if (error) throw error;
+        return res as unknown as Raw;
+      },
+    }).then(({ data: res }) => { if (!cancelled) setData(res); })
+      .catch((e: Error) => { if (!cancelled) toast(`Gagal memuat: ${e.message}`, "danger"); });
     return () => {
       cancelled = true;
     };

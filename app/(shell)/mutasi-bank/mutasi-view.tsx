@@ -24,7 +24,7 @@ export function MutasiView() {
       <div className="mt-4">
         {tab === "dash" && <MutasiDashboard version={version} />}
         {tab === "upload" && <MutasiUpload version={version} onDone={() => setVersion((v) => v + 1)} />}
-        {tab === "data" && <MutasiData version={version} />}
+        {tab === "data" && <MutasiData version={version} onChanged={() => setVersion((v) => v + 1)} />}
       </div>
     </div>
   );

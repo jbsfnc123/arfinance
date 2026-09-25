@@ -90,7 +90,7 @@ export function Mitra10View() {
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard version={version} />}
         {tab === "kk" && (
-          <PagedTable source="v_m10_worksheet" title="Kertas Kerja" cols={KK_COLS} version={version} order="invoice_date"
+          <PagedTable source="v_m10_worksheet" deps={["m10", "aging", "settings"]} title="Kertas Kerja" cols={KK_COLS} version={version} order="invoice_date"
             search={["invoice_no", "business_partner", "no_sj", "no_po", "username", "keterangan"]}
             filters={[
               { k: "status", l: "Status", options: ["Outstanding", "Lunas"] },
@@ -107,16 +107,16 @@ export function Mitra10View() {
             )} />
         )}
         {tab === "gr" && (
-          <PagedTable source="v_m10_gr" title="GR Update" cols={GR_COLS} version={version}
+          <PagedTable source="v_m10_gr" deps={["m10", "aging", "settings"]} title="GR Update" cols={GR_COLS} version={version}
             search={["gr_no", "po_no", "sj_no", "item_name", "delivery_to", "vendor_ship_no"]}
             filters={[{ k: "check_status", l: "Check", options: ["Done", "Check"] }]} />
         )}
         {tab === "kw" && (
-          <PagedTable source="v_m10_kwitansi" title="KW Update" cols={KW_COLS} version={version}
+          <PagedTable source="v_m10_kwitansi" deps={["m10", "aging", "settings"]} title="KW Update" cols={KW_COLS} version={version}
             search={["invoice_no", "vendor_invoice_no", "kuitansi_no", "po_no", "username"]} />
         )}
         {tab === "jadwal" && (
-          <PagedTable source="m10_payment_schedule" title="Jadwal Bayar" cols={JADWAL_COLS} version={version} order="jadwal_transfer"
+          <PagedTable source="m10_payment_schedule" deps={["m10"]} title="Jadwal Bayar" cols={JADWAL_COLS} version={version} order="jadwal_transfer"
             search={["no_kw", "spp", "notes"]} selectable rowKey="no_kw"
             actions={(sel, clear) => (
               <button type="button" className={btnGhost} onClick={() => deleteSchedule(sel.map((r) => r.no_kw as string), clear)}>
@@ -125,7 +125,7 @@ export function Mitra10View() {
             )} />
         )}
         {tab === "aging" && (
-          <PagedTable source="m10_aging" title="Data Aging" cols={AGING_COLS} version={version}
+          <PagedTable source="m10_aging" deps={["aging", "settings"]} title="Data Aging" cols={AGING_COLS} version={version}
             search={["invoice_no", "business_partner", "no_sj", "no_po"]} />
         )}
         {tab === "upload" && <M10Upload version={version} onDone={bump} />}

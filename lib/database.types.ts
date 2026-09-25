@@ -980,6 +980,10 @@ export type Database = {
         Row: Database["public"]["Tables"]["m10_kwitansi"]["Row"] & { jadwal_bayar: string | null; aging: number; selisih: number }
         Relationships: []
       }
+      v_bank_mutations: {
+        Row: Database["public"]["Tables"]["bank_mutations"]["Row"] & { excluded: boolean; excluded_note: string | null }
+        Relationships: []
+      }
       v_m10_worksheet: {
         Row: {
           id: number
@@ -1058,6 +1062,7 @@ export type Database = {
       }
     }
     Functions: {
+      mutasi_set_excluded: { Args: { p_ids: number[]; p_excluded: boolean; p_note: string }; Returns: number }
       upload_begin: { Args: { p_kind: string; p_file_name: string; p_sha256: string; p_meta: Json }; Returns: Json }
       upload_rows: { Args: { p_batch: string; p_offset: number; p_rows: Json }; Returns: number }
       aging_commit: { Args: { p_batch: string }; Returns: Json }

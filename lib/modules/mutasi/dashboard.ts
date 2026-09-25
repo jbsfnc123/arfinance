@@ -1,6 +1,7 @@
 // Angka Dashboard Mutasi (port mdlDashboard.bas) dari hasil RPC mutasi_dashboard.
 
-export type MutasiDay = { date: string; mut: Record<string, number>; alloc: number; allocT: number; inv: number };
+// exc/excN = nominal & jumlah transaksi yang ditandai manual "tidak dihitung" (tidak termasuk di mut).
+export type MutasiDay = { date: string; mut: Record<string, number>; alloc: number; allocT: number; inv: number; exc?: number; excN?: number };
 export type MutasiRaw = { accounts: string[]; target: number; targetCount: number; days: MutasiDay[]; months: string[] };
 
 export type DailyRow = {
@@ -19,7 +20,7 @@ export type DailyRow = {
 
 export function buildMutasi(raw: MutasiRaw, today: string) {
   const perAccount: Record<string, number> = Object.fromEntries(raw.accounts.map((a) => [a, 0]));
-  let total = 0, alloc = 0, allocT = 0, inv = 0;
+  let total = 0, alloc = 0, allocT = 0, inv = 0, excluded = 0, excludedCount = 0;
   const cum: Record<string, number> = { ...perAccount };
   let cTotal = 0, cAlloc = 0, cAllocT = 0;
 
@@ -33,6 +34,7 @@ export function buildMutasi(raw: MutasiRaw, today: string) {
       perAccount[a] += v;
       cum[a] += v;
     }
+    excluded += Number(d.exc ?? 0); excludedCount += Number(d.excN ?? 0);
     total += dayTotal; alloc += Number(d.alloc); allocT += Number(d.allocT); inv += Number(d.inv);
     cTotal += dayTotal; cAlloc += Number(d.alloc); cAllocT += Number(d.allocT);
     const future = d.date > today;
@@ -47,7 +49,7 @@ export function buildMutasi(raw: MutasiRaw, today: string) {
 
   const target = Number(raw.target);
   return {
-    perAccount, total, alloc, allocT, inv, target,
+    perAccount, total, alloc, allocT, inv, target, excluded, excludedCount,
     targetCount: Number(raw.targetCount),
     realisasi: target ? allocT / target : 0, // Realization / Target = Allocated in Target ÷ Target
     daily,

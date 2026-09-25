@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { createClient } from "@/lib/supabase/client";
+import { cachedQuery } from "@/lib/cache/cached-query";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel, rupiah } from "@/lib/format";
 import { buildMutasi, type MutasiRaw } from "@/lib/modules/mutasi/dashboard";
@@ -23,11 +24,15 @@ export function MutasiDashboard({ version }: { version: number }) {
 
   useEffect(() => {
     let cancelled = false;
-    supabase.rpc("mutasi_dashboard", { p_month: month }).then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) return toast(`Gagal memuat: ${error.message}`, "danger");
-      setRaw(data as unknown as MutasiRaw);
-    });
+    cachedQuery(supabase, {
+      key: `mutasi:${month}`, deps: ["mutasi", "erp", "targets"],
+      load: async () => {
+        const { data, error } = await supabase.rpc("mutasi_dashboard", { p_month: month });
+        if (error) throw error;
+        return data as unknown as MutasiRaw;
+      },
+    }).then(({ data }) => { if (!cancelled) setRaw(data); })
+      .catch((e: Error) => { if (!cancelled) toast(`Gagal memuat: ${e.message}`, "danger"); });
     return () => { cancelled = true; };
   }, [month, version, supabase, toast]);
 
@@ -61,6 +66,7 @@ export function MutasiDashboard({ version }: { version: number }) {
             <Kpi label="Target (Open Amt)" value={rupiah(v.target)} sub={`${v.targetCount.toLocaleString("id-ID")} invoice`} />
             <Kpi label="Realisasi / Target" value={`${(v.realisasi * 100).toFixed(1)}%`} />
             <Kpi label="Total Invoice Create" value={rupiah(v.inv)} />
+            <Kpi label="Dikecualikan manual" value={rupiah(v.excluded)} sub={`${v.excludedCount.toLocaleString("id-ID")} transaksi tidak dihitung sebagai uang masuk`} />
             {raw.accounts.map((a) => <Kpi key={a} label={`Uang masuk ${a}`} value={rupiah(v.perAccount[a])} />)}
           </div>
 

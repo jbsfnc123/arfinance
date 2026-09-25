@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Json } from "@/lib/database.types";
+import { cachedQuery } from "@/lib/cache/cached-query";
 import { assembleState, persistable, recomputeDirty, type LegacyParser } from "@/lib/uploads/deck";
 import { detectKind } from "@/lib/uploads/parse";
 import { runUpload } from "@/lib/uploads/run";
@@ -29,10 +30,19 @@ export function DeckFrame() {
     const supabase = createClient();
     window.ARDeckBridge = {
       async load(win) {
-        await recomputeDirty(supabase, win);
-        const { data, error } = await supabase.from("deck_state").select("state").eq("id", 1).maybeSingle();
-        if (error) throw error;
-        return assembleState(supabase, (data?.state ?? null) as Record<string, unknown> | null, () => win.newState_());
+        // Bulan yang ditandai dirty oleh upload dihitung ulang dulu (ini menaikkan token "deck").
+        const { count } = await supabase.from("deck_dirty").select("kind", { count: "exact", head: true });
+        if (count) await recomputeDirty(supabase, win);
+        // State rakitan di-cache di browser; dimuat ulang hanya bila token deck/aging/erp berubah.
+        const { data } = await cachedQuery(supabase, {
+          key: "deck-state", deps: ["deck", "aging", "erp"],
+          load: async () => {
+            const { data: row, error } = await supabase.from("deck_state").select("state").eq("id", 1).maybeSingle();
+            if (error) throw error;
+            return assembleState(supabase, (row?.state ?? null) as Record<string, unknown> | null, () => win.newState_());
+          },
+        });
+        return data;
       },
       async save(state) {
         const { error } = await supabase.from("deck_state")

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { cachedQuery } from "@/lib/cache/cached-query";
+import type { DatasetKey } from "@/lib/cache/versions";
 import { fmtDate } from "@/lib/format";
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { btnGhost, card, inputCls, td, th } from "@/components/ui";
@@ -15,6 +17,7 @@ const PAGE = 200;
 // Tabel view/tabel Supabase dengan filter, cari, paging server & export (pengganti tabel Excel + slicer).
 export function PagedTable(props: {
   source: string;
+  deps: DatasetKey[];   // dataset penentu token cache
   cols: PCol[];
   search: string[];
   filters?: PFilter[];
@@ -53,10 +56,20 @@ export function PagedTable(props: {
   }
 
   useEffect(() => {
-    build("*").range(page * PAGE, page * PAGE + PAGE - 1).then(({ data, count }: { data: Row[] | null; count: number | null }) => {
-      setRows(data ?? []);
-      setTotal(count ?? 0);
-    });
+    let cancelled = false;
+    cachedQuery(supabase, {
+      key: `pt:${props.source}:${JSON.stringify(f)}:${query}:${page}`, deps: props.deps,
+      load: async () => {
+        const { data, count, error } = await build("*").range(page * PAGE, page * PAGE + PAGE - 1);
+        if (error) throw error;
+        return { rows: (data ?? []) as Row[], total: (count ?? 0) as number };
+      },
+    }).then(({ data }) => {
+      if (cancelled) return;
+      setRows(data.rows);
+      setTotal(data.total);
+    }).catch(() => { /* tabel kosong */ });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, f, page, props.version, props.source]);
 
