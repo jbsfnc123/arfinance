@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { MenuGroup } from "@/lib/menu";
 import { idbClear } from "@/lib/cache/idb";
 import { ToastProvider } from "@/components/toast";
@@ -14,6 +15,20 @@ export function ShellChrome({ menu, user, children }: {
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const router = useRouter();
+
+  // Prefetch semua menu yang boleh diakses saat browser sedang senggang, supaya klik menu
+  // tidak menunggu server (sidebar auto-hide tidak merender link sebelum dibuka).
+  useEffect(() => {
+    const hrefs = menu.flatMap((g) => g.children.filter((c) => !c.external).map((c) => c.href));
+    const run = () => hrefs.forEach((h) => router.prefetch(h));
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(run, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = setTimeout(run, 1200);
+    return () => clearTimeout(t);
+  }, [menu, router]);
 
   async function signOut(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

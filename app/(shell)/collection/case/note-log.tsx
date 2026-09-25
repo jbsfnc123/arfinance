@@ -6,7 +6,8 @@ import { fmtDate, fmtTimestamp, rupiah } from "@/lib/format";
 import { todayJakarta } from "@/lib/parsers/date";
 import { buildNoteGroups, filterGroups, type NoteGroup, type StatusFilter } from "@/lib/modules/collection/note-groups";
 import { useDataset, optimistic } from "@/lib/local/store";
-import { arInvoices, filterOf, noteLatest } from "@/lib/modules/collection/rows";
+import { noteLatest } from "@/lib/modules/collection/rows";
+import { arOf } from "@/lib/local/derived";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
@@ -32,7 +33,7 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
   // Catatan terbaru per invoice (port v_note_latest) dihitung di browser dari dataset lokal.
   const notes = useMemo(() => {
     if (!activity.data || !aging.data) return [];
-    const ar = arInvoices(aging.data.lines, filterOf(settings.data));
+    const ar = arOf(aging.data.lines, settings.data ?? null);
     return noteLatest(activity.data.notes, ar).filter((n) => n.kategori === kategori);
   }, [activity.data, aging.data, settings.data, kategori]);
   const loading = !activity.data || !aging.data;

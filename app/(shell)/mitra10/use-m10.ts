@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { useDataset } from "@/lib/local/store";
-import { computeM10, m10AgingLines, TAX_DEFAULT } from "@/lib/modules/m10/compute";
+import { TAX_DEFAULT } from "@/lib/modules/m10/compute";
+import { m10LinesOf, m10Of } from "@/lib/local/derived";
 import { useRemarks } from "@/lib/modules/remarks";
 
 // Data Mitra10 lengkap di browser: paket m10 + aging snapshot terkini + Tax Name,
@@ -14,8 +15,9 @@ export function useM10() {
   const remarks = useRemarks();
   const taxName = typeof settings.data?.m10_tax_name === "string" ? settings.data.m10_tax_name : TAX_DEFAULT;
 
-  const agingLines = useMemo(() => (aging.data ? m10AgingLines(aging.data.lines, taxName) : []), [aging.data, taxName]);
-  const computed = useMemo(() => (m10.data ? computeM10({ ...m10.data, aging: agingLines, remarks: remarks.map }) : null), [m10.data, agingLines, remarks.map]);
+  // Dibagi antar tab/halaman (memo global per versi data).
+  const agingLines = useMemo(() => (aging.data ? m10LinesOf(aging.data.lines, taxName) : []), [aging.data, taxName]);
+  const computed = useMemo(() => (m10.data ? m10Of(m10.data, agingLines, remarks.map) : null), [m10.data, agingLines, remarks.map]);
 
   return {
     computed,
