@@ -6,7 +6,10 @@ import { PIN_LENGTH } from "@/lib/auth/constants";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
-export function PinForm({ initialError }: { initialError: string | null }) {
+// Langkah 2 login: keypad PIN untuk nama yang sudah dipilih di langkah 1 (NameStep).
+export function PinForm({ initialError, name, next, onChangeName }: {
+  initialError: string | null; name: string; next: string; onChangeName: () => void;
+}) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginWithPin, null);
   const [pin, setPin] = useState("");
   const [handledAt, setHandledAt] = useState<number | null>(null);
@@ -43,6 +46,13 @@ export function PinForm({ initialError }: { initialError: string | null }) {
   return (
     <form ref={formRef} action={action} className="mt-6">
       <input type="hidden" name="pin" value={pin} />
+      <input type="hidden" name="name" value={name} />
+      <input type="hidden" name="next" value={next} />
+
+      <p className="mb-4 text-sm">
+        Masuk sebagai <b>{name}</b> ·{" "}
+        <button type="button" onClick={onChangeName} className="text-accent underline" disabled={pending}>Ganti</button>
+      </p>
 
       <div className="flex justify-center gap-2" aria-label="PIN" aria-live="polite">
         {Array.from({ length: PIN_LENGTH }, (_, i) => (

@@ -1,15 +1,17 @@
 import { getSession } from "@/lib/session";
-import { canEnterWorkspace } from "@/lib/menu";
+import { redirect } from "next/navigation";
+import { canEnterWorkspace, homeWorkspace } from "@/lib/menu";
 import { currentHost } from "@/lib/workspace-server";
-import { WORKSPACES } from "@/lib/workspace";
-import { WorkspaceDenied } from "@/components/workspace-denied";
+import { WORKSPACES, workspaceUrl } from "@/lib/workspace";
 import { ToastProvider } from "@/components/toast";
 import { FinanceNav } from "./finance-nav";
 
-// Finance Workspace (tangki.space): portal & pengaturan pusat, khusus Super Admin.
+// Finance Workspace (tangki.space): portal pemilih workspace untuk Super Admin & akun divisi AR + AP.
+// Pengaturan pusat (Akun, Role, Database) hanya untuk Super Admin. Akun satu divisi diarahkan ke workspace-nya.
 export default async function FinanceLayout({ children }: LayoutProps<"/finance">) {
   const [{ profile, role, access }, host] = await Promise.all([getSession(), currentHost()]);
-  if (!canEnterWorkspace("finance", access)) return <WorkspaceDenied ws="finance" access={access} host={host} />;
+  if (!canEnterWorkspace("finance", access)) redirect(workspaceUrl(homeWorkspace(access), host));
+  const isSa = role.kind === "sa";
 
   return (
     <ToastProvider>
@@ -30,7 +32,7 @@ export default async function FinanceLayout({ children }: LayoutProps<"/finance"
             </form>
           </div>
         </header>
-        <FinanceNav />
+        {isSa && <FinanceNav />}
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </ToastProvider>

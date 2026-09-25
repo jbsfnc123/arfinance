@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authCookieOptions, routeFor, workspaceFromHost, workspaceUrl } from "./workspace";
+import { authCookieOptions, loginUrl, parseNext, routeFor, workspaceFromHost, workspaceUrl } from "./workspace";
 
 describe("workspace per host", () => {
   it("mengenali host produksi, dev, dan preview", () => {
@@ -49,5 +49,28 @@ describe("cookie sesi", () => {
     expect(authCookieOptions("tangki.space")).toEqual({ name: "sb-tangki-auth", domain: ".tangki.space" });
     expect(authCookieOptions("localhost:3000")).toEqual({ name: "sb-tangki-auth" });
     expect(authCookieOptions("evil-tangki.space")).toEqual({ name: "sb-tangki-auth" });
+  });
+});
+
+describe("satu pintu login (produksi)", () => {
+  it("login di ar./ap. dipindah ke tangki.space; dev tetap per host", () => {
+    expect(routeFor("ar", "/login", true)).toEqual({ kind: "moved", ws: "finance", path: "/login" });
+    expect(routeFor("ap", "/login", true)).toEqual({ kind: "moved", ws: "finance", path: "/login" });
+    expect(routeFor("finance", "/login", true)).toEqual({ kind: "next" });
+    expect(routeFor("ar", "/login", false)).toEqual({ kind: "next" });
+  });
+  it("URL login membawa alamat asal", () => {
+    expect(loginUrl("ar.tangki.space", "https://ar.tangki.space/collection")).toBe(
+      "https://tangki.space/login?next=https%3A%2F%2Far.tangki.space%2Fcollection");
+    expect(loginUrl("localhost:3000", "http://localhost:3000/x")).toBe("/login?next=http%3A%2F%2Flocalhost%3A3000%2Fx");
+  });
+  it("next hanya ke keluarga host sendiri", () => {
+    expect(parseNext("https://ap.tangki.space/a?b=1", "tangki.space")).toEqual({ ws: "ap", url: "https://ap.tangki.space/a?b=1" });
+    expect(parseNext("https://evil.com/", "tangki.space")).toBeNull();
+    expect(parseNext("https://tangki.space.evil.com/", "tangki.space")).toBeNull();
+    expect(parseNext("http://ar.tangki.space/", "tangki.space")).toBeNull();
+    expect(parseNext("https://tangki.space/login", "tangki.space")).toBeNull();
+    expect(parseNext("/collection", "tangki.space")).toBeNull();
+    expect(parseNext("http://ap.localhost:3000/", "finance.localhost:3000")).toEqual({ ws: "ap", url: "http://ap.localhost:3000/" });
   });
 });

@@ -47,7 +47,14 @@ export type Route = { kind: "next" } | { kind: "rewrite"; path: string } | { kin
 // Halaman admin pusat yang pindah dari AR ke Finance Workspace (fase 16).
 const MOVED_TO_FINANCE: Record<string, string> = { "/pengaturan/akun": "/akun", "/pengaturan/acl": "/acl", "/pengaturan/database": "/database" };
 
-export function routeFor(ws: Workspace, pathname: string): Route {
+// Host produksi *.tangki.space: cookie sesi dibagi, jadi login hanya lewat satu pintu (tangki.space).
+export function isSharedHost(host: string | null | undefined) {
+  const h = hostname(host ?? "");
+  return h === ROOT_DOMAIN || h.endsWith(`.${ROOT_DOMAIN}`);
+}
+
+export function routeFor(ws: Workspace, pathname: string, shared = false): Route {
+  if (shared && ws !== "finance" && /^\/login(\/|$)/.test(pathname)) return { kind: "moved", ws: "finance", path: "/login" };
   if (SHARED.test(pathname) || hasExtension(pathname)) return { kind: "next" };
   if (ws === "ar") {
     if (MOVED_TO_FINANCE[pathname]) return { kind: "moved", ws: "finance", path: MOVED_TO_FINANCE[pathname] };
@@ -60,7 +67,26 @@ export function routeFor(ws: Workspace, pathname: string): Route {
 // cookie lama ar.tangki.space (host-only) diabaikan dan tidak ada dua sesi yang bentrok.
 export const AUTH_COOKIE = "sb-tangki-auth";
 export function authCookieOptions(host: string | null | undefined) {
-  const h = hostname(host ?? "");
-  const shared = h === ROOT_DOMAIN || h.endsWith(`.${ROOT_DOMAIN}`);
-  return shared ? { name: AUTH_COOKIE, domain: `.${ROOT_DOMAIN}` } : { name: AUTH_COOKIE };
+  return isSharedHost(host) ? { name: AUTH_COOKIE, domain: `.${ROOT_DOMAIN}` } : { name: AUTH_COOKIE };
+}
+
+// Alamat login untuk request yang belum login: produksi → tangki.space/login?next=<asal>, dev → host sendiri.
+export function loginUrl(host: string | null | undefined, from: string) {
+  const base = isSharedHost(host) ? workspaceUrl("finance", host, "/login") : "/login";
+  return `${base}?next=${encodeURIComponent(from)}`;
+}
+
+// `next` hanya diterima bila mengarah ke keluarga host yang sama (tangki.space / *.localhost) —
+// mencegah open redirect. Mengembalikan workspace tujuan + URL, atau null.
+export function parseNext(next: string | null | undefined, currentHost: string | null | undefined): { ws: Workspace; url: string } | null {
+  if (!next) return null;
+  let u: URL;
+  try { u = new URL(next); } catch { return null; }
+  const h = u.hostname.toLowerCase();
+  const cur = hostname(currentHost ?? "");
+  const prod = (h === ROOT_DOMAIN || h.endsWith(`.${ROOT_DOMAIN}`)) && u.protocol === "https:" && isSharedHost(cur);
+  const dev = (h === "localhost" || h.endsWith(".localhost")) && (cur === "localhost" || cur.endsWith(".localhost"));
+  if (!prod && !dev) return null;
+  if (/\/login(\/|$)/.test(u.pathname)) return null;
+  return { ws: workspaceFromHost(u.host), url: u.toString() };
 }
