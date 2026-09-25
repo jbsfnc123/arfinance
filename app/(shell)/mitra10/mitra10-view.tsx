@@ -2,12 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { optimistic } from "@/lib/local/store";
+import { LocalTable, type LCol } from "@/lib/local/table";
+import type { Gr, Kwitansi, Schedule } from "@/lib/local/datasets";
+import type { GrRow, KwRow, WorksheetRow } from "@/lib/modules/m10/compute";
+import type { AgingLine } from "@/lib/local/datasets";
 import { Tabs } from "@/components/tabs";
+import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
-import { btnGhost, inputCls } from "@/components/ui";
-import { PagedTable, type PCol } from "./paged-table";
+import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { M10Dashboard } from "./m10-dashboard";
 import { M10Upload } from "./m10-upload";
+import { useM10 } from "./use-m10";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -24,112 +30,172 @@ const OK = "bg-success/20 text-success";
 const WAIT = "bg-warning/20 text-warning";
 const BAD = "bg-danger/20 text-danger";
 
-const KK_COLS: PCol[] = [
+const KK_COLS: LCol<WorksheetRow>[] = [
   { k: "username", l: "Username" }, { k: "business_partner", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
   { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
   { k: "branch", l: "Branch" }, { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
   { k: "gr", l: "GR", badge: { Done: OK, Pending: WAIT } },
   { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
-  { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan" },
+  { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 160 },
   { k: "status", l: "Status", badge: { Outstanding: WAIT, Lunas: OK } },
   { k: "jadwal_bayar", l: "Jadwal Bayar", d: true }, { k: "lama_tf", l: "Lama TF (hari)", n: true },
 ];
-const GR_COLS: PCol[] = [
+const GR_EDIT: { k: keyof Gr & string; l: string; t?: "number" }[] = [
   { k: "store_no", l: "Store No" }, { k: "delivery_to", l: "Delivery To" }, { k: "gr_no", l: "GR No" }, { k: "gr_date", l: "GR Date" },
   { k: "po_no", l: "PO No" }, { k: "po_date", l: "PO Date" }, { k: "vendor_ship_no", l: "Vendor Ship No" }, { k: "item_code", l: "Item Code" },
-  { k: "item_name", l: "Item Name" }, { k: "uom", l: "UOM" }, { k: "qty_order", l: "Qty Order", n: true }, { k: "qty_received", l: "Qty Received", n: true },
-  { k: "status", l: "Status" }, { k: "sj_no", l: "SJ NO" }, { k: "po_aging", l: "PO Aging" },
-  { k: "check_status", l: "Check", badge: { Done: OK, Check: BAD } },
+  { k: "item_name", l: "Item Name" }, { k: "uom", l: "UOM" }, { k: "qty_order", l: "Qty Order", t: "number" },
+  { k: "qty_received", l: "Qty Received", t: "number" }, { k: "status", l: "Status" }, { k: "sj_no", l: "SJ NO" },
 ];
-const KW_COLS: PCol[] = [
+const GR_COLS: LCol<GrRow>[] = [
+  ...GR_EDIT.map((f): LCol<GrRow> => ({ k: f.k, l: f.l, n: f.t === "number", edit: f.t === "number" ? "number" : "text" })),
+  { k: "po_aging", l: "PO Aging" }, { k: "check_status", l: "Check", badge: { Done: OK, Check: BAD } },
+];
+const KW_EDIT: { k: keyof Kwitansi & string; l: string; t?: "number" | "date" }[] = [
   { k: "username", l: "Username" }, { k: "invoice_no", l: "Invoice No" }, { k: "vendor_invoice_no", l: "Vendor Invoice No" },
-  { k: "invoice_date", l: "Invoice Date", d: true }, { k: "kuitansi_no", l: "Kuitansi No" }, { k: "kuitansi_date", l: "Kuitansi Date", d: true },
-  { k: "accepted_date", l: "Accepted Date", d: true }, { k: "pfi_no", l: "PFI No" }, { k: "gr_no", l: "GR No" }, { k: "po_no", l: "PO No" },
-  { k: "total_net", l: "Total Net", n: true }, { k: "jadwal_bayar", l: "Jadwal Bayar", d: true }, { k: "aging", l: "Aging", n: true },
-  { k: "selisih", l: "Selisih", n: true },
+  { k: "invoice_date", l: "Invoice Date", t: "date" }, { k: "kuitansi_no", l: "Kuitansi No" }, { k: "kuitansi_date", l: "Kuitansi Date", t: "date" },
+  { k: "accepted_date", l: "Accepted Date", t: "date" }, { k: "pfi_no", l: "PFI No" }, { k: "gr_no", l: "GR No" }, { k: "po_no", l: "PO No" },
+  { k: "total_net", l: "Total Net", t: "number" },
 ];
-const JADWAL_COLS: PCol[] = [
+const KW_COLS: LCol<KwRow>[] = [
+  ...KW_EDIT.map((f): LCol<KwRow> => ({ k: f.k, l: f.l, n: f.t === "number", d: f.t === "date", edit: f.t ?? "text" })),
+  { k: "jadwal_bayar", l: "Jadwal Bayar", d: true }, { k: "aging", l: "Aging", n: true }, { k: "selisih", l: "Selisih", n: true },
+];
+const JADWAL_COLS: LCol<Schedule>[] = [
   { k: "no_kw", l: "NO KW" }, { k: "spp", l: "SPP" }, { k: "nilai_kw", l: "Nilai KW", n: true },
   { k: "tgl_tukar_faktur", l: "Tgl Tukar Faktur", d: true }, { k: "jadwal_transfer", l: "Jadwal Transfer", d: true }, { k: "notes", l: "Notes" },
 ];
-const AGING_COLS: PCol[] = [
+const AGING_COLS: LCol<AgingLine>[] = [
   { k: "payment_group", l: "Payment Group" }, { k: "business_partner", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
   { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
   { k: "days", l: "Days", n: true }, { k: "branch", l: "Branch" }, { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
 ];
 
-// Port workbook "VBA Mitra10 Tukar Faktur.xlsm".
+type AddKind = { table: "gr" | "kwitansi"; fields: { k: string; l: string; t?: "number" | "date" }[] } | null;
+
+// Port workbook "VBA Mitra10 Tukar Faktur.xlsm". Semua rumus dihitung di browser (use-m10);
+// edit tampil seketika lalu disimpan ke server di belakang layar.
 export function Mitra10View() {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [tab, setTab] = useState<Tab>("dash");
-  const [version, setVersion] = useState(0);
   const [ket, setKet] = useState("");
-  const bump = () => setVersion((v) => v + 1);
+  const [add, setAdd] = useState<AddKind>(null);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const m = useM10();
+  const c = m.computed;
 
-  async function setKeterangan(ids: number[], clear: () => void) {
-    const { data, error } = await supabase.rpc("m10_set_keterangan", { p_ids: ids, p_text: ket });
-    if (error) return toast(`Gagal: ${error.message}`, "danger");
-    toast(`Keterangan ${data} invoice diperbarui.`, "success");
-    clear();
-    bump();
+  const fail = (e: unknown) => toast(`Gagal menyimpan: ${(e as Error).message}`, "danger", 6000);
+  const rpc = async (fn: string, args: Record<string, unknown>) => {
+    const { data, error } = await supabase.rpc(fn as never, args as never);
+    if (error) throw error;
+    return data as unknown;
+  };
+
+  function setKeterangan(ids: number[], text: string) {
+    const v = text.trim() || null;
+    optimistic("m10", (d) => ({ ...d, worksheet: d.worksheet.map((w) => (ids.includes(w.id) ? { ...w, keterangan: v } : w)) }),
+      () => rpc("m10_set_keterangan", { p_ids: ids, p_text: text })).catch(fail);
   }
 
-  async function deleteSchedule(noKw: string[], clear: () => void) {
-    if (!confirm(`Hapus ${noKw.length} jadwal bayar?`)) return;
-    const { error } = await supabase.rpc("m10_schedule_delete", { p_no_kw: noKw });
-    if (error) return toast(`Gagal: ${error.message}`, "danger");
-    clear();
-    bump();
+  function editRow(table: "gr" | "kwitansi", id: number, key: string, value: unknown) {
+    const fn = table === "gr" ? "m10_gr_save" : "m10_kw_save";
+    optimistic("m10", (d) => ({ ...d, [table]: (d[table] as { id: number }[]).map((r) => (r.id === id ? { ...r, [key]: value } : r)) }),
+      () => rpc(fn, { p_id: id, p_row: { [key]: value } })).catch(fail);
   }
+
+  function deleteRows(table: "gr" | "kwitansi", ids: number[]) {
+    optimistic("m10", (d) => ({ ...d, [table]: (d[table] as { id: number }[]).filter((r) => !ids.includes(r.id)) }),
+      () => rpc("m10_rows_delete", { p_table: table, p_ids: ids })).catch(fail);
+  }
+
+  async function addRow() {
+    if (!add) return;
+    const row: Record<string, unknown> = {};
+    for (const f of add.fields) {
+      const v = (draft[f.k] ?? "").trim();
+      row[f.k] = v === "" ? null : f.t === "number" ? Number(v.replace(/\./g, "").replace(",", ".")) : v;
+    }
+    const table = add.table;
+    const tempId = -Date.now();
+    setAdd(null);
+    setDraft({});
+    try {
+      const id = await optimistic("m10", (d) => ({ ...d, [table]: [...(d[table] as unknown[]), { id: tempId, ...row }] }),
+        () => rpc(table === "gr" ? "m10_gr_save" : "m10_kw_save", { p_id: null, p_row: row }));
+      // Ganti id sementara dengan id dari server.
+      await optimistic("m10", (d) => ({ ...d, [table]: (d[table] as { id: number }[]).map((r) => (r.id === tempId ? { ...r, id: Number(id) } : r)) }), async () => null);
+      toast("Baris ditambahkan.", "success");
+    } catch (e) { fail(e); }
+  }
+
+  const deleteSchedule = (rows: Schedule[]) =>
+    optimistic("m10", (d) => ({ ...d, schedule: d.schedule.filter((s) => !rows.some((r) => r.no_kw === s.no_kw)) }),
+      () => rpc("m10_schedule_delete", { p_no_kw: rows.map((r) => r.no_kw) })).catch(fail);
 
   return (
     <div className="mx-auto max-w-[1600px]">
-      <h1 className="text-2xl font-medium">Mitra10 Tukar Faktur</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-medium">Mitra10 Tukar Faktur</h1>
+        {m.error && <span className="text-sm text-danger">Gagal memuat: {m.error.message}</span>}
+      </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
-        {tab === "dash" && <M10Dashboard version={version} />}
+        {tab === "dash" && <M10Dashboard />}
         {tab === "kk" && (
-          <PagedTable source="v_m10_worksheet" deps={["m10", "aging", "settings"]} title="Kertas Kerja" cols={KK_COLS} version={version} order="invoice_date"
+          <LocalTable title="Kertas Kerja" rows={c?.worksheet ?? []} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["invoice_no", "business_partner", "no_sj", "no_po", "username", "keterangan"]}
             filters={[
               { k: "status", l: "Status", options: ["Outstanding", "Lunas"] },
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
               { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },
             ]}
+            onEdit={(r, _k, v) => setKeterangan([r.id], String(v ?? ""))}
             selectable
             actions={(sel, clear) => (
               <span className="flex items-center gap-2">
                 <input list="m10-ket" value={ket} onChange={(e) => setKet(e.target.value)} placeholder="Keterangan (kosong = hapus)" className={`${inputCls} !w-56`} />
                 <datalist id="m10-ket"><option value="LTKP" /><option value="Litigasi" /><option value="new inbox" /></datalist>
-                <button type="button" className={btnGhost} onClick={() => setKeterangan(sel.map((r) => r.id as number), clear)}>Simpan untuk {sel.length}</button>
+                <button type="button" className={btnGhost} onClick={() => { setKeterangan(sel.map((r) => r.id), ket); clear(); }}>Simpan untuk {sel.length}</button>
               </span>
             )} />
         )}
         {tab === "gr" && (
-          <PagedTable source="v_m10_gr" deps={["m10", "aging", "settings"]} title="GR Update" cols={GR_COLS} version={version}
-            search={["gr_no", "po_no", "sj_no", "item_name", "delivery_to", "vendor_ship_no"]}
-            filters={[{ k: "check_status", l: "Check", options: ["Done", "Check"] }]} />
+          <LocalTable title="GR Update" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
+            search={["gr_no", "po_no", "sj_no", "item_name", "delivery_to", "vendor_ship_no", "item_code"]}
+            filters={[{ k: "check_status", l: "Check", options: ["Done", "Check"] }]}
+            onEdit={(r, k, v) => editRow("gr", r.id, k, v)}
+            onAdd={() => setAdd({ table: "gr", fields: GR_EDIT })}
+            selectable onDelete={(rows) => deleteRows("gr", rows.map((r) => r.id))} />
         )}
         {tab === "kw" && (
-          <PagedTable source="v_m10_kwitansi" deps={["m10", "aging", "settings"]} title="KW Update" cols={KW_COLS} version={version}
-            search={["invoice_no", "vendor_invoice_no", "kuitansi_no", "po_no", "username"]} />
+          <LocalTable title="KW Update" rows={c?.kwitansi ?? []} cols={KW_COLS} rowKey={(r) => r.id} loading={m.loading}
+            search={["invoice_no", "vendor_invoice_no", "kuitansi_no", "po_no", "username"]}
+            onEdit={(r, k, v) => editRow("kwitansi", r.id, k, v)}
+            onAdd={() => setAdd({ table: "kwitansi", fields: KW_EDIT })}
+            selectable onDelete={(rows) => deleteRows("kwitansi", rows.map((r) => r.id))} />
         )}
         {tab === "jadwal" && (
-          <PagedTable source="m10_payment_schedule" deps={["m10"]} title="Jadwal Bayar" cols={JADWAL_COLS} version={version} order="jadwal_transfer"
-            search={["no_kw", "spp", "notes"]} selectable rowKey="no_kw"
-            actions={(sel, clear) => (
-              <button type="button" className={btnGhost} onClick={() => deleteSchedule(sel.map((r) => r.no_kw as string), clear)}>
-                <span className="material-symbols-outlined !text-base">delete</span>Hapus {sel.length}
-              </button>
-            )} />
+          <LocalTable title="Jadwal Bayar" rows={m.schedule} cols={JADWAL_COLS} rowKey={(r) => r.no_kw} loading={m.loading}
+            search={["no_kw", "spp", "notes"]} selectable onDelete={deleteSchedule} />
         )}
         {tab === "aging" && (
-          <PagedTable source="m10_aging" deps={["aging", "settings"]} title="Data Aging" cols={AGING_COLS} version={version}
-            search={["invoice_no", "business_partner", "no_sj", "no_po"]} />
+          <LocalTable title="Data Aging" rows={m.agingLines} cols={AGING_COLS} rowKey={(r) => r.line_no} loading={m.loading}
+            search={["invoice_no", "business_partner", "no_sj", "no_po", "payment_group"]} />
         )}
-        {tab === "upload" && <M10Upload version={version} onDone={bump} />}
+        {tab === "upload" && <M10Upload version={0} onDone={() => undefined} />}
       </div>
+
+      <Modal open={!!add} title={add?.table === "gr" ? "Tambah baris GR" : "Tambah kwitansi"} onClose={() => setAdd(null)} wide
+        footer={<button type="button" className={btnPrimary} onClick={addRow}>Simpan</button>}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {add?.fields.map((f) => (
+            <label key={f.k} className="text-sm">
+              <span className="text-fg-2">{f.l}{add.table === "kwitansi" && f.k === "invoice_no" ? " *" : ""}</span>
+              <input type={f.t === "date" ? "date" : "text"} value={draft[f.k] ?? ""} onChange={(e) => setDraft({ ...draft, [f.k]: e.target.value })} className={`${inputCls} mt-1`} />
+            </label>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }

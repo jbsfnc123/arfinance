@@ -321,16 +321,6 @@ export type Database = {
         Update: never
         Relationships: []
       }
-      m10_bp_users: {
-        Row: {
-          business_partner: string
-          payment_group: string | null
-          username: string | null
-        }
-        Insert: never
-        Update: never
-        Relationships: []
-      }
       m10_worksheet: {
         Row: {
           id: number
@@ -972,38 +962,8 @@ export type Database = {
         Row: { invoice_no: string; payment_doc: string; payment_date: string; payment_amount: number; bp_key: string | null; bp_name: string | null; bp_group: string | null; marketing_group: string | null; payment_term: string | null; invoice_date: string | null; due_date: string | null }
         Relationships: []
       }
-      v_m10_gr: {
-        Row: Database["public"]["Tables"]["m10_gr"]["Row"] & { po_aging: string; check_status: string }
-        Relationships: []
-      }
-      v_m10_kwitansi: {
-        Row: Database["public"]["Tables"]["m10_kwitansi"]["Row"] & { jadwal_bayar: string | null; aging: number; selisih: number }
-        Relationships: []
-      }
       v_bank_mutations: {
         Row: Database["public"]["Tables"]["bank_mutations"]["Row"] & { excluded: boolean; excluded_note: string | null }
-        Relationships: []
-      }
-      v_m10_worksheet: {
-        Row: {
-          id: number
-          username: string
-          business_partner: string | null
-          invoice_no: string | null
-          invoice_date: string | null
-          due_date: string | null
-          open_amt: number
-          branch: string | null
-          no_po: string | null
-          no_sj: string
-          gr: string
-          tukar_faktur: string
-          selisih: number
-          keterangan: string | null
-          status: string
-          jadwal_bayar: string | null
-          lama_tf: number | null
-        }
         Relationships: []
       }
       v_courier_pending: {
@@ -1014,54 +974,19 @@ export type Database = {
         Row: { month: string | null; invoices: number | null; total: number | null }
         Relationships: []
       }
-      v_collection_summary: {
-        Row: { collection_name: string | null; invoices: number | null; total: number | null }
-        Relationships: []
-      }
-      v_collection_rows: {
-        Row: {
-          bp_value: string | null
-          business_partner: string | null
-          catatan: string | null
-          collection_name: string | null
-          due_date: string | null
-          foto_path: string | null
-          invoice_date: string | null
-          invoice_no: string | null
-          janji_bayar: string | null
-          keterangan: string | null
-          marketing: string | null
-          metode_tukar: string | null
-          no_po: string | null
-          no_sj: string | null
-          open_amt: number | null
-          payment_group: string | null
-          resi: string | null
-          tanggal_tukar: string | null
-        }
-        Relationships: []
-      }
-      v_note_latest: {
-        Row: {
-          business_partner: string | null
-          closed_at: string | null
-          closed_by: string | null
-          collection_name: string | null
-          created_at: string | null
-          done: boolean | null
-          id: number | null
-          invoice_date: string | null
-          invoice_no: string | null
-          isi: string | null
-          kategori: string | null
-          no_po: string | null
-          no_sj: string | null
-          nominal: number | null
-        }
-        Relationships: []
-      }
     }
     Functions: {
+      pack_aging: { Args: Record<string, never>; Returns: Json }
+      pack_activity: { Args: Record<string, never>; Returns: Json }
+      pack_targets: { Args: Record<string, never>; Returns: Json }
+      pack_m10: { Args: Record<string, never>; Returns: Json }
+      pack_mutasi: { Args: Record<string, never>; Returns: Json }
+      pack_erp: { Args: Record<string, never>; Returns: Json }
+      pack_tukar: { Args: Record<string, never>; Returns: Json }
+      pack_settings: { Args: Record<string, never>; Returns: Json }
+      m10_gr_save: { Args: { p_id: number | null; p_row: Json }; Returns: number }
+      m10_kw_save: { Args: { p_id: number | null; p_row: Json }; Returns: number }
+      m10_rows_delete: { Args: { p_table: string; p_ids: number[] }; Returns: number }
       mutasi_set_excluded: { Args: { p_ids: number[]; p_excluded: boolean; p_note: string }; Returns: number }
       upload_begin: { Args: { p_kind: string; p_file_name: string; p_sha256: string; p_meta: Json }; Returns: Json }
       upload_rows: { Args: { p_batch: string; p_offset: number; p_rows: Json }; Returns: number }
@@ -1070,21 +995,17 @@ export type Database = {
       bp_commit: { Args: { p_batch: string }; Returns: Json }
       mp_erp_rows: { Args: { p_pos: string[]; p_group: string | null; p_dari: string | null; p_ke: string | null }; Returns: Json }
       mutasi_import: { Args: { p_sheets: Json; p_file_name: string }; Returns: number }
-      mutasi_dashboard: { Args: { p_month: string }; Returns: Json }
       m10_gr_add: { Args: { p_rows: Json; p_file_name: string; p_first: boolean }; Returns: number }
       m10_kw_add: { Args: { p_rows: Json; p_username: string; p_file_name: string }; Returns: Json }
       m10_schedule_upsert: { Args: { p_rows: Json }; Returns: number }
       m10_schedule_delete: { Args: { p_no_kw: string[] }; Returns: number }
       m10_set_keterangan: { Args: { p_ids: number[]; p_text: string }; Returns: number }
-      m10_bp_replace: { Args: { p_rows: Json }; Returns: number }
       m10_set_tax_name: { Args: { p_value: string }; Returns: number }
-      m10_dashboard: { Args: { p_month: string | null }; Returns: Json }
       admin_set_pin: { Args: { p_pin: string; p_user: string }; Returns: undefined }
       ar_target_replace: {
         Args: { p_file_name: string; p_month: string; p_rows: Json }
         Returns: number
       }
-      get_spv_summary: { Args: { p_month: string }; Returns: Json }
       note_group_delete: { Args: { p_bp: string; p_cat: string; p_isi: string }; Returns: number }
       note_group_done: {
         Args: { p_bp: string; p_cat: string; p_done: boolean; p_isi: string }
@@ -1122,7 +1043,6 @@ export type Database = {
         Returns: { invoices: number; kolektor: string; lokasi: number; tanggal: string }[]
       }
       schedule_replace: { Args: { p_file_name: string; p_rows: Json }; Returns: number }
-      tukar_dashboard: { Args: { p_kurir: string; p_month: string }; Returns: Json }
       so_master_load: { Args: { p_rows: Json; p_reset: boolean; p_file_name: string }; Returns: number }
       get_so_pivot: {
         Args: { p_keys: string[] }

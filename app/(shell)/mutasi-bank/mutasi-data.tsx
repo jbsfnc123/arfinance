@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { cachedQuery } from "@/lib/cache/cached-query";
+import { optimistic, useDataset } from "@/lib/local/store";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtDate, rupiah } from "@/lib/format";
 import { useToast } from "@/components/toast";
@@ -13,12 +13,11 @@ type Row = {
   excluded: boolean; excluded_note: string | null;
 };
 type Status = "" | "dihitung" | "tidak";
-const PAGE = 200;
 const NOTES = ["Transfer internal", "Salah posting", "Bukan pembayaran customer", "Pengembalian dana"];
 
 // Daftar baris mutasi CR per bulan & rekening (pengganti sheet MUT_xxxx). Transaksi bisa ditandai
 // manual "tidak dihitung" sebagai uang masuk; tanda tetap berlaku walau file di-upload ulang.
-export function MutasiData({ version, onChanged }: { version: number; onChanged?: () => void }) {
+export function MutasiData() {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [month, setMonth] = useState(todayJakarta().slice(0, 7));
@@ -26,72 +25,38 @@ export function MutasiData({ version, onChanged }: { version: number; onChanged?
   const [status, setStatus] = useState<Status>("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
-  const [accounts, setAccounts] = useState<string[]>([]);
-  const [rows, setRows] = useState<Row[]>([]);
-  const [total, setTotal] = useState(0);
-  const [sum, setSum] = useState(0);
-  const [page, setPage] = useState(0);
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [note, setNote] = useState(NOTES[0]);
-  const [busy, setBusy] = useState(false);
-  const [nonce, setNonce] = useState(0);
+  const mutasi = useDataset("mutasi");
   const filterKey = `${month}|${account}|${status}|${query}`;
-  const [pageKey, setPageKey] = useState(filterKey);
-  if (pageKey !== filterKey) {
-    setPageKey(filterKey);
-    setPage(0);
-    setSel(new Set());
-  }
+  const [selKey, setSelKey] = useState(filterKey);
+  if (selKey !== filterKey) { setSelKey(filterKey); setSel(new Set()); }
 
   useEffect(() => {
-    const t = setTimeout(() => setQuery(q.trim()), 300);
+    const t = setTimeout(() => setQuery(q.trim().toLowerCase()), 250);
     return () => clearTimeout(t);
   }, [q]);
 
-  useEffect(() => {
-    supabase.from("bank_accounts").select("code").order("sort").then(({ data }) => setAccounts((data ?? []).map((a) => a.code)));
-  }, [supabase]);
+  // Filter & total dihitung di browser dari dataset lokal.
+  const accounts = useMemo(() => (mutasi.data?.accounts ?? []).map((a) => a.code), [mutasi.data]);
+  const rows: Row[] = useMemo(() => (mutasi.data?.mutations ?? []).filter((r) =>
+    r.tx_date.slice(0, 7) === month && (!account || r.account === account) &&
+    (!status || r.excluded === (status === "tidak")) &&
+    (!query || `${r.keterangan ?? ""} ${r.catatan ?? ""}`.toLowerCase().includes(query))), [mutasi.data, month, account, status, query]);
+  const sum = rows.reduce((a, r) => a + Number(r.amount), 0);
 
-  useEffect(() => {
-    let cancelled = false;
-    const start = `${month}-01`;
-    const [y, m] = month.split("-").map(Number);
-    const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
-    const base = () => {
-      let r = supabase.from("v_bank_mutations").select("*", { count: "exact" }).gte("tx_date", start).lte("tx_date", end);
-      if (account) r = r.eq("account", account);
-      if (status) r = r.eq("excluded", status === "tidak");
-      if (query) {
-        const s = query.replace(/[%,()]/g, " ");
-        r = r.or(`keterangan.ilike.%${s}%,catatan.ilike.%${s}%`);
-      }
-      return r;
-    };
-    cachedQuery(supabase, {
-      key: `mutasi-data:${filterKey}:${page}`, deps: ["mutasi"],
-      load: async () => {
-        const { data, count, error } = await base().order("tx_date").order("id").range(page * PAGE, page * PAGE + PAGE - 1);
-        if (error) throw error;
-        return { rows: (data ?? []) as Row[], total: count ?? 0 };
-      },
-    }).then(({ data }) => {
-      if (cancelled) return;
-      setRows(data.rows);
-      setTotal(data.total);
-      setSum(data.rows.reduce((a, r) => a + Number(r.amount), 0));
-    }).catch((e: Error) => toast(`Gagal memuat: ${e.message}`, "danger"));
-    return () => { cancelled = true; };
-  }, [filterKey, month, account, status, query, page, version, nonce, supabase, toast]);
-
-  async function mark(excluded: boolean) {
-    setBusy(true);
-    const { data, error } = await supabase.rpc("mutasi_set_excluded", { p_ids: [...sel], p_excluded: excluded, p_note: note });
-    setBusy(false);
-    if (error) return toast(`Gagal: ${error.message}`, "danger");
-    toast(excluded ? `${data} transaksi ditandai tidak dihitung.` : `${data} transaksi dihitung kembali.`, "success");
+  // Tandai / batalkan: tampil seketika, disimpan ke server di belakang layar.
+  function mark(excluded: boolean) {
+    const ids = [...sel];
+    const n = excluded ? note.trim() || null : null;
     setSel(new Set());
-    setNonce((n) => n + 1);
-    onChanged?.();
+    optimistic("mutasi", (d) => ({ ...d, mutations: d.mutations.map((m) => (ids.includes(m.id) ? { ...m, excluded, excluded_note: n } : m)) }),
+      async () => {
+        const { error } = await supabase.rpc("mutasi_set_excluded", { p_ids: ids, p_excluded: excluded, p_note: note });
+        if (error) throw error;
+      })
+      .then(() => toast(excluded ? `${ids.length} transaksi ditandai tidak dihitung.` : `${ids.length} transaksi dihitung kembali.`, "success"))
+      .catch((e: Error) => toast(`Gagal: ${e.message}`, "danger"));
   }
 
   const toggle = (id: number) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -111,9 +76,7 @@ export function MutasiData({ version, onChanged }: { version: number; onChanged?
           <option value="tidak">Tidak dihitung</option>
         </select>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari keterangan / catatan…" className={`${inputCls} !w-60`} />
-        <span className="ml-auto text-sm text-fg-2">{total.toLocaleString("id-ID")} baris</span>
-        <button type="button" className={btnGhost} disabled={page === 0} onClick={() => setPage(page - 1)}>‹</button>
-        <button type="button" className={btnGhost} disabled={(page + 1) * PAGE >= total} onClick={() => setPage(page + 1)}>›</button>
+        <span className="ml-auto text-sm text-fg-2">{mutasi.data ? `${rows.length.toLocaleString("id-ID")} baris` : "Memuat…"}</span>
       </div>
 
       {sel.size > 0 && (
@@ -121,10 +84,10 @@ export function MutasiData({ version, onChanged }: { version: number; onChanged?
           <b>{sel.size} dipilih</b>
           <input list="mutasi-exc-notes" value={note} onChange={(e) => setNote(e.target.value)} className={`${inputCls} !w-64`} placeholder="Alasan" />
           <datalist id="mutasi-exc-notes">{NOTES.map((n) => <option key={n} value={n} />)}</datalist>
-          <button type="button" className={btnPrimary} disabled={busy} onClick={() => mark(true)}>
+          <button type="button" className={btnPrimary} onClick={() => mark(true)}>
             <span className="material-symbols-outlined !text-base">block</span>Tandai tidak dihitung
           </button>
-          <button type="button" className={btnGhost} disabled={busy} onClick={() => mark(false)}>
+          <button type="button" className={btnGhost} onClick={() => mark(false)}>
             <span className="material-symbols-outlined !text-base">undo</span>Hitung kembali
           </button>
           <button type="button" className={`${btnGhost} ml-auto`} onClick={() => setSel(new Set())}>Batal</button>
@@ -161,7 +124,7 @@ export function MutasiData({ version, onChanged }: { version: number; onChanged?
             {!rows.length && <tr><td colSpan={7} className={`${td} text-fg-2`}>Tidak ada data.</td></tr>}
           </tbody>
           {rows.length > 0 && (
-            <tfoot><tr><td colSpan={3} className={`${td} font-medium`}>Total halaman ini</td><td className={`${td} text-right font-medium`}>{rupiah(sum)}</td><td colSpan={3} /></tr></tfoot>
+            <tfoot><tr><td colSpan={3} className={`${td} font-medium`}>Total</td><td className={`${td} text-right font-medium`}>{rupiah(sum)}</td><td colSpan={3} /></tr></tfoot>
           )}
         </table>
       </div>

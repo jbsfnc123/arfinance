@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
-import { createClient } from "@/lib/supabase/client";
-import { cachedQuery } from "@/lib/cache/cached-query";
+import { useDataset } from "@/lib/local/store";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel } from "@/lib/format";
-import { tukarKpi, type TukarDay } from "@/lib/modules/tukar/dashboard";
+import { tukarDays, tukarKpi, type TukarDay } from "@/lib/modules/tukar/dashboard";
 import { Chart, CHART_GRID } from "@/components/chart";
-import { useToast } from "@/components/toast";
 import { card, inputCls } from "@/components/ui";
 
 type Raw = { months: string[]; kurirs: string[]; days: TukarDay[] };
@@ -20,27 +18,11 @@ const SERIES: { key: keyof TukarDay; label: string; color: string; kpi: "Invoice
 ];
 
 export function TukarDashboard() {
-  const supabase = useMemo(() => createClient(), []);
-  const toast = useToast();
   const [month, setMonth] = useState(todayJakarta().slice(0, 7));
   const [kurir, setKurir] = useState("");
-  const [data, setData] = useState<Raw | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    cachedQuery(supabase, {
-      key: `tukar:${month}:${kurir}`, deps: ["tukar"],
-      load: async () => {
-        const { data: res, error } = await supabase.rpc("tukar_dashboard", { p_month: month, p_kurir: kurir });
-        if (error) throw error;
-        return res as unknown as Raw;
-      },
-    }).then(({ data: res }) => { if (!cancelled) setData(res); })
-      .catch((e: Error) => { if (!cancelled) toast(`Gagal memuat: ${e.message}`, "danger"); });
-    return () => {
-      cancelled = true;
-    };
-  }, [month, kurir, supabase, toast]);
+  const tukar = useDataset("tukar");
+  // Dihitung di browser dari data lokal (port tukar_dashboard).
+  const data: Raw | null = useMemo(() => (tukar.data ? tukarDays(tukar.data.done, month, kurir) : null), [tukar.data, month, kurir]);
 
   const kpi = data ? tukarKpi(data.days) : null;
   const months = data ? (data.months.includes(month) ? data.months : [month, ...data.months]) : [month];

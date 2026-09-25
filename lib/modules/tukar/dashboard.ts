@@ -35,3 +35,20 @@ export function groupJadwal(rows: JadwalRow[]) {
     })
     .sort((a, b) => b.total - a.total || a.bp.localeCompare(b.bp));
 }
+
+// Port RPC tukar_dashboard ke browser: tukar faktur Done per hari (invoice, BP unik, titik lokasi unik).
+export function tukarDays(done: { tanggal_tukar: string | null; kurir: string | null; business_partner: string | null; kode: string | null }[], month: string, kurir: string) {
+  const kol = (k: string | null) => (k ?? "").trim() || "Tanpa Kolektor";
+  const months = [...new Set(done.map((d) => d.tanggal_tukar?.slice(0, 7)).filter(Boolean) as string[])].sort().reverse();
+  const kurirs = [...new Set(done.map((d) => kol(d.kurir)))].sort();
+  const sel = done.filter((d) => d.tanggal_tukar?.slice(0, 7) === month && (!kurir || kol(d.kurir) === kurir));
+  const [y, m] = month.split("-").map(Number);
+  const last = /^\d{4}-\d{2}$/.test(month) ? new Date(Date.UTC(y, m, 0)).getUTCDate() : 0;
+  const days: TukarDay[] = Array.from({ length: last }, (_, i) => {
+    const date = `${month}-${String(i + 1).padStart(2, "0")}`;
+    const rows = sel.filter((d) => d.tanggal_tukar === date);
+    const uniq = (f: (d: (typeof rows)[number]) => string | null) => new Set(rows.map(f).map((v) => (v ?? "").trim()).filter(Boolean)).size;
+    return { day: i + 1, inv: rows.length, bp: uniq((d) => d.business_partner), lok: uniq((d) => d.kode) };
+  });
+  return { months, kurirs, days };
+}

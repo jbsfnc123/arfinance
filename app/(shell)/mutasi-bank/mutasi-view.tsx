@@ -22,9 +22,9 @@ export function MutasiView() {
       <h1 className="text-2xl font-medium">Mutasi Bank vs Realisasi</h1>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
-        {tab === "dash" && <MutasiDashboard version={version} />}
+        {tab === "dash" && <MutasiDashboard />}
         {tab === "upload" && <MutasiUpload version={version} onDone={() => setVersion((v) => v + 1)} />}
-        {tab === "data" && <MutasiData version={version} onChanged={() => setVersion((v) => v + 1)} />}
+        {tab === "data" && <MutasiData />}
       </div>
     </div>
   );

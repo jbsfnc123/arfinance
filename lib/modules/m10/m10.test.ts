@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanSj, parseBpUsers, parseGrCsv, parseKwCsv, parseSchedule, toRoman } from "./parse";
+import { cleanSj, parseGrCsv, parseKwCsv, parseSchedule, toRoman } from "./parse";
 
 describe("mitra10", () => {
   it("CleanSJ: digit, padding 5, tahun romawi", () => {
@@ -34,10 +34,8 @@ describe("mitra10", () => {
     expect(r.rows).toEqual([{ invoice_no: "INV1", vendor_invoice_no: "SI/1", invoice_date: "2026-07-03", kuitansi_no: "M1", kuitansi_date: "2026-07-08", accepted_date: "2026-07-08", pfi_no: "PFI1", gr_no: "GR1", po_no: "PO1", total_net: 1088769 }]);
   });
 
-  it("jadwal bayar & username", () => {
+  it("jadwal bayar", () => {
     expect(parseSchedule([["NO KW", "SPP", "NILAI KW", "TGL TUKAR FAKTUR", "JADWAL TRANSFER", "Notes"], ["M1", "SP1", 1257408, 46204, 46280, ""], ["", "", 0]]))
       .toEqual([{ no_kw: "M1", spp: "SP1", nilai_kw: 1257408, tgl_tukar_faktur: "2026-07-01", jadwal_transfer: "2026-09-15", notes: "" }]);
-    expect(parseBpUsers([["Business Partner", "Payment Group", "Username"], ["BP A", "CMSS", "PENGU338"]]))
-      .toEqual([{ business_partner: "BP A", payment_group: "CMSS", username: "PENGU338" }]);
   });
 });

@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { readAllSheets, readFirstSheetRows } from "@/lib/xlsx-client";
-import { parseBpUsers, parseGrCsv, parseKwCsv, parseSchedule } from "@/lib/modules/m10/parse";
+import { parseGrCsv, parseKwCsv, parseSchedule } from "@/lib/modules/m10/parse";
 import { runUpload } from "@/lib/uploads/run";
 import { todayJakarta } from "@/lib/parsers/date";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls } from "@/components/ui";
 
-type Kind = "aging" | "gr" | "kw" | "jadwal" | "bp";
+type Kind = "aging" | "gr" | "kw" | "jadwal";
 const CHUNK = 2000; // GR
 const KW_USER_KEY = "m10.kwUsername";
 
@@ -60,11 +60,6 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
         const { data, error } = await supabase.rpc("m10_schedule_upsert", { p_rows: rows });
         if (error) throw error;
         msg = `Jadwal bayar: ${data} No KW disimpan/diperbarui.`;
-      } else {
-        const rows = parseBpUsers(await readFirstSheetRows(file));
-        const { data, error } = await supabase.rpc("m10_bp_replace", { p_rows: rows });
-        if (error) throw error;
-        msg = `Mapping BP → Username diganti: ${data} baris.`;
       }
       toast(msg, "success", 9000);
       onDone();
@@ -119,11 +114,6 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
         {fileInput("jadwal", ".xlsx,.xls,.csv")}
       </div>
 
-      <div className={`${card} space-y-3 p-4`}>
-        <h2 className="font-medium">5. Business Partner → Username</h2>
-        <p className="text-xs text-fg-2">Excel dengan header Business Partner, Payment Group, Username (tabel &quot;Add&quot;). Mengganti seluruh mapping.</p>
-        {fileInput("bp", ".xlsx,.xls,.csv")}
-      </div>
     </div>
   );
 }
