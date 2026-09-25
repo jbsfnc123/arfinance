@@ -1,10 +1,5 @@
-// Kelas Tailwind bersama untuk form di halaman Pengaturan.
-export const inputCls =
-  "w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-accent";
-export const btnPrimary =
-  "rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent hover:bg-accent-strong disabled:opacity-60";
-export const btnGhost =
-  "rounded-full border border-line px-3 py-1.5 text-sm hover:bg-surface-2 disabled:opacity-60";
+// Kelas bersama ada di components/ui.ts; file ini menambah tipe hasil server action.
+export { inputCls, btnPrimary, btnGhost } from "@/components/ui";
 
 export type ActionResult = { ok: boolean; message: string; at: number } | null;
 
