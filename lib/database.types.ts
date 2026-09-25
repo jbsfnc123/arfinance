@@ -767,6 +767,7 @@ export type Database = {
           created_by: string | null
           created_by_name: string | null
           id: number
+          pinned_at: string | null
           updated_at: string
           updated_by_name: string | null
         }
@@ -777,6 +778,7 @@ export type Database = {
           created_by?: string | null
           created_by_name?: string | null
           id?: never
+          pinned_at?: string | null
           updated_at?: string
           updated_by_name?: string | null
         }
@@ -787,6 +789,7 @@ export type Database = {
           created_by?: string | null
           created_by_name?: string | null
           id?: never
+          pinned_at?: string | null
           updated_at?: string
           updated_by_name?: string | null
         }
