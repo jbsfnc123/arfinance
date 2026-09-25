@@ -342,6 +342,158 @@ export type Database = {
           },
         ]
       }
+      so_master: {
+        Row: {
+          id: number
+          document_no: string | null
+          date_po: string | null
+          no_po_customer: string | null
+          no_po_clean: string | null
+          is_manual: boolean
+          business_partner: string | null
+          price_list: string | null
+          document_status: string | null
+          grand_total: number
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      po_so_cases: {
+        Row: {
+          id: number
+          po_customer: string
+          document_no: string | null
+          date_po: string | null
+          business_partner: string | null
+          price_list: string | null
+          document_status: string | null
+          total_po: number
+          total_so: number
+          selisih: number
+          aksi: string | null
+          tindakan: string | null
+          keterangan: string | null
+          status: string
+          archived_at: string
+          completed_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+        }
+        Insert: {
+          po_customer: string
+          document_no?: string | null
+          date_po?: string | null
+          business_partner?: string | null
+          price_list?: string | null
+          document_status?: string | null
+          total_po?: number
+          total_so?: number
+          selisih?: number
+          aksi?: string | null
+          tindakan?: string | null
+          keterangan?: string | null
+          status?: string
+        }
+        Update: {
+          aksi?: string | null
+          tindakan?: string | null
+          keterangan?: string | null
+          status?: string
+          completed_at?: string | null
+        }
+        Relationships: []
+      }
+      coretax_batches: {
+        Row: {
+          id: number
+          file_name: string | null
+          seller_tin: string | null
+          types: string | null
+          invoice_count: number
+          line_count: number
+          dpp: number
+          dpp_lain: number
+          ppn: number
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+        }
+        Insert: {
+          file_name?: string | null
+          seller_tin?: string | null
+          types?: string | null
+          invoice_count?: number
+          line_count?: number
+          dpp?: number
+          dpp_lain?: number
+          ppn?: number
+        }
+        Update: never
+        Relationships: []
+      }
+      coretax_lines: {
+        Row: {
+          id: number
+          batch_id: number
+          no: number | null
+          tax_invoice_date: string | null
+          tax_invoice_opt: string | null
+          trx_code: string | null
+          ref_desc: string | null
+          seller_idtku: string | null
+          buyer_tin: string | null
+          buyer_document: string | null
+          buyer_country: string | null
+          buyer_document_number: string | null
+          buyer_name: string | null
+          buyer_address: string | null
+          buyer_email: string | null
+          buyer_idtku: string | null
+          code: string | null
+          name: string | null
+          unit: string | null
+          price: number | null
+          qty: number | null
+          total_discount: number | null
+          tax_base: number | null
+          other_tax_base: number | null
+          vat_rate: number | null
+          vat: number | null
+          stlg_rate: number | null
+          stlg: number | null
+        }
+        Insert: Omit<Database["public"]["Tables"]["coretax_lines"]["Row"], "id">
+        Update: never
+        Relationships: []
+      }
+      coretax_delete_list: {
+        Row: { ref_desc: string; created_at: string; created_by: string | null; created_by_name: string | null }
+        Insert: { ref_desc: string }
+        Update: never
+        Relationships: []
+      }
+      mp_reports: {
+        Row: {
+          report_id: string
+          platform: string
+          username: string
+          dari: string
+          ke: string
+          data: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      mp_order_index: {
+        Row: { report_id: string; no: string; penghasilan: number }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       data_versions: {
         Row: { key: string; updated_at: string }
         Insert: { key: string; updated_at?: string }
@@ -681,6 +833,21 @@ export type Database = {
       }
       schedule_replace: { Args: { p_file_name: string; p_rows: Json }; Returns: number }
       tukar_dashboard: { Args: { p_kurir: string; p_month: string }; Returns: Json }
+      so_master_load: { Args: { p_rows: Json; p_reset: boolean; p_file_name: string }; Returns: number }
+      get_so_pivot: {
+        Args: { p_keys: string[] }
+        Returns: {
+          po: string
+          total: number
+          document_no: string
+          date_po: string
+          business_partner: string
+          price_list: string
+          document_status: string
+          is_manual: boolean
+        }[]
+      }
+      mp_save_report: { Args: { p_report: Json }; Returns: string }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }

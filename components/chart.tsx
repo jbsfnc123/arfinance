@@ -13,13 +13,15 @@ const ReactECharts = dynamic(() => import("echarts-for-react"), {
 export const CHART_TEXT = "#9aa0a6";
 export const CHART_GRID = "rgba(255,255,255,.08)";
 
-export function Chart({ option, height = 260 }: { option: EChartsOption; height?: number }) {
+// onClick menerima indeks data yang diklik (untuk drill-down).
+export function Chart({ option, height = 260, onClick }: { option: EChartsOption; height?: number; onClick?: (dataIndex: number) => void }) {
   return (
-    <div style={{ height }}>
+    <div style={{ height, cursor: onClick ? "pointer" : undefined }}>
       <ReactECharts
         option={{ backgroundColor: "transparent", textStyle: { color: CHART_TEXT, fontFamily: "inherit" }, ...option }}
         style={{ height: "100%", width: "100%" }}
         notMerge
+        onEvents={onClick ? { click: (p: { dataIndex: number }) => onClick(p.dataIndex) } : undefined}
       />
     </div>
   );
