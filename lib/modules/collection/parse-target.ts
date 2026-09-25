@@ -13,6 +13,7 @@ export type TargetRow = {
   business_partner: string;
   due_date: string | null;
   branch: string;
+  no_sj: string;      // No SJ (tetap walau invoice direvisi; bisa beberapa SJ digabung "-")
 };
 
 type Field = keyof TargetRow;
@@ -25,9 +26,10 @@ const ALIASES: Record<Field, string[]> = {
   business_partner: ["businesspartner", "bpname", "bp", "customer"],
   due_date: ["duedate", "jatuhtempo", "tgljatuhtempo", "tanggaljatuhtempo"],
   branch: ["branch", "cabang"],
+  no_sj: ["nosj", "sjno", "nosuratjalan", "suratjalan", "nomorsj", "nomorsuratjalan", "sj"],
 };
 
-const LEGACY_LAYOUT: Record<Field, number> = {
+const LEGACY_LAYOUT: Partial<Record<Field, number>> = {
   target: 0, marketing: 2, collection_name: 3, business_partner: 4,
   invoice_no: 5, due_date: 7, branch: 9,
 };
@@ -78,6 +80,7 @@ export function parseTarget(sheetRows: unknown[][]) {
       business_partner: text(pick(r, "business_partner")),
       due_date: parseDate(pick(r, "due_date")),
       branch: text(pick(r, "branch")),
+      no_sj: text(pick(r, "no_sj")),
     });
   }
 

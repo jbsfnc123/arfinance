@@ -337,7 +337,8 @@ function ReconCard({ r }: { r: ReturnType<typeof reconcileCollected> }) {
               onClick={() => setSpec({
                 title: c.label,
                 cols: [
-                  { k: "invoice_no", l: "Invoice" }, { k: "business_partner", l: "Business Partner" },
+                  { k: "invoice_no", l: "Invoice" }, { k: "pengganti", l: "Invoice Pengganti" }, { k: "no_sj", l: "No SJ" },
+                  { k: "business_partner", l: "Business Partner" },
                   { k: "target", l: "Target", n: true }, { k: "sisa", l: "Sisa Aging", n: true },
                   { k: "terkumpul", l: "Terkumpul", n: true }, { k: "dibayar", l: "Dibayar (bulan ini)", n: true },
                   { k: "dibayarLain", l: "Dibayar (bulan lain)", n: true }, { k: "selisih", l: "Selisih", n: true },

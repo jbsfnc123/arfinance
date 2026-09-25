@@ -1,12 +1,14 @@
 import { num } from "@/lib/local/pack";
 import type { AgingLine, Target } from "@/lib/local/datasets";
+import { revisionLookup } from "./revision";
 
 // Rekonsiliasi "Terkumpul" (target − sisa aging) vs "Allocated in Target" (pembayaran ERP bulan
 // target untuk invoice target) per invoice, lalu setiap selisih diberi kemungkinan penyebab.
 
-export type ReconCategory = "cm" | "ppn" | "hilang" | "luar_bulan" | "potongan" | "turun" | "lebih";
+export type ReconCategory = "cm" | "revisi" | "ppn" | "hilang" | "luar_bulan" | "potongan" | "turun" | "lebih";
 export const RECON_LABEL: Record<ReconCategory, string> = {
   cm: "Retur / Credit Memo dikompensasikan ke invoice lain",
+  revisi: "Invoice direvisi (No SJ sama, No Invoice berubah)",
   ppn: "PPN 11% tidak dibayar (dipungut/WAPU atau CN PPN)",
   hilang: "Hilang dari aging tanpa pembayaran (retur / pembatalan?)",
   luar_bulan: "Pembayaran tercatat di luar bulan target",
@@ -16,7 +18,7 @@ export const RECON_LABEL: Record<ReconCategory, string> = {
 };
 
 export type ReconRow = {
-  invoice_no: string; business_partner: string; target: number; sisa: number; inAging: boolean;
+  invoice_no: string; no_sj: string; pengganti: string; business_partner: string; target: number; sisa: number; inAging: boolean;
   terkumpul: number; dibayar: number; dibayarLain: number; selisih: number; category: ReconCategory;
 };
 
@@ -35,14 +37,21 @@ export function reconcileCollected(input: {
     m.set(p.invoice_no, (m.get(p.invoice_no) ?? 0) + num(p.amount));
   }
 
-  const all = input.targets.filter((t) => t.month === input.month).map((t) => {
+  const monthTargets = input.targets.filter((t) => t.month === input.month);
+  const revised = revisionLookup(input.agingAll, new Set(monthTargets.map((t) => t.invoice_no)));
+  const all = monthTargets.map((t) => {
     const target = num(t.target);
-    const s = sisa.get(t.invoice_no) ?? 0;
+    // Invoice direvisi: sisa & pembayaran mengikuti invoice pengganti (SJ sama).
+    const rev = revised(t.invoice_no, t.no_sj);
+    const invs = [t.invoice_no, ...(rev?.replacements ?? [])];
+    const s = rev ? rev.open : sisa.get(t.invoice_no) ?? 0;
     const terkumpul = target - s;
-    const dibayar = inMonth.get(t.invoice_no) ?? 0;
+    const dibayar = invs.reduce((a, i) => a + (inMonth.get(i) ?? 0), 0);
     return {
-      invoice_no: t.invoice_no, business_partner: t.business_partner ?? "", target, sisa: s, inAging: sisa.has(t.invoice_no),
-      terkumpul, dibayar, dibayarLain: other.get(t.invoice_no) ?? 0, selisih: terkumpul - dibayar, category: "turun" as ReconCategory,
+      invoice_no: t.invoice_no, no_sj: t.no_sj ?? "", pengganti: rev?.replacements.join(", ") ?? "",
+      business_partner: t.business_partner ?? "", target, sisa: s, inAging: sisa.has(t.invoice_no) || !!rev,
+      terkumpul, dibayar, dibayarLain: invs.reduce((a, i) => a + (other.get(i) ?? 0), 0), selisih: terkumpul - dibayar,
+      category: (rev ? "revisi" : "turun") as ReconCategory,
     };
   });
   const rows = all.filter((r) => Math.abs(r.selisih) >= 1);
@@ -50,12 +59,12 @@ export function reconcileCollected(input: {
   // 1. Credit Memo: CM (target negatif / nomor CM/) dipasangkan dengan invoice yang kurang bayar sebesar nilai CM.
   const used = new Set<ReconRow>();
   for (const cm of rows.filter((r) => r.target < 0 || /^CM\//i.test(r.invoice_no))) {
-    const pair = rows.find((r) => !used.has(r) && r !== cm && r.target > 0 && Math.abs(r.selisih + cm.selisih) < 1);
+    const pair = rows.find((r) => !used.has(r) && r !== cm && r.category !== "revisi" && r.target > 0 && Math.abs(r.selisih + cm.selisih) < 1);
     used.add(cm); cm.category = "cm";
     if (pair) { used.add(pair); pair.category = "cm"; }
   }
   for (const r of rows) {
-    if (used.has(r)) continue;
+    if (used.has(r) || r.category === "revisi") continue;
     const ppn = r.target - r.target / 1.11;
     r.category =
       r.target > 0 && Math.abs(r.selisih - ppn) <= 2 ? "ppn"

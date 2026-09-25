@@ -116,7 +116,7 @@ export function ActionBar(props: {
     if (text === null) return;
     const before = new Map(selected.map((r) => [r.invoice_no, r]));
     patch(invoices, (r) => withSearch({ ...r, keterangan: text.trim() }));
-    setRemarks(invoices, text, "collection")
+    setRemarks(selected.map((r) => ({ no_sj: r.no_sj, invoice_no: r.invoice_no })), text, "collection")
       .then(() => { toast(`Keterangan disimpan untuk ${selected.length} invoice.`, "success"); clear(); })
       .catch((e: Error) => { patch(invoices, (r) => before.get(r.invoice_no) ?? r); toast(`Gagal menyimpan: ${e.message}`, "danger"); });
   }

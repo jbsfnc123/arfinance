@@ -972,7 +972,7 @@ export type Database = {
       }
     }
     Functions: {
-      set_invoice_remark: { Args: { p_invoices: string[]; p_text: string; p_source: string }; Returns: number }
+      set_invoice_remark: { Args: { p_items: Json; p_text: string; p_source: string }; Returns: number }
       pack_remarks: { Args: Record<string, never>; Returns: Json }
       pack_aging: { Args: Record<string, never>; Returns: Json }
       pack_activity: { Args: Record<string, never>; Returns: Json }

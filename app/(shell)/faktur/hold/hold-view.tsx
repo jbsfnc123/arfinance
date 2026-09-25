@@ -52,7 +52,7 @@ export function HoldView() {
       ? await supabase.from("tax_invoice_holds").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", editing)
       : await supabase.from("tax_invoice_holds").insert(payload);
     if (error) { setBusy(false); return toast(`Gagal menyimpan: ${error.message}`, "danger"); }
-    try { await setRemarks([payload.invoice_no], ket, "hold"); } catch (e) { toast(`Keterangan gagal disimpan: ${(e as Error).message}`, "danger"); }
+    try { await setRemarks([{ no_sj: payload.no_sj, invoice_no: payload.invoice_no }], ket, "hold"); } catch (e) { toast(`Keterangan gagal disimpan: ${(e as Error).message}`, "danger"); }
     setBusy(false);
     toast(editing ? "Hold faktur diperbarui." : "Hold faktur ditambahkan.", "success");
     reset();
@@ -66,7 +66,17 @@ export function HoldView() {
     setRows(rows.filter((r) => r.id !== h.id));
   }
 
-  const shown = rows.filter((r) => `${r.invoice_no} ${r.bp_value} ${remarks.map.get(r.invoice_no) ?? ""}`.toLowerCase().includes(q.toLowerCase()));
+  // Pencarian di SEMUA kolom (Invoice, BP, Invoice Date, No SJ, Keterangan, pembuat, waktu);
+  // beberapa kata = semua harus cocok (mis. "wisco 09/2026").
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = rows.filter((r) => {
+    if (!words.length) return true;
+    const hay = [
+      r.invoice_no, r.bp_value, r.invoice_date, fmtDate(r.invoice_date), r.no_sj, remarks.get(r.no_sj, r.invoice_no),
+      r.created_by_name, fmtTimestamp(r.created_at), r.updated_at ? fmtTimestamp(r.updated_at) : "",
+    ].map((v) => String(v ?? "")).join(" ").toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
@@ -85,7 +95,7 @@ export function HoldView() {
       <section className={`${card} overflow-x-auto`}>
         <div className="flex items-center gap-2 px-4 pt-4">
           <h2 className="text-sm font-medium">Daftar Hold ({shown.length})</h2>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari…" className={`${inputCls} ml-auto !w-56`} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari di semua kolom…" className={`${inputCls} ml-auto !w-72`} />
         </div>
         <table className="mt-2 w-full text-sm">
           <thead>
@@ -105,10 +115,10 @@ export function HoldView() {
                 <td className={`${td} max-w-56 truncate`} title={h.bp_value}>{h.bp_value}</td>
                 <td className={td}>{fmtDate(h.invoice_date)}</td>
                 <td className={td}>{h.no_sj}</td>
-                <td className={`${td} max-w-72 whitespace-normal`}>{remarks.map.get(h.invoice_no) ?? ""}</td>
+                <td className={`${td} max-w-72 whitespace-normal`}>{remarks.get(h.no_sj, h.invoice_no)}</td>
                 <td className={`${td} text-right`}>
                   <button type="button" className="px-1 text-fg-2 hover:text-fg" title="Ubah"
-                    onClick={() => { setEditing(h.id); setInv({ invoice_no: h.invoice_no, bp_value: h.bp_value, invoice_date: h.invoice_date ?? "", no_sj: h.no_sj ?? "" }); setKet(remarks.map.get(h.invoice_no) ?? ""); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    onClick={() => { setEditing(h.id); setInv({ invoice_no: h.invoice_no, bp_value: h.bp_value, invoice_date: h.invoice_date ?? "", no_sj: h.no_sj ?? "" }); setKet(remarks.get(h.no_sj, h.invoice_no)); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                     <span className="material-symbols-outlined">edit</span>
                   </button>
                   <button type="button" className="px-1 text-fg-2 hover:text-danger" title="Hapus" onClick={() => remove(h)}>

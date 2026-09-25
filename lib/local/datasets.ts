@@ -17,13 +17,13 @@ export type Note = {
 };
 export type Promise_ = { id: number; invoice_no: string; business_partner: string | null; collection_name: string | null; promise_date: string | null; isi: string | null; created_at: string };
 export type Exchange = { id: number; invoice_no: string; metode: string; tanggal: string | null; keterangan: string | null; resi: string | null; foto_path: string | null; kurir: string | null; collection_name: string | null };
-export type Target = { month: string; invoice_no: string; target: number; marketing: string | null; collection_name: string | null; business_partner: string | null; due_date: string | null; branch: string | null };
+export type Target = { month: string; invoice_no: string; target: number; marketing: string | null; collection_name: string | null; business_partner: string | null; due_date: string | null; branch: string | null; no_sj?: string | null };
 export type Worksheet = { id: number; payment_group: string | null; business_partner: string | null; invoice_no: string | null; invoice_date: string | null; due_date: string | null; open_amt: number; branch: string | null; no_po: string | null; no_sj: string };
 export type Gr = { id: number; no: string | null; store_no: string | null; delivery_to: string | null; gr_no: string | null; gr_date: string | null; po_no: string | null; po_date: string | null; vendor_ship_no: string | null; item_code: string | null; item_name: string | null; uom: string | null; qty_order: number | null; qty_received: number | null; status: string | null; sj_no: string | null };
 export type Kwitansi = { id: number; username: string | null; invoice_no: string; vendor_invoice_no: string | null; invoice_date: string | null; kuitansi_no: string | null; kuitansi_date: string | null; accepted_date: string | null; pfi_no: string | null; gr_no: string | null; po_no: string | null; total_net: number };
 export type Schedule = { no_kw: string; spp: string | null; nilai_kw: number; tgl_tukar_faktur: string | null; jadwal_transfer: string | null; notes: string | null };
 export type Mutation = { id: number; account: string; tx_date: string; amount: number; keterangan: string | null; catatan: string | null; excluded: boolean; excluded_note: string | null };
-export type Remark = { invoice_no: string; keterangan: string; source: string; updated_at: string; updated_by_name: string | null };
+export type Remark = { ref: string; no_sj: string | null; invoice_no: string | null; keterangan: string; source: string; updated_at: string; updated_by_name: string | null };
 export type Account = { code: string; last4: string; sort: number; active: boolean };
 
 export type Datasets = {

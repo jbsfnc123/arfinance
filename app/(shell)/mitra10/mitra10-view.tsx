@@ -94,7 +94,7 @@ export function Mitra10View() {
 
   // Keterangan invoice bersama (sama dengan Collection & Hold Faktur Pajak).
   function setKeterangan(rows: WorksheetRow[], text: string) {
-    setRemarks(rows.map((r) => r.invoice_no ?? "").filter(Boolean), text, "mitra10").catch(fail);
+    setRemarks(rows.map((r) => ({ no_sj: r.no_sj, invoice_no: r.invoice_no })), text, "mitra10").catch(fail);
   }
 
   // Filter Kertas Kerja: rentang Invoice Date & Username.

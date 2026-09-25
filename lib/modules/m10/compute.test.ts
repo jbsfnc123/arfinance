@@ -33,7 +33,7 @@ describe("Mitra10 compute", () => {
   ], " catur mitra sejati sentosa ");
   const c = computeM10({
     aging,
-    remarks: new Map([["SI2", "ltkp"]]),
+    remarks: new Map([["SJ/2", "ltkp"]]),
     worksheet: [
       ws({ id: 1, payment_group: "CMSS - Pengu338", invoice_no: "SI1", invoice_date: "2026-09-03", open_amt: 2000000, no_sj: "SJ/1" }),
       ws({ id: 2, invoice_no: "SI2", invoice_date: "2026-09-04", open_amt: 50000, no_sj: "SJ/2" }),
