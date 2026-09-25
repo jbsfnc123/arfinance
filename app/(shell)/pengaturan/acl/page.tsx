@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import { MENU_REGISTRY } from "@/lib/menu";
+import { HOME_GROUP, MENU_REGISTRY } from "@/lib/menu";
 import { NoAccess } from "@/components/no-access";
 import { RolesView } from "./roles-view";
 
@@ -21,7 +21,7 @@ export default async function AclPage() {
   for (const a of accounts ?? []) accountCount[a.role_id] = (accountCount[a.role_id] ?? 0) + 1;
 
   // Registry dikirim tanpa href eksternal panjang; cukup id, label, needs per grup.
-  const groups = MENU_REGISTRY.map((g) => ({
+  const groups = [HOME_GROUP, ...MENU_REGISTRY].map((g) => ({
     id: g.id,
     label: g.label,
     items: g.children.map((c) => ({ id: c.id, label: c.label, needs: c.needs ?? null })),

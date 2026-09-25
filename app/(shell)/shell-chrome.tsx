@@ -9,8 +9,9 @@ import { Sidebar } from "./sidebar";
 
 // Kerangka halaman (topbar + sidebar + konten). Client component karena menyimpan status
 // drawer mobile dan membersihkan cache browser saat logout.
-export function ShellChrome({ menu, user, children }: {
+export function ShellChrome({ menu, showHome, user, children }: {
   menu: MenuGroup[];
+  showHome: boolean;
   user: { name: string; role: string; collection: string | null };
   children: React.ReactNode;
 }) {
@@ -21,6 +22,7 @@ export function ShellChrome({ menu, user, children }: {
   // tidak menunggu server (sidebar auto-hide tidak merender link sebelum dibuka).
   useEffect(() => {
     const hrefs = menu.flatMap((g) => g.children.filter((c) => !c.external).map((c) => c.href));
+    if (showHome) hrefs.unshift("/");
     const run = () => hrefs.forEach((h) => router.prefetch(h));
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(run, { timeout: 3000 });
@@ -28,7 +30,7 @@ export function ShellChrome({ menu, user, children }: {
     }
     const t = setTimeout(run, 1200);
     return () => clearTimeout(t);
-  }, [menu, router]);
+  }, [menu, showHome, router]);
 
   async function signOut(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -63,7 +65,7 @@ export function ShellChrome({ menu, user, children }: {
         </div>
       </header>
       <div className="flex min-h-0 flex-1">
-        <Sidebar menu={menu} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+        <Sidebar menu={menu} showHome={showHome} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
         <main className="min-w-0 flex-1 overflow-auto p-6">
           <ToastProvider>{children}</ToastProvider>
         </main>
