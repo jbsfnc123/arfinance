@@ -2,55 +2,38 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { downloadXlsx, readAllSheets, readFirstSheetRows } from "@/lib/xlsx-client";
-import { parseInvoiceFile, parseMutasiWorkbook, parsePaymentFile, TEMPLATES } from "@/lib/modules/mutasi/parse";
-import { parseTarget } from "@/lib/modules/collection/parse-target";
+import { downloadXlsx, readAllSheets } from "@/lib/xlsx-client";
+import { TEMPLATES } from "@/lib/modules/mutasi/parse";
+import { detectKind, type FileKind } from "@/lib/uploads/parse";
+import { runUpload } from "@/lib/uploads/run";
 import { todayJakarta } from "@/lib/parsers/date";
-import { monthLabel } from "@/lib/format";
 import { ImportLog } from "@/components/import-log";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls } from "@/components/ui";
 
-type Kind = keyof typeof TEMPLATES;
+type Box = "mutasi" | "erp" | "target";
+const EXPECT: Record<Box, FileKind> = { mutasi: "mutasi", erp: "erp", target: "target" };
+const TEMPLATE_OF: Record<Box, keyof typeof TEMPLATES> = { mutasi: "mutasi", erp: "erp", target: "target" };
 
-// Upload 4 jenis file (port mdlImport.bas). Upload ulang file yang sama tidak menggandakan data.
+// Upload data Mutasi Bank (port mdlImport.bas). Invoice & Payment kini satu laporan ERP bersama
+// (juga dipakai Presentasi & Marketplace) — disimpan sekali lewat jalur Pusat Upload.
 export function MutasiUpload({ version, onDone }: { version: number; onDone: () => void }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
-  const [busy, setBusy] = useState<Kind | null>(null);
+  const [busy, setBusy] = useState<Box | null>(null);
   const [month, setMonth] = useState(todayJakarta().slice(0, 7));
 
-  async function run(kind: Kind, files: File[]) {
+  async function run(box: Box, files: File[]) {
     if (!files.length) return;
-    setBusy(kind);
+    setBusy(box);
     try {
       const msgs: string[] = [];
       for (const f of files) {
-        if (kind === "mutasi") {
-          const { data: accounts, error: e1 } = await supabase.from("bank_accounts").select("code, last4").eq("active", true);
-          if (e1) throw e1;
-          const res = parseMutasiWorkbook(await readAllSheets(f), accounts ?? []);
-          const { data, error } = await supabase.rpc("mutasi_import", { p_sheets: res.sheets, p_file_name: f.name });
-          if (error) throw error;
-          msgs.push(`${f.name}: ${data} baris CR (${res.sheets.map((s) => s.account).join(", ")})` +
-            (res.ignored.length ? ` · sheet diabaikan: ${res.ignored.join(", ")}` : ""));
-        } else if (kind === "invoice") {
-          const rows = parseInvoiceFile(await readFirstSheetRows(f));
-          const { data, error } = await supabase.rpc("erp_invoice_import", { p_rows: rows, p_file_name: f.name });
-          if (error) throw error;
-          msgs.push(`${f.name}: ${data} invoice`);
-        } else if (kind === "payment") {
-          const rows = parsePaymentFile(await readFirstSheetRows(f));
-          const { data, error } = await supabase.rpc("erp_payment_import", { p_rows: rows, p_file_name: f.name });
-          if (error) throw error;
-          msgs.push(`${f.name}: ${data} payment`);
-        } else {
-          const parsed = parseTarget(await readFirstSheetRows(f));
-          if (!parsed.rows.length) throw new Error("Header 'Invoice No / Open Amt' tidak ditemukan atau file kosong.");
-          const { data, error } = await supabase.rpc("ar_target_replace", { p_month: month, p_rows: parsed.rows, p_file_name: f.name });
-          if (error) throw error;
-          msgs.push(`Target ${monthLabel(month)}: ${data} invoice`);
-        }
+        const sheets = await readAllSheets(f);
+        const kind = detectKind(sheets);
+        if (kind !== EXPECT[box]) throw new Error(`${f.name}: bukan file ${box === "erp" ? "Invoice/Payment" : box} (terdeteksi: ${kind ?? "tidak dikenali"})`);
+        const r = await runUpload(supabase, kind, f, sheets, { month });
+        msgs.push(`${f.name}: ${r.message}`);
       }
       toast(msgs.join("\n"), "success", 8000);
       onDone();
@@ -61,32 +44,30 @@ export function MutasiUpload({ version, onDone }: { version: number; onDone: () 
     }
   }
 
-  const box = (kind: Kind, title: string, note: string, multi: boolean, extra?: React.ReactNode) => (
+  const box = (b: Box, title: string, note: string, multi: boolean, extra?: React.ReactNode) => (
     <div className={`${card} space-y-3 p-4`}>
       <div className="flex items-center gap-2">
         <h2 className="font-medium">{title}</h2>
-        <button type="button" className={`${btnGhost} ml-auto !text-xs`} onClick={() => downloadXlsx(`Template ${title}.xlsx`, title, TEMPLATES[kind])}>
+        <button type="button" className={`${btnGhost} ml-auto !text-xs`} onClick={() => downloadXlsx(`Template ${title}.xlsx`, "Template", TEMPLATES[TEMPLATE_OF[b]])}>
           <span className="material-symbols-outlined !text-base">download</span>Template
         </button>
       </div>
       <p className="text-xs text-fg-2">{note}</p>
       {extra}
       <input type="file" accept=".xlsx,.xls,.xlsm" multiple={multi} disabled={busy !== null}
-        key={busy === kind ? "busy" : "idle"}
-        onChange={(e) => run(kind, [...(e.target.files ?? [])])} className={inputCls} />
-      {busy === kind && <p className="text-sm text-accent">Memproses…</p>}
+        key={busy === b ? "busy" : "idle"}
+        onChange={(e) => run(b, [...(e.target.files ?? [])])} className={inputCls} />
+      {busy === b && <p className="text-sm text-accent">Memproses…</p>}
     </div>
   );
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         {box("mutasi", "Mutasi Rekening",
           "Boleh beberapa file & beberapa sheet. Rekening dikenali dari 4 digit terakhir (nama sheet atau baris \"No. rekening :\"). Hanya baris CR yang disimpan; \"SWITCHING PENGUIN\" diabaikan. Tanggal yang tercakup file/Periode diganti.", true)}
-        {box("invoice", "Invoice",
-          "Header: Invoice No., Invoice Amount, Invoice Date. Baris lama dengan tanggal atau nomor invoice yang sama diganti.", true)}
-        {box("payment", "Payment",
-          "Header: Invoice No., Payment Document, Payment Amount, Payment Date. Semua payment pada tanggal yang ada di file diganti.", true)}
+        {box("erp", "Invoice & Payment",
+          "Laporan ERP \"Invoice and Payment Date Comparison\" (per tanggal invoice atau per tanggal payment), atau file berheader Invoice No., Invoice Amount, Invoice Date / Payment Document, Payment Amount, Payment Date. Data yang sama juga dipakai Presentasi & Marketplace — upload sekali saja.", true)}
         {box("target", "Target",
           "Header: Invoice No, Open Amt. Mengganti seluruh target bulan terpilih (tabel target yang sama dengan Dashboard Controller).", false,
           <label className="block text-sm">
@@ -94,7 +75,7 @@ export function MutasiUpload({ version, onDone }: { version: number; onDone: () 
             <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} mt-1`} />
           </label>)}
       </div>
-      <ImportLog module="mutasi" version={version} />
+      <ImportLog module={["data", "mutasi", "collection"]} version={version} />
     </div>
   );
 }

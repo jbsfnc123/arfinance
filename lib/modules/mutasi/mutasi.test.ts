@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findHeaderRow, parseInvoiceFile, parseMutasiWorkbook, parsePaymentFile } from "./parse";
+import { findHeaderRow, parseMutasiWorkbook } from "./parse";
 import { buildMutasi } from "./dashboard";
 import { parseDate } from "@/lib/parsers/date";
 
@@ -37,13 +37,6 @@ describe("mutasi", () => {
   it("header dicari berdasarkan nama (NormHeader)", () => {
     expect(findHeaderRow([["a"], ["", "INVOICE NO.", "Invoice-Amount", "invoice date"]], ["Invoice No.", "Invoice Amount", "Invoice Date"], 30))
       .toEqual({ row: 1, cols: [1, 2, 3] });
-  });
-
-  it("invoice: ganda → pertama; payment: nilai 0 dibuang", () => {
-    const inv = parseInvoiceFile([["Invoice No.", "Invoice Amount", "Invoice Date"], ["A", 10, 46266], ["A", 99, 46266], ["", 1, 46266], ["B", "1.500", ""]]);
-    expect(inv).toEqual([{ invoice_no: "A", invoice_date: "2026-09-01", amount: 10 }]);
-    const pay = parsePaymentFile([["Invoice No.", "Payment Document", "Payment Amount", "Payment Date"], ["A", "P1", 5, "02/09/2026"], ["B", "P2", 0, "02/09/2026"]]);
-    expect(pay).toEqual([{ invoice_no: "A", payment_doc: "P1", payment_date: "2026-09-02", amount: 5 }]);
   });
 
   it("tanggal dengan jam", () => {

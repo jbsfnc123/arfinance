@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { readAllSheets, readFirstSheetRows } from "@/lib/xlsx-client";
-import { parseAging, parseBpUsers, parseGrCsv, parseKwCsv, parseSchedule } from "@/lib/modules/m10/parse";
+import { parseBpUsers, parseGrCsv, parseKwCsv, parseSchedule } from "@/lib/modules/m10/parse";
+import { runUpload } from "@/lib/uploads/run";
 import { todayJakarta } from "@/lib/parsers/date";
-import { rupiah } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls } from "@/components/ui";
 
 type Kind = "aging" | "gr" | "kw" | "jadwal" | "bp";
-const CHUNK = 2000;
+const CHUNK = 2000; // GR
 const KW_USER_KEY = "m10.kwUsername";
 
 // Upload file sumber (port tombol macro: Update Master Aging, Upload CSV + Update GR,
@@ -20,7 +20,6 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
   const toast = useToast();
   const [busy, setBusy] = useState<Kind | null>(null);
   const [taxName, setTaxName] = useState("");
-  const [sheetName, setSheetName] = useState("Blank_A4");
   // Username terakhir disimpan per browser (dulu sel A1 sheet KW Update).
   const [kwUser, setKwUser] = useState(() => {
     try { return typeof window === "undefined" ? "" : localStorage.getItem(KW_USER_KEY) ?? ""; } catch { return ""; }
@@ -37,19 +36,9 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
     try {
       let msg = "";
       if (kind === "aging") {
-        const sheets = await readAllSheets(file);
-        const sheet = sheets.find((s) => s.name.toLowerCase() === sheetName.trim().toLowerCase()) ?? sheets[0];
-        const rows = parseAging(sheet.rows, taxName);
-        const batch = crypto.randomUUID();
-        for (let i = 0; i < rows.length; i += CHUNK) {
-          const { error } = await supabase.rpc("m10_aging_stage", { p_batch: batch, p_rows: rows.slice(i, i + CHUNK) });
-          if (error) throw error;
-        }
-        const { data, error } = await supabase.rpc("m10_aging_commit", { p_batch: batch, p_file_name: file.name });
-        if (error) throw error;
-        const r = data as { rows: number; oldRows: number; totalOpen: number; newInvoices: number; lunas: number };
-        msg = `Update Master Aging selesai (sheet ${sheet.name}).\nBaris aging: ${r.rows} (sebelumnya ${r.oldRows})\n` +
-          `Total Open Amt: ${rupiah(r.totalOpen)}\nInvoice baru ke Kertas Kerja: ${r.newInvoices}\nHilang dari aging (Lunas): ${r.lunas}`;
+        // Laporan aging bersama: disimpan sekali, dipakai Collection, Mitra10, Presentasi.
+        const r = await runUpload(supabase, "aging", file, await readAllSheets(file));
+        msg = r.message;
       } else if (kind === "gr") {
         const { rows, lines, sjCount } = parseGrCsv(await file.text(), Number(todayJakarta().slice(0, 4)));
         let added = 0;
@@ -103,12 +92,11 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
     <div className="grid gap-4 md:grid-cols-2">
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">1. Update Master Aging</h2>
-        <p className="text-xs text-fg-2">File MASTER AGING (.xls/.xlsx). Hanya baris dengan Tax Name di bawah yang disimpan; data aging lama diganti penuh. No SJ baru otomatis ditambahkan ke Kertas Kerja; invoice yang hilang dari aging berstatus Lunas.</p>
+        <p className="text-xs text-fg-2">File MASTER AGING / Blank_A4 — laporan yang sama dengan Update Tagihan, cukup di-upload sekali (di sini atau di Pusat Upload). Mitra10 membaca baris dengan Tax Name di bawah; No SJ baru otomatis masuk Kertas Kerja dan invoice yang hilang dari aging berstatus Lunas.</p>
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
           <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={inputCls} placeholder="Filter Tax Name" />
           <button type="button" className={btnGhost} onClick={saveTax}>Simpan</button>
         </div>
-        <input value={sheetName} onChange={(e) => setSheetName(e.target.value)} className={inputCls} placeholder="Nama sheet (default Blank_A4)" />
         {fileInput("aging", ".xls,.xlsx,.xlsm,.xlsb")}
       </div>
 

@@ -72,7 +72,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
       href: "https://script.google.com/a/macros/penguin.id/s/AKfycby2hZ2lsfsPzV9FUup3YTSV3IYt1BrrKBEgUlg7B977ibdRj0k4zA2lt0kRnmahrNIr3g/exec" },
   ]},
   { id: "set", label: "Pengaturan", icon: "settings", children: [
-    { id: "set.update",   label: "Update Tagihan (Excel)", href: "/pengaturan/update-tagihan", needs: "ctrl" },
+    { id: "set.update",   label: "Pusat Upload Data",      href: "/pengaturan/upload",         needs: "ctrl" },
     { id: "set.target",   label: "Upload Target Bulanan",  href: "/pengaturan/target",         needs: "ctrl" },
     { id: "set.akun",     label: "Akun & PIN",             href: "/pengaturan/akun",           needs: "sa" },
     { id: "set.acl",      label: "Role & Akses Menu",      href: "/pengaturan/acl",            needs: "sa" },

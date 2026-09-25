@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
-import { parseErp, parseWorkbook, type Report } from "./parse";
+import { parseWorkbook, type Report } from "./parse";
 import { buildAudit, buildErpRecon, buildRecon, buildReconAdj, erpSubsidi, reconProblems } from "./analysis";
 
 function wb(sheets: Record<string, unknown[][]>) {
@@ -74,17 +74,12 @@ describe("parse Shopee", () => {
   });
 
   it("rekonsiliasi ERP + invoice subsidi", () => {
-    const erp = parseErp(XLSX, wb({
-      Blank_A4: [
-        ["Organization :", "Penguin"], ["Payment Group", "Shopee"], ["Date", "2026-08-01", "2026-08-31"],
-        ["BP Name", "Invoice No.", "Invoice Amount", "Payment Amount", "PO No. Customer"],
-        ["Shopee", "INV-1", 100000, 85000, "A1"],
-        ["Shopee", "INV-2", 7000, 7000, "-"],
-        ["Shopee", "INV-3", 10, 0, "X1"],
-      ],
-    }));
-    expect(erp.erpMeta).toMatchObject({ org: "Penguin", paymentGroup: "Shopee", dari: "2026-08-01", ke: "2026-08-31" });
-    const R2: Report = { ...R, Erp: erp.Erp, erpMeta: erp.erpMeta };
+    // Baris ERP kini berasal dari RPC mp_erp_rows (bentuk sama dengan parser lama).
+    const R2: Report = { ...R, erpMeta: { org: "Penguin", paymentGroup: "Shopee", dari: "2026-08-01", ke: "2026-08-31" }, Erp: [
+      { bpName: "Shopee", invoiceNo: "INV-1", invoiceAmount: 100000, paymentAmount: 85000, no: "A1" },
+      { bpName: "Shopee", invoiceNo: "INV-2", invoiceAmount: 7000, paymentAmount: 7000, no: "" },
+      { bpName: "Shopee", invoiceNo: "INV-3", invoiceAmount: 10, paymentAmount: 0, no: "X1" },
+    ] };
     const rows = buildErpRecon(R2, 0);
     // A1: selisih ERP 15.000 = biaya 10.000 + subsidi 5.000 → cocok
     expect(rows.find((r) => r.no === "A1")).toMatchObject({ biaya: 10000, subsidi: 5000, takTerjelaskan: 0, status: "Cocok" });

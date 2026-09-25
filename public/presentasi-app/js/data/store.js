@@ -27,7 +27,7 @@ const Store = (() => {
     // Dalam iframe: tunggu sebentar sampai halaman induk memasang bridge.
     for (let i = 0; i < 40 && window.parent !== window && !bridge(); i++) await new Promise(r => setTimeout(r, 50));
     const b = bridge();
-    if (b) return b.load();
+    if (b) return b.load(window);
     const timeout = new Promise(resolve => setTimeout(() => resolve(null), 2500));
     return Promise.race([loadIdb(), timeout]);
   }
@@ -133,5 +133,5 @@ const Store = (() => {
     return main();
   }
 
-  return { load, save, clear, parseFile };
+  return { load, save, clear, parseFile, bridge };
 })();

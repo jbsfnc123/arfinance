@@ -8,15 +8,16 @@ import { card, td, th } from "@/components/ui";
 type LogRow = { id: number; kind: string; file_name: string | null; months: string[] | null; rows: number | null; at: string };
 
 // Riwayat upload satu modul (pengganti sheet UploadLog / tblLog).
-export function ImportLog({ module, version, limit = 10 }: { module: string; version: number; limit?: number }) {
+export function ImportLog({ module, version, limit = 10 }: { module: string | string[]; version: number; limit?: number }) {
+  const modules = Array.isArray(module) ? module.join(",") : module;
   const supabase = useMemo(() => createClient(), []);
   const [rows, setRows] = useState<LogRow[]>([]);
 
   useEffect(() => {
     supabase.from("import_log").select("id, kind, file_name, months, rows, at")
-      .eq("module", module).order("id", { ascending: false }).limit(limit)
+      .in("module", modules.split(",")).order("id", { ascending: false }).limit(limit)
       .then(({ data }) => setRows((data ?? []) as LogRow[]));
-  }, [module, version, limit, supabase]);
+  }, [modules, version, limit, supabase]);
 
   return (
     <section className={`${card} overflow-x-auto`}>

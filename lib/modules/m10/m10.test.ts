@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanSj, parseAging, parseBpUsers, parseGrCsv, parseKwCsv, parseSchedule, toRoman } from "./parse";
+import { cleanSj, parseBpUsers, parseGrCsv, parseKwCsv, parseSchedule, toRoman } from "./parse";
 
 describe("mitra10", () => {
   it("CleanSJ: digit, padding 5, tahun romawi", () => {
@@ -7,18 +7,6 @@ describe("mitra10", () => {
     expect(cleanSj("SJ-102301-XXVI-TRA", 2026)).toBe("SJ/102301/XXVI/TRA");
     expect(cleanSj("123", 2026)).toBe("SJ/00123/XXVI/TRA");
     expect(cleanSj("abc", 2026)).toBe("");
-  });
-
-  it("aging: header per nama, filter Tax Name, #N/A & null → kosong", () => {
-    const rows = parseAging([
-      ["Payment Group", "Marketing ", "Tax Name", "Invoice No", "Invoice Date", "Open Amt", "Days", "No PO", "No SJ", "Due + > 90"],
-      ["CMSS - A", "02", " catur mitra sejati sentosa ", "SI1", 46266, "1.500.000", 12, "null", "SJ/1", "#N/A"],
-      ["X", "02", "Lain", "SI2", 46266, 5, 1, "", "SJ/2", 0],
-    ], "Catur Mitra Sejati Sentosa");
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ payment_group: "CMSS - A", marketing: "02", invoice_no: "SI1", invoice_date: "2026-09-01", open_amt: 1500000, days: 12, no_po: "", no_sj: "SJ/1", due_90: 0 });
-    expect(() => parseAging([["Tax Name", "Invoice No"]], "x")).toThrow(/No SJ/);
-    expect(() => parseAging([["Tax Name", "Invoice No", "No SJ"], ["Lain", "A", "B"]], "x")).toThrow(/Tidak ada baris/);
   });
 
   it("GR CSV: kutip dibuang, SJ NO dibentuk, duplikat GR No + Item Code dibuang", () => {

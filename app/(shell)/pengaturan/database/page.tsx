@@ -5,13 +5,19 @@ import { fmtTimestamp } from "@/lib/format";
 import { card, td, th } from "@/components/ui";
 
 // Pengganti modal "Database" (peta arsitektur) di aplikasi lama: isi tabel & riwayat import.
+// Fase 7: laporan ERP disimpan sekali di tabel inti; menu lain membaca lewat view.
 const TABLES = [
-  { table: "ar_invoices", desc: "Tagihan terbuka (upload Blank_A4, pengganti Update_Tagihan)" },
-  { table: "ar_targets", desc: "Target bulanan (pengganti sheet Tagihan)" },
+  { table: "ar_aging_snapshots", desc: "Snapshot aging per bulan (upload Blank_A4 / MASTER AGING, 1 per bulan)" },
+  { table: "ar_aging_lines", desc: "Baris aging semua snapshot → view ar_invoices (Collection) & m10_aging (Mitra10)" },
+  { table: "erp_invoices", desc: "Invoice ERP (laporan Invoice & Payment) → Mutasi, Presentasi, Marketplace" },
+  { table: "erp_payments", desc: "Pembayaran ERP per dokumen → Mutasi, Presentasi (late days), Marketplace" },
+  { table: "business_partners", desc: "Master Business Partner → Presentasi" },
+  { table: "ar_targets", desc: "Target bulanan → Dashboard Controller & Mutasi" },
   { table: "notes", desc: "Catatan collection (Reminder, No Respon, Case, Administratif)" },
   { table: "payment_promises", desc: "Janji bayar" },
   { table: "invoice_exchanges", desc: "Tukar faktur (Kolektor, Ekspedisi, Sistem, WA, Email)" },
   { table: "contacts", desc: "Kontak WA per Business Partner" },
+  { table: "deck_derived", desc: "Agregat Presentasi per bulan (dihitung ulang dari tabel inti)" },
   { table: "profiles", desc: "Akun (login PIN)" },
   { table: "roles", desc: "Role & jenis akses" },
 ] as const;
@@ -23,7 +29,7 @@ export default async function DatabasePage() {
   const supabase = await createClient();
   const counts = await Promise.all(
     TABLES.map(async (t) => {
-      const { count } = await supabase.from(t.table).select("*", { count: "exact", head: true });
+      const { count } = await supabase.from(t.table as "profiles").select("*", { count: "exact", head: true });
       return count ?? 0;
     }),
   );
