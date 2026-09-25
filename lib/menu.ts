@@ -51,7 +51,9 @@ export const MENU_REGISTRY: MenuGroup[] = [
     { id: "ext.ltkp",      label: "LTKP",                          href: "/faktur/ltkp" },
   ]},
   { id: "billing", label: "Billing", icon: "receipt_long", children: [
-    { id: "bill.detail", label: "Tagihan Bulanan Detail", href: "/billing", phase: 4 },
+    // Keputusan user 2026-09-25: Billing tetap di GAS, dibuka lewat link langsung (seperti menu Eksternal).
+    { id: "bill.detail", label: "Tagihan Bulanan Detail", external: true,
+      href: "https://script.google.com/a/macros/penguin.id/s/AKfycbySpc4mhfrsuVa4434OO9Ac0rPW7l5vMUZ8Nbe8TGYuzZDmndAZ-jpVc7D_cPOhvJ7_gQ/exec" },
     { id: "bill.ecom",   label: "E-Commerce",             href: "/billing/ecommerce" },
     { id: "bill.komisi", label: "Komisi dan Cashback",    href: "/billing/komisi" },
   ]},
@@ -63,7 +65,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
     { id: "rek.mitra10",     label: "Mitra10 Tukar Faktur",    href: "/mitra10" },
   ]},
   { id: "laporan", label: "Laporan", icon: "slideshow", children: [
-    { id: "lap.presentasi", label: "AR Management Deck", href: "/presentasi", phase: 6 },
+    { id: "lap.presentasi", label: "AR Management Deck", href: "/presentasi" },
   ]},
   { id: "eksternal", label: "Eksternal", icon: "open_in_new", children: [
     { id: "ext.modern", label: "Modern Market", external: true,

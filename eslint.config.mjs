@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Aplikasi Presentasi lama (JS klasik) disalin apa adanya.
+    "public/presentasi-app/**",
   ]),
 ]);
 

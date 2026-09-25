@@ -519,6 +519,12 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      deck_state: {
+        Row: { id: number; state: Json; saved_at: string; saved_by: string | null }
+        Insert: { id?: number; state: Json; saved_at?: string; saved_by?: string | null }
+        Update: { id?: number; state?: Json; saved_at?: string; saved_by?: string | null }
+        Relationships: []
+      }
       po_so_cases: {
         Row: {
           id: number
