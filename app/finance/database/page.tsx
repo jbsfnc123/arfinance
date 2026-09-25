@@ -1,4 +1,4 @@
-import { menuGuard } from "@/lib/guard";
+import { getSession } from "@/lib/session";
 import { NoAccess } from "@/components/no-access";
 import { createClient } from "@/lib/supabase/server";
 import { fmtTimestamp } from "@/lib/format";
@@ -24,8 +24,8 @@ const TABLES = [
 ] as const;
 
 export default async function DatabasePage() {
-  const { allowed, label } = await menuGuard("set.database");
-  if (!allowed) return <NoAccess label={label} />;
+  const { role } = await getSession();
+  if (role.kind !== "sa") return <NoAccess label="Database" reason="Menu ini hanya untuk Super Admin." />;
 
   const supabase = await createClient();
   const counts = await Promise.all(

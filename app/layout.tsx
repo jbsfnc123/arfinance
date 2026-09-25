@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
+import { currentWorkspace } from "@/lib/workspace-server";
+import { WORKSPACES } from "@/lib/workspace";
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -8,10 +10,11 @@ const roboto = Roboto({
   weight: ["400", "500", "700"],
 });
 
-export const metadata: Metadata = {
-  title: "AR Workspace — Penguin",
-  description: "Aplikasi AR Collection, Tukar Faktur, Faktur Pajak, Billing, dan rekonsiliasi PT Penguin Trading",
-};
+// Judul tab mengikuti workspace (host): Finance / AR / AP Workspace.
+export async function generateMetadata(): Promise<Metadata> {
+  const ws = await currentWorkspace();
+  return { title: `${WORKSPACES[ws].label} — Penguin`, description: WORKSPACES[ws].desc };
+}
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

@@ -64,10 +64,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
   { id: "set", label: "Pengaturan", icon: "settings", children: [
     { id: "set.update",   label: "Pusat Upload Data",      href: "/pengaturan/upload",         needs: "ctrl" },
     { id: "set.target",   label: "Upload Target Bulanan",  href: "/pengaturan/target",         needs: "ctrl" },
-    { id: "set.akun",     label: "Akun & PIN",             href: "/pengaturan/akun",           needs: "sa" },
-    { id: "set.acl",      label: "Role & Akses Menu",      href: "/pengaturan/acl",            needs: "sa" },
     { id: "set.watpl",    label: "Template WA",            href: "/pengaturan/wa-template",    needs: "ctrl" },
-    { id: "set.database", label: "Database",               href: "/pengaturan/database",       needs: "sa" },
   ]},
 ];
 
@@ -78,8 +75,29 @@ export const HOME_GROUP: MenuGroup = { id: "home", label: "Beranda", icon: "home
 ]};
 export const HOME_ITEM = HOME_GROUP.children[0];
 
+// Akses workspace (subdomain). Finance Workspace (tangki.space) selalu khusus Super Admin.
+export const WORKSPACE_GROUP: MenuGroup = { id: "ws", label: "Workspace", icon: "apps", children: [
+  { id: "ws.ar", label: "AR Workspace (ar.tangki.space)", href: "/" },
+  { id: "ws.ap", label: "AP Workspace (ap.tangki.space)", href: "/" },
+]};
+export const wsItem = (ws: "ar" | "ap") => WORKSPACE_GROUP.children[ws === "ar" ? 0 : 1];
+
+// Grup yang ditampilkan di Role & Akses Menu (urutan tampil).
+export const ACL_GROUPS: MenuGroup[] = [WORKSPACE_GROUP, HOME_GROUP];
+
+// Menu AP Workspace — diisi fase berikutnya.
+export const AP_MENU_REGISTRY: MenuGroup[] = [];
+
+// Navigasi Finance Workspace (tangki.space, khusus Super Admin). Halaman admin pusat pindah ke sini.
+export const FINANCE_NAV = [
+  { href: "/", label: "Portal", icon: "apps" },
+  { href: "/akun", label: "Akun & PIN", icon: "badge" },
+  { href: "/acl", label: "Role & Akses", icon: "admin_panel_settings" },
+  { href: "/database", label: "Database", icon: "database" },
+] as const;
+
 export function findMenuById(id: string) {
-  for (const group of [HOME_GROUP, ...MENU_REGISTRY]) {
+  for (const group of [WORKSPACE_GROUP, HOME_GROUP, ...MENU_REGISTRY]) {
     const item = group.children.find((c) => c.id === id);
     if (item) return { group, item };
   }
@@ -110,8 +128,8 @@ export function canAccess(item: MenuItem, access: Access) {
   return access.kind === "sa" || access.allowed.has(item.id);
 }
 
-export function visibleMenu(access: Access): MenuGroup[] {
-  return MENU_REGISTRY
+export function visibleMenu(access: Access, registry: MenuGroup[] = MENU_REGISTRY): MenuGroup[] {
+  return registry
     .map((g) => ({ ...g, children: g.children.filter((c) => canAccess(c, access)) }))
     .filter((g) => g.children.length > 0);
 }
@@ -123,4 +141,10 @@ export function firstAllowedHref(access: Access): string | null {
     if (item) return item.href;
   }
   return null;
+}
+
+// Boleh masuk workspace? Finance khusus Super Admin; AR/AP lewat centang ws.ar / ws.ap.
+export function canEnterWorkspace(ws: "finance" | "ar" | "ap", access: Access) {
+  if (ws === "finance") return access.kind === "sa";
+  return canAccess(wsItem(ws), access);
 }

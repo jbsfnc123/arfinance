@@ -7,7 +7,7 @@ import { requireSuperAdmin } from "@/lib/session";
 import { derivePassword, isValidPin, syntheticEmail } from "@/lib/auth/pin";
 import { err, ok, type ActionResult } from "../ui";
 
-const PATH = "/pengaturan/akun";
+const PATH = "/finance/akun";
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
 
 async function roleKind(roleId: string) {
