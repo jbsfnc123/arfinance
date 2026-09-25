@@ -2,6 +2,7 @@ import type { AgingLine, Datasets } from "./datasets";
 import { memoize } from "./memo";
 import { arInvoices, collectionRows, computeSpvSummary, filterOf, type ArInvoice } from "@/lib/modules/collection/rows";
 import { enrichRow } from "@/lib/modules/collection/view-model";
+import { collectionAllocation } from "@/lib/modules/collection/allocation";
 import { computeM10, m10AgingLines } from "@/lib/modules/m10/compute";
 
 // Hasil hitungan berat dibagi ANTAR halaman: dihitung sekali per versi data (identitas objek
@@ -21,3 +22,7 @@ export const spvSummaryOf = memoize((month: string, today: string, targets: Data
 export const m10LinesOf = memoize((lines: AgingLine[], taxName: string) => m10AgingLines(lines, taxName));
 
 export const m10Of = memoize((m10: Datasets["m10"], aging: AgingLine[], remarks: Map<string, string>) => computeM10({ ...m10, aging, remarks }));
+
+// Alokasi (pembayaran ERP) per hari untuk satu collection & bulan (Daftar Tagihan).
+export const collectionAllocationOf = memoize((month: string, collection: string, erp: Datasets["erp"], targets: Datasets["targets"], agingAll: AgingLine[]) =>
+  collectionAllocation({ month, collection, payments: erp.payments, invoices: erp.invoices, targets: targets.targets, agingAll }));

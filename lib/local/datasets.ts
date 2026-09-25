@@ -32,7 +32,7 @@ export type Datasets = {
   targets: { targets: Target[] };
   m10: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[] };
   mutasi: { accounts: Account[]; mutations: Mutation[] };
-  erp: { invoices: { invoice_no: string; invoice_date: string; amount: number }[]; payments: { invoice_no: string; payment_date: string; amount: number }[] };
+  erp: { invoices: { invoice_no: string; invoice_date: string; amount: number; bp_key?: string | null }[]; payments: { invoice_no: string; payment_date: string; amount: number }[] };
   tukar: { done: { tanggal_tukar: string | null; kurir: string | null; business_partner: string | null; kode: string | null }[] };
   settings: Record<string, unknown>;
   remarks: { remarks: Remark[] };

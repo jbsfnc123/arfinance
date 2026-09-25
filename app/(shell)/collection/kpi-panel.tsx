@@ -1,12 +1,17 @@
 ﻿"use client";
 
 import { useMemo, useState } from "react";
+import type { EChartsOption } from "echarts";
 import { monthLabel, rupiah } from "@/lib/format";
 import {
-  agingCards, categoryCounts, CATEGORY_CARDS, dueRecap, NO_DATE, TUKAR_METHODS, tukarRecap,
-  type CollectionRow, type Filters, type TukarMetric,
+  agingCards, categoryCounts, CATEGORY_CARDS, dueRecap,
+  type CollectionRow, type Filters,
 } from "@/lib/modules/collection/view-model";
-import { card, td, th } from "@/components/ui";
+import { collectionAllocationOf } from "@/lib/local/derived";
+import { useDataset } from "@/lib/local/store";
+import { todayJakarta } from "@/lib/parsers/date";
+import { Chart, CHART_GRID } from "@/components/chart";
+import { card, inputCls, td, th } from "@/components/ui";
 
 type Props = { rows: CollectionRow[]; filters: Filters; setFilters: (f: Filters) => void };
 
@@ -26,26 +31,10 @@ const CATEGORY_COLOR: Record<string, string> = {
   "Tidak Ada Catatan": "text-fg",
 };
 
-const cellBtn = (active: boolean) =>
-  `rounded px-1.5 py-0.5 hover:bg-surface-2 ${active ? "bg-pill text-pill-fg" : ""}`;
-
-export function KpiPanel({ rows, filters, setFilters, loading }: Props & { loading: boolean }) {
+export function KpiPanel({ rows, filters, setFilters, loading, collection }: Props & { loading: boolean; collection: string }) {
   const [open, setOpen] = useState(false);
   const aging = useMemo(() => agingCards(rows), [rows]);
-  const tukar = useMemo(() => tukarRecap(rows), [rows]);
   const due = useMemo(() => dueRecap(rows), [rows]);
-
-  const toggleTukar = (ym: string, metric: TukarMetric) => {
-    const same = filters.tukar?.ym === ym && filters.tukar.metric === metric;
-    setFilters({ ...filters, tukar: same ? null : { ym, metric } });
-  };
-  const isTukar = (ym: string, metric: TukarMetric) => filters.tukar?.ym === ym && filters.tukar.metric === metric;
-  const metrics: { key: TukarMetric; label: string; cls?: string }[] = [
-    { key: "total", label: "Total" },
-    { key: "belum", label: "Belum TT", cls: "text-danger" },
-    { key: "sudah", label: "Sudah TT", cls: "text-success" },
-    ...TUKAR_METHODS.map((m) => ({ key: m as TukarMetric, label: m })),
-  ];
 
   return (
     <section className={`${card} mt-4`}>
@@ -75,40 +64,7 @@ export function KpiPanel({ rows, filters, setFilters, loading }: Props & { loadi
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-            <div className="overflow-x-auto">
-              <h3 className="mb-2 text-sm font-medium">Rekap Tukar Faktur · per Bulan (Invoice Date)</h3>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className={th}>Bulan</th>
-                    {metrics.map((m) => <th key={m.key} className={`${th} text-right`}>{m.label}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...tukar.months, { ...tukar.total, ym: "__ALL__" }].map((row) => {
-                    const ym = row.ym === "__ALL__" ? "" : row.ym;
-                    const isTotal = row.ym === "__ALL__";
-                    return (
-                      <tr key={row.ym || "tanpa"} className={`border-t border-line ${isTotal ? "font-medium" : ""}`}>
-                        <td className={td}>{isTotal ? "Semua Bulan" : monthLabel(row.ym)}</td>
-                        {metrics.map((m) => (
-                          <td key={m.key} className={`${td} text-right ${m.cls ?? ""}`}>
-                            {/* Baris total: ym "" = semua bulan; baris "(Tanpa Tgl)" juga "" tetapi hanya invoice tanpa tanggal */}
-                            <button
-                              type="button"
-                              className={cellBtn(isTukar(isTotal ? "" : ym || NO_DATE, m.key))}
-                              onClick={() => toggleTukar(isTotal ? "" : ym || NO_DATE, m.key)}
-                            >
-                              {Number(row[m.key]) || 0}
-                            </button>
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <AllocationChart collection={collection} />
 
             <div className="overflow-x-auto">
               <h3 className="mb-2 text-sm font-medium">Rekap Jatuh Tempo · per Bulan (Due Date)</h3>
@@ -169,6 +125,60 @@ export function CategoryCards({ rows, filters, setFilters }: Props) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+const juta = (n: number) => Math.round(n / 1e4) / 100;
+
+// Pengganti "Rekap Tukar Faktur per Bulan": total alokasi (pembayaran ERP) collection ini per hari.
+// Dataset erp/targets baru dimuat saat panel dibuka (komponen ini hanya dirender saat terbuka).
+function AllocationChart({ collection }: { collection: string }) {
+  const erp = useDataset("erp").data;
+  const targets = useDataset("targets").data;
+  const agingAll = useDataset("aging").data?.lines;
+  const current = todayJakarta().slice(0, 7);
+  const [month, setMonth] = useState(current);
+  const a = useMemo(
+    () => (erp && targets && agingAll ? collectionAllocationOf(month, collection, erp, targets, agingAll) : null),
+    [month, collection, erp, targets, agingAll],
+  );
+  const months = useMemo(() => {
+    const set = new Set([current, month, ...(a?.months ?? []), ...(targets?.targets.map((t) => t.month) ?? [])]);
+    return [...set].filter(Boolean).sort().reverse();
+  }, [current, month, a, targets]);
+
+  if (!a) return <div className="text-sm text-fg-2">Memuat data alokasi…</div>;
+  const option: EChartsOption = {
+    grid: { left: 8, right: 8, top: 36, bottom: 8, containLabel: true },
+    tooltip: { trigger: "axis", valueFormatter: (x) => (x == null ? "-" : `${Number(x).toLocaleString("id-ID")} jt`) },
+    legend: { top: 0, textStyle: { color: "#9aa0a6" } },
+    xAxis: { type: "category", data: a.days.map((d) => String(Number(d.date.slice(8)))) },
+    yAxis: { type: "value", name: "Juta", splitLine: { lineStyle: { color: CHART_GRID } } },
+    series: [
+      { name: "Alloc in Target", type: "bar", stack: "a", data: a.days.map((d) => juta(d.inTarget)), itemStyle: { color: "#5f8fd8" }, barMaxWidth: 16 },
+      { name: "Di luar target", type: "bar", stack: "a", data: a.days.map((d) => juta(d.outside)), itemStyle: { color: "#fdd663" }, barMaxWidth: 16 },
+    ],
+  };
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-medium">Total Alokasi · per Hari</h3>
+        <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} !w-auto !py-1 text-xs`}>
+          {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+        </select>
+      </div>
+      <p className="text-xs text-fg-2">
+        Total <b className="text-fg">{rupiah(a.total)}</b> · Alloc in Target {rupiah(a.inTarget)}
+        {a.target ? <> dari target {rupiah(a.target)} (<b className="text-fg">{Math.round(a.pctTarget * 1000) / 10}%</b>)</> : " · belum ada target bulan ini"}
+        {" "}· Di luar target {rupiah(a.outside)} · rata-rata {rupiah(Math.round(a.avgPerActiveDay))}/hari aktif
+      </p>
+      <Chart option={option} height={260} />
+      {a.unmappedCount > 0 && (
+        <p className="text-xs text-fg-2">
+          {a.unmappedCount} pembayaran ({rupiah(a.unmapped)}) di bulan ini belum bisa dipetakan ke collection mana pun.
+        </p>
+      )}
     </div>
   );
 }
