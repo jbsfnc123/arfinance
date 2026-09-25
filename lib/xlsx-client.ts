@@ -10,6 +10,16 @@ export async function readFirstSheetRows(file: File): Promise<unknown[][]> {
   return XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "", raw: true });
 }
 
+// Semua sheet (nama + baris), mis. file mutasi bank yang berisi beberapa rekening.
+export async function readAllSheets(file: File): Promise<{ name: string; rows: unknown[][] }[]> {
+  const XLSX = await import("xlsx");
+  const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  return wb.SheetNames.map((name) => ({
+    name,
+    rows: XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name], { header: 1, defval: "", raw: true }),
+  }));
+}
+
 // Nilai sel yang diawali = + - @ bisa dieksekusi sebagai formula saat dibuka di Excel.
 function safeCell(v: unknown) {
   return typeof v === "string" && /^[=+\-@]/.test(v) ? "'" + v : v;
