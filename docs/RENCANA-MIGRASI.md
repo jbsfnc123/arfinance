@@ -559,3 +559,26 @@ Quirk lama yang **diperbaiki**:
 - `get_advisors` security dan performance.
 
 **Butuh dari user:** file **Blank_A4** asli dan **file target bulanan** (contoh) untuk uji E2E dan penyesuaian nama header target.
+
+## Domain & Workspace (Fase 16, aktif 2026-09-26)
+
+Satu project Vercel (`arfinance`, region sin1) melayani tiga workspace; workspace dipilih dari host
+di `lib/supabase/proxy.ts` + `lib/workspace.ts`.
+
+| Host | Workspace | Route | Akses |
+|---|---|---|---|
+| `tangki.space` (`www.` → 308 ke apex) | Finance Workspace | `app/finance` (portal, `/akun`, `/acl`, `/database`) | khusus Super Admin |
+| `ar.tangki.space` | AR Workspace | `app/(shell)` | centang `ws.ar` di Role & Akses |
+| `ap.tangki.space` | AP Workspace | `app/ap` (kerangka) | centang `ws.ap` di Role & Akses |
+
+- **DNS Hostinger** (nameserver Hostinger tetap): A `@` → `76.76.21.21`; CNAME `www`, `ar`, `ap` → `cname.vercel-dns.com`.
+  Record parkir (A 2.57.91.91 + AAAA) sudah dihapus. Domain `arfinance-eight.vercel.app` dinonaktifkan.
+- **Login bersama:** cookie sesi `sb-tangki-auth` dengan domain `.tangki.space` → login sekali berlaku di semua
+  workspace. Nama cookie baru → semua pengguna login ulang sekali saat Fase 16 dirilis.
+  Login action menolak akun yang tidak berhak masuk workspace host tsb sebelum sign-in.
+- **Path lama AR** `/pengaturan/{akun,acl,database}` → 308 ke `https://tangki.space/{akun,acl,database}`.
+  Route `/finance/*` dan `/ap/*` diblokir (404) di host AR.
+- **Supabase Auth → URL Configuration:** Site URL `https://tangki.space`; Redirect URLs `https://tangki.space/**`,
+  `https://*.tangki.space/**`, `http://localhost:3000/**`.
+- **Dev lokal:** `http://localhost:3000` = AR, `http://finance.localhost:3000` = Finance, `http://ap.localhost:3000` = AP
+  (cookie host-only di dev, login per host).
