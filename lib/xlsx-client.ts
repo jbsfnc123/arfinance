@@ -16,9 +16,15 @@ function safeCell(v: unknown) {
 }
 
 export async function downloadXlsx(fileName: string, sheetName: string, aoa: unknown[][]) {
+  return downloadXlsxSheets(fileName, [{ name: sheetName, rows: aoa }]);
+}
+
+// Beberapa sheet sekaligus. Nilai teks tetap teks (NPWP/ID TKU tidak berubah jadi angka).
+export async function downloadXlsxSheets(fileName: string, sheets: { name: string; rows: unknown[][] }[]) {
   const XLSX = await import("xlsx");
-  const ws = XLSX.utils.aoa_to_sheet(aoa.map((row) => row.map(safeCell)));
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  for (const s of sheets) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s.rows.map((row) => row.map(safeCell))), s.name);
+  }
   XLSX.writeFile(wb, fileName);
 }
