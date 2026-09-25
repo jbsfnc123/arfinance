@@ -6,7 +6,7 @@ import { requireSuperAdmin } from "@/lib/session";
 import { MENU_REGISTRY } from "@/lib/menu";
 import { err, ok, type ActionResult } from "../ui";
 
-const PATH = "/pengaturan/acl";
+const PATH = "/finance/acl";
 const KINDS = ["sa", "ctrl", "coll", "kurir"];
 const MENU_IDS = new Set(MENU_REGISTRY.flatMap((g) => g.children.map((c) => c.id)));
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();

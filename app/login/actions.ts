@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { derivePassword, isValidPin } from "@/lib/auth/pin";
+import { canEnterWorkspace } from "@/lib/menu";
+import { WORKSPACES, workspaceFromHost } from "@/lib/workspace";
 
 export type LoginState = { error: string; at: number } | null;
 
@@ -28,6 +30,19 @@ export async function loginWithPin(_prev: LoginState, formData: FormData): Promi
   const result = data as PinLoginResult;
   if (result.status === "locked") return fail("Terlalu banyak percobaan. Coba lagi dalam 15 menit.");
   if (result.status !== "ok") return fail("PIN salah.");
+
+  // Hak masuk workspace dicek SEBELUM sign-in (Finance khusus Super Admin; AR/AP lewat centang role).
+  const ws = workspaceFromHost(h.get("host"));
+  const { data: prof } = await createAdminClient()
+    .from("profiles").select("active, role:roles(kind, menus:role_menus(submenu_id))").eq("id", result.user_id).single();
+  const role = prof?.role as { kind: string; menus: { submenu_id: string }[] | null } | null | undefined;
+  if (!prof?.active || !role) return fail("Akun Anda dinonaktifkan. Hubungi Super Admin.");
+  const access = { kind: role.kind, allowed: new Set((role.menus ?? []).map((m) => m.submenu_id)) };
+  if (!canEnterWorkspace(ws, access)) {
+    return fail(ws === "finance"
+      ? "Finance Workspace khusus Super Admin."
+      : `Akun Anda tidak punya akses ke ${WORKSPACES[ws].label}. Hubungi Super Admin.`);
+  }
 
   const supabase = await createClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({

@@ -9,7 +9,9 @@ import { Sidebar } from "./sidebar";
 
 // Kerangka halaman (topbar + sidebar + konten). Client component karena menyimpan status
 // drawer mobile dan membersihkan cache browser saat logout.
-export function ShellChrome({ menu, showHome, user, children }: {
+export function ShellChrome({ title, icon, menu, showHome, user, children }: {
+  title: string;
+  icon: string;
   menu: MenuGroup[];
   showHome: boolean;
   user: { name: string; role: string; collection: string | null };
@@ -46,8 +48,8 @@ export function ShellChrome({ menu, showHome, user, children }: {
           className="flex h-9 w-9 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 md:hidden">
           <span className="material-symbols-outlined">menu</span>
         </button>
-        <span className="material-symbols-outlined !text-[26px] text-accent">account_balance</span>
-        <span className="text-lg font-medium">AR Workspace</span>
+        <span className="material-symbols-outlined !text-[26px] text-accent">{icon}</span>
+        <span className="text-lg font-medium">{title}</span>
         <div className="ml-auto flex items-center gap-3">
           <div className="hidden text-right sm:block">
             <div className="text-sm">{user.name}</div>
