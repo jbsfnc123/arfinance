@@ -26,7 +26,6 @@ export type Report = {
 };
 
 export type BalanceOnly = Pick<Report, "meta" | "balanceSummary" | "Balance">;
-export type ErpFile = Pick<Report, "erpMeta" | "Erp">;
 
 // ── util dasar (sama dengan versi lama) ─────────────────────────────
 export const num = (v: Cell): number => {
@@ -269,33 +268,6 @@ function parseBalanceShopee(XLSX: XlsxLib, wb: WorkBook): BalanceOnly {
 }
 
 // ── Tarikan ERP (invoice vs payment) ───────────────────────────────
-export function parseErp(XLSX: XlsxLib, wb: WorkBook): ErpFile {
-  let rows: Cell[][] | null = null;
-  for (const n of wb.SheetNames) {
-    const r = sheetRows(XLSX, wb, n);
-    if (r && findRow(r, (x) => x.some((v) => txt(v) === "Invoice No.")) >= 0) { rows = r; break; }
-  }
-  if (!rows) throw new Error('File ERP tidak dikenali: kolom "Invoice No." tidak ditemukan.');
-
-  const erpMeta: Report["erpMeta"] = {};
-  for (const r of rows.slice(0, 12)) {
-    const label = txt(r[0]).replace(/[\t:]/g, "").trim().toLowerCase();
-    const vals = r.slice(1).filter((v) => v != null && v !== "" && v !== "/");
-    if (label === "organization") erpMeta.org = txt(vals[0]);
-    else if (label === "payment group") erpMeta.paymentGroup = txt(vals[0]);
-    else if (label === "date") { erpMeta.dari = toDate(vals[0]); erpMeta.ke = toDate(vals[1]); }
-  }
-
-  const h = findRow(rows, (x) => x.some((v) => txt(v) === "Invoice No."));
-  const Erp = mapTable(rows, h, {
-    bpName: "BP Name", lokasi: "BP Location", cabang: "Branch", invoiceNo: "Invoice No.",
-    invoiceAmount: "Invoice Amount", invoiceDate: "Invoice Date", paymentDoc: "Payment Document",
-    paymentAmount: "Payment Amount", paymentDate: "Payment Date", hari: "days", no: "PO No. Customer",
-  }).map((x) => x.obj).filter((x) => x.invoiceNo).map((x) => ({ ...x, no: x.no === "-" ? "" : x.no }));
-
-  return { erpMeta, Erp };
-}
-
 export type ParsedFile =
   | { kind: "report"; data: Report }
   | { kind: "balance"; data: BalanceOnly };

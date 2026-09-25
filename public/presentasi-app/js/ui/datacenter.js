@@ -63,6 +63,18 @@ const DataCenter = (() => {
       const t0 = performance.now();
       try {
         const res = await Store.parseFile(f);
+        const b = Store.bridge();
+        if (b && b.shareFile && ['invoice', 'payment', 'aging', 'bpmaster'].indexOf(res.kind) >= 0) {
+          // AR Workspace: laporan mentah disimpan sekali ke database bersama, deck dihitung ulang darinya.
+          const before = buildModel_(st);
+          r.shared = await b.shareFile(f);
+          st = await b.load(window);
+          r.check = [r.shared].concat(checkAgainst_(before, res));
+          Object.assign(r, { done: true, kind: res.kind, months: res.months, stats: res.stats, ms: performance.now() - t0 });
+          changed = true;
+          render();
+          continue;
+        }
         if (res.kind === 'snapshot') {
           if (!confirm('Ganti seluruh data dengan snapshot "' + f.name + '"?')) { r.error = 'Dibatalkan'; render(); continue; }
           st = res.state;

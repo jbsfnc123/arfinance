@@ -28,51 +28,6 @@ export type Database = {
           },
         ]
       }
-      ar_invoices: {
-        Row: {
-          bp_value: string | null
-          business_partner: string | null
-          collection_name: string | null
-          due_date: string | null
-          invoice_date: string | null
-          invoice_no: string
-          marketing: string | null
-          no_po: string | null
-          no_sj: string | null
-          open_amt: number
-          payment_group: string | null
-          uploaded_at: string
-        }
-        Insert: {
-          bp_value?: string | null
-          business_partner?: string | null
-          collection_name?: string | null
-          due_date?: string | null
-          invoice_date?: string | null
-          invoice_no: string
-          marketing?: string | null
-          no_po?: string | null
-          no_sj?: string | null
-          open_amt?: number
-          payment_group?: string | null
-          uploaded_at?: string
-        }
-        Update: {
-          bp_value?: string | null
-          business_partner?: string | null
-          collection_name?: string | null
-          due_date?: string | null
-          invoice_date?: string | null
-          invoice_no?: string
-          marketing?: string | null
-          no_po?: string | null
-          no_sj?: string | null
-          open_amt?: number
-          payment_group?: string | null
-          uploaded_at?: string
-        }
-        Relationships: []
-      }
       ar_targets: {
         Row: {
           branch: string | null
@@ -366,57 +321,6 @@ export type Database = {
         Update: never
         Relationships: []
       }
-      erp_invoices: {
-        Row: {
-          invoice_no: string
-          invoice_date: string
-          amount: number
-        }
-        Insert: never
-        Update: never
-        Relationships: []
-      }
-      erp_payments: {
-        Row: {
-          id: number
-          invoice_no: string | null
-          payment_doc: string | null
-          payment_date: string
-          amount: number
-        }
-        Insert: never
-        Update: never
-        Relationships: []
-      }
-      m10_aging: {
-        Row: {
-          id: number
-          payment_group: string | null
-          marketing: string | null
-          collection_name: string | null
-          sales_name: string | null
-          business_partner: string | null
-          tax_name: string | null
-          invoice_no: string | null
-          invoice_date: string | null
-          due_date: string | null
-          open_amt: number
-          cur_0_30: number
-          cur_31_60: number
-          due_1_7: number
-          due_8_30: number
-          due_31_60: number
-          due_61_90: number
-          due_90: number
-          days: number | null
-          branch: string | null
-          no_po: string | null
-          no_sj: string | null
-        }
-        Insert: never
-        Update: never
-        Relationships: []
-      }
       m10_bp_users: {
         Row: {
           business_partner: string
@@ -500,6 +404,126 @@ export type Database = {
         }
         Insert: never
         Update: never
+        Relationships: []
+      }
+      erp_invoices: {
+        Row: {
+          invoice_no: string
+          bp_key: string | null
+          bp_name: string | null
+          bp_location: string | null
+          bp_group: string | null
+          marketing_group: string | null
+          branch: string | null
+          payment_term: string | null
+          credit_limit: number | null
+          invoice_date: string
+          due_date: string | null
+          amount: number
+          po_customer: string | null
+          updated_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      erp_payments: {
+        Row: {
+          id: number
+          invoice_no: string
+          payment_doc: string
+          payment_bank: string | null
+          payment_date: string
+          amount: number
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      business_partners: {
+        Row: {
+          search_key: string
+          bp_key: string
+          name: string | null
+          payment_group: string | null
+          pic_ar: string | null
+          sales_agent: string | null
+          payment_term: string | null
+          marketing_group: string | null
+          customer_type: string | null
+          credit_limit: number | null
+          credit_status: string | null
+          sales_region: string | null
+          branch: string | null
+          description: string | null
+          first_sale: string | null
+          last_sale: string | null
+          customer: string | null
+          updated_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      ar_aging_snapshots: {
+        Row: {
+          id: number
+          month: string
+          as_of: string
+          file_name: string | null
+          row_count: number
+          total_open: number
+          created_at: string
+          created_by: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      ar_aging_lines: {
+        Row: {
+          snapshot_id: number
+          line_no: number
+          limit_group: string | null
+          bp_key: string | null
+          follow_up: string | null
+          area: string | null
+          payment_group: string | null
+          marketing: string | null
+          collection_name: string | null
+          sales_name: string | null
+          business_partner: string | null
+          tax_name: string | null
+          invoice_no: string | null
+          invoice_date: string | null
+          due_date: string | null
+          open_amt: number
+          cur_0_30: number
+          cur_31_60: number
+          due_1_7: number
+          due_8_30: number
+          due_31_60: number
+          due_61_90: number
+          due_90: number
+          days: number | null
+          branch: string | null
+          no_po: string | null
+          no_sj: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      deck_derived: {
+        Row: { kind: string; month: string; series: Json; bp: Json; stats: Json; updated_at: string }
+        Insert: { kind: string; month: string; series?: Json; bp?: Json; stats?: Json; updated_at?: string }
+        Update: { kind?: string; month?: string; series?: Json; bp?: Json; stats?: Json; updated_at?: string }
+        Relationships: []
+      }
+      deck_dirty: {
+        Row: { kind: string; month: string; at: string }
+        Insert: { kind: string; month: string; at?: string }
+        Update: { kind?: string; month?: string; at?: string }
         Relationships: []
       }
       so_master: {
@@ -896,6 +920,58 @@ export type Database = {
       }
     }
     Views: {
+      ar_invoices: {
+        Row: {
+          bp_value: string | null
+          business_partner: string | null
+          collection_name: string | null
+          due_date: string | null
+          invoice_date: string | null
+          invoice_no: string
+          marketing: string | null
+          no_po: string | null
+          no_sj: string | null
+          open_amt: number
+          payment_group: string | null
+          uploaded_at: string
+        }
+        Relationships: []
+      }
+      m10_aging: {
+        Row: {
+          id: number
+          payment_group: string | null
+          marketing: string | null
+          collection_name: string | null
+          sales_name: string | null
+          business_partner: string | null
+          tax_name: string | null
+          invoice_no: string | null
+          invoice_date: string | null
+          due_date: string | null
+          open_amt: number
+          cur_0_30: number
+          cur_31_60: number
+          due_1_7: number
+          due_8_30: number
+          due_31_60: number
+          due_61_90: number
+          due_90: number
+          days: number | null
+          branch: string | null
+          no_po: string | null
+          no_sj: string | null
+        }
+        Relationships: []
+      }
+      v_deck_invoices: {
+        Row: Database["public"]["Tables"]["erp_invoices"]["Row"] & { last_payment_date: string | null }
+        Relationships: []
+      }
+      v_deck_payments: {
+        Row: { invoice_no: string; payment_doc: string; payment_date: string; payment_amount: number; bp_key: string | null; bp_name: string | null; bp_group: string | null; marketing_group: string | null; payment_term: string | null; invoice_date: string | null; due_date: string | null }
+        Relationships: []
+      }
       v_m10_gr: {
         Row: Database["public"]["Tables"]["m10_gr"]["Row"] & { po_aging: string; check_status: string }
         Relationships: []
@@ -982,28 +1058,27 @@ export type Database = {
       }
     }
     Functions: {
+      upload_begin: { Args: { p_kind: string; p_file_name: string; p_sha256: string; p_meta: Json }; Returns: Json }
+      upload_rows: { Args: { p_batch: string; p_offset: number; p_rows: Json }; Returns: number }
+      aging_commit: { Args: { p_batch: string }; Returns: Json }
+      erp_commit: { Args: { p_batch: string }; Returns: Json }
+      bp_commit: { Args: { p_batch: string }; Returns: Json }
+      mp_erp_rows: { Args: { p_pos: string[]; p_group: string | null; p_dari: string | null; p_ke: string | null }; Returns: Json }
       mutasi_import: { Args: { p_sheets: Json; p_file_name: string }; Returns: number }
-      erp_invoice_import: { Args: { p_rows: Json; p_file_name: string }; Returns: number }
-      erp_payment_import: { Args: { p_rows: Json; p_file_name: string }; Returns: number }
       mutasi_dashboard: { Args: { p_month: string }; Returns: Json }
-      m10_aging_stage: { Args: { p_batch: string; p_rows: Json }; Returns: number }
-      m10_aging_commit: { Args: { p_batch: string; p_file_name: string }; Returns: Json }
       m10_gr_add: { Args: { p_rows: Json; p_file_name: string; p_first: boolean }; Returns: number }
       m10_kw_add: { Args: { p_rows: Json; p_username: string; p_file_name: string }; Returns: Json }
       m10_schedule_upsert: { Args: { p_rows: Json }; Returns: number }
       m10_schedule_delete: { Args: { p_no_kw: string[] }; Returns: number }
       m10_set_keterangan: { Args: { p_ids: number[]; p_text: string }; Returns: number }
       m10_bp_replace: { Args: { p_rows: Json }; Returns: number }
-      m10_set_tax_name: { Args: { p_value: string }; Returns: undefined }
+      m10_set_tax_name: { Args: { p_value: string }; Returns: number }
       m10_dashboard: { Args: { p_month: string | null }; Returns: Json }
       admin_set_pin: { Args: { p_pin: string; p_user: string }; Returns: undefined }
       ar_target_replace: {
         Args: { p_file_name: string; p_month: string; p_rows: Json }
         Returns: number
       }
-      ar_upload_chunk: { Args: { p_batch: string; p_rows: Json }; Returns: number }
-      ar_upload_finish: { Args: { p_batch: string }; Returns: Json }
-      ar_upload_start: { Args: { p_file_name: string }; Returns: string }
       get_spv_summary: { Args: { p_month: string }; Returns: Json }
       note_group_delete: { Args: { p_bp: string; p_cat: string; p_isi: string }; Returns: number }
       note_group_done: {

@@ -1,7 +1,7 @@
 import { parseDate } from "@/lib/parsers/date";
 import { parseNumber } from "@/lib/parsers/number";
 
-// Port macro Mitra10 Tukar Faktur: modAging (UpdateMasterAging), modGR (UploadCSV + CleanSJ +
+// Port macro Mitra10 Tukar Faktur (aging kini lewat laporan bersama lib/uploads): modGR (UploadCSV + CleanSJ +
 // Update_GR_Data), modKwitansi (UpdateDataKwitansi) dan tabel manual tblJadwal / tblAdd.
 
 const text = (v: unknown) => (v === null || v === undefined ? "" : String(v).trim());
@@ -14,61 +14,6 @@ const clean = (v: unknown) => {
 const num = (v: unknown) => parseNumber(clean(v));
 const str = (v: unknown) => text(clean(v));
 const date = (v: unknown) => parseDate(clean(v));
-const int = (v: unknown) => {
-  const s = str(v);
-  return s === "" ? null : Math.round(parseNumber(s));
-};
-
-// ── Aging ─────────────────────────────────────────────────────────
-export type AgingRow = {
-  payment_group: string; marketing: string; collection_name: string; sales_name: string;
-  business_partner: string; tax_name: string; invoice_no: string; invoice_date: string | null;
-  due_date: string | null; open_amt: number; cur_0_30: number; cur_31_60: number; due_1_7: number;
-  due_8_30: number; due_31_60: number; due_61_90: number; due_90: number; days: number | null;
-  branch: string; no_po: string; no_sj: string;
-};
-
-const AGING_HEADERS: Record<keyof AgingRow, string> = {
-  payment_group: "Payment Group", marketing: "Marketing", collection_name: "Collection Name",
-  sales_name: "Sales Name", business_partner: "Business Partner", tax_name: "Tax Name",
-  invoice_no: "Invoice No", invoice_date: "Invoice Date", due_date: "Due Date", open_amt: "Open Amt",
-  cur_0_30: "Current 0 - 30", cur_31_60: "Current 31 - 60", due_1_7: "Due + 1 - 7",
-  due_8_30: "Due + 8 - 30", due_31_60: "Due + 31 - 60", due_61_90: "Due + 61 - 90", due_90: "Due + > 90",
-  days: "Days", branch: "Branch", no_po: "No PO", no_sj: "No SJ",
-};
-const NUM_FIELDS = new Set<keyof AgingRow>(["open_amt", "cur_0_30", "cur_31_60", "due_1_7", "due_8_30", "due_31_60", "due_61_90", "due_90"]);
-const DATE_FIELDS = new Set<keyof AgingRow>(["invoice_date", "due_date"]);
-
-// Header dipetakan berdasarkan nama (tidak peka huruf besar/kecil & spasi tepi).
-// Filter Tax Name = taxName. Wajib ada: Tax Name, Invoice No, No SJ.
-export function parseAging(rows: unknown[][], taxName: string) {
-  const want = key(taxName);
-  let headerRow = -1;
-  let idx = new Map<string, number>();
-  for (let r = 0; r < Math.min(15, rows.length); r++) {
-    const m = new Map<string, number>();
-    (rows[r] ?? []).forEach((c, i) => { const k = key(c); if (k && !m.has(k)) m.set(k, i); });
-    if (m.has("tax name") && m.has("invoice no") && m.has("no sj")) { headerRow = r; idx = m; break; }
-  }
-  if (headerRow < 0) throw new Error("Header 'Tax Name' / 'Invoice No' / 'No SJ' tidak ditemukan di file aging.");
-
-  const col = Object.fromEntries(
-    (Object.keys(AGING_HEADERS) as (keyof AgingRow)[]).map((f) => [f, idx.get(key(AGING_HEADERS[f])) ?? -1]),
-  ) as Record<keyof AgingRow, number>;
-
-  const out: AgingRow[] = [];
-  for (const r of rows.slice(headerRow + 1)) {
-    if (key(r?.[col.tax_name]) !== want) continue;
-    const row = {} as Record<keyof AgingRow, unknown>;
-    for (const f of Object.keys(col) as (keyof AgingRow)[]) {
-      const v = col[f] >= 0 ? r[col[f]] : "";
-      row[f] = NUM_FIELDS.has(f) ? num(v) : DATE_FIELDS.has(f) ? date(v) : f === "days" ? int(v) : str(v);
-    }
-    out.push(row as AgingRow);
-  }
-  if (!out.length) throw new Error(`Tidak ada baris dengan Tax Name = '${taxName}' di file aging.`);
-  return out;
-}
 
 // ── GR ────────────────────────────────────────────────────────────
 export function toRoman(n: number) {

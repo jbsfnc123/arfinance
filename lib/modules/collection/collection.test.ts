@@ -1,57 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { agingOf } from "./aging";
-import { parseBlankA4 } from "./parse-blank-a4";
 import { parseTarget } from "./parse-target";
 import { buildWaMessage, DEFAULT_WA_TEMPLATE, effectiveTemplate, normalizePhone, waLink } from "./wa-message";
-
-// Baris Blank_A4 dengan kolom pada posisi yang dipakai (A,C,D,G,H,K,L,M,N,Z,AA).
-function a4(p: {
-  pg?: string; mkt?: string; coll?: string; value?: string; bp?: string;
-  inv?: string; invDate?: unknown; due?: unknown; open?: unknown; po?: string; sj?: string;
-}) {
-  const r: unknown[] = new Array(27).fill("");
-  r[0] = p.pg ?? "PG"; r[2] = p.mkt ?? "01-Traditional"; r[3] = p.coll ?? "Andi";
-  r[6] = p.value ?? "1000258"; r[7] = p.bp ?? "Toko A"; r[10] = p.inv ?? "";
-  r[11] = p.invDate ?? "15/02/2026"; r[12] = p.due ?? "15/03/2026"; r[13] = p.open ?? 1500000;
-  r[25] = p.po ?? "PO1"; r[26] = p.sj ?? "SJ1";
-  return r;
-}
-const HEADER = new Array(27).fill("h");
-
-describe("parseBlankA4", () => {
-  it("memetakan kolom dan mengubah tanggal ke ISO", () => {
-    const { rows } = parseBlankA4([HEADER, a4({ inv: "INV-1", invDate: 46068, open: "1.234.567" })]);
-    expect(rows).toEqual([{
-      invoice_no: "INV-1", payment_group: "PG", marketing: "01-Traditional", collection_name: "Andi",
-      business_partner: "Toko A", bp_value: "1000258", invoice_date: "2026-02-15",
-      due_date: "2026-03-15", open_amt: 1234567, no_po: "PO1", no_sj: "SJ1",
-    }]);
-  });
-
-  it("filter marketing, tanggal > 01/01/2026, dan duplikat", () => {
-    const { rows, skipped } = parseBlankA4([
-      HEADER,
-      a4({ inv: "A", mkt: "99-Lain" }),
-      a4({ inv: "B", invDate: "01/01/2026" }),
-      a4({ inv: "C", invDate: "" }),
-      a4({ inv: "D" }),
-      a4({ inv: "D", open: 1 }),
-      a4({ inv: "" }),
-    ]);
-    expect(rows.map((r) => r.invoice_no)).toEqual(["D"]);
-    expect(skipped).toEqual({ marketing: 1, date: 2, duplicate: 1 });
-  });
-
-  it("duplikat dari baris yang ditolak dinilai ulang (perilaku lama)", () => {
-    const { rows, skipped } = parseBlankA4([
-      HEADER,
-      a4({ inv: "X", mkt: "99-Lain" }),
-      a4({ inv: "X" }),
-    ]);
-    expect(rows).toHaveLength(1);
-    expect(skipped).toEqual({ marketing: 1, date: 0, duplicate: 0 });
-  });
-});
 
 describe("parseTarget", () => {
   it("mengenali header berdasarkan nama", () => {

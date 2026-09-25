@@ -7,8 +7,6 @@ import { parseNumber } from "@/lib/parsers/number";
 export type Account = { code: string; last4: string };
 export type MutasiRow = { tx_date: string; amount: number; keterangan: string; catatan: string };
 export type MutasiSheet = { account: string; sheet: string; dates: string[]; rows: MutasiRow[] };
-export type InvoiceRow = { invoice_no: string; invoice_date: string; amount: number };
-export type PaymentRow = { invoice_no: string; payment_doc: string; payment_date: string; amount: number };
 
 const CATATAN_COL = 5; // kolom F file mutasi sumber
 
@@ -102,42 +100,16 @@ export function parseMutasiWorkbook(sheets: { name: string; rows: unknown[][] }[
   return { sheets: found, ignored: sheets.filter((_, i) => !parsed[i]).map((s) => s.name) };
 }
 
-// File Invoice: invoice ganda dalam file → yang pertama dipakai.
-export function parseInvoiceFile(rows: unknown[][]) {
-  const hdr = findHeaderRow(rows, ["Invoice No.", "Invoice Amount", "Invoice Date"], 30);
-  if (!hdr) throw new Error("Header 'Invoice No. / Invoice Amount / Invoice Date' tidak ditemukan.");
-  const [cInv, cAmt, cDate] = hdr.cols;
-  const seen = new Map<string, InvoiceRow>();
-  for (const r of rows.slice(hdr.row + 1)) {
-    const inv = text(r?.[cInv]);
-    const dt = parseDate(r?.[cDate]);
-    if (inv && dt && !seen.has(inv)) seen.set(inv, { invoice_no: inv, invoice_date: dt, amount: parseNumber(r[cAmt]) });
-  }
-  return [...seen.values()];
-}
-
-// File Payment: baris tanpa tanggal atau bernilai 0 dilewati.
-export function parsePaymentFile(rows: unknown[][]) {
-  const hdr = findHeaderRow(rows, ["Invoice No.", "Payment Document", "Payment Amount", "Payment Date"], 30);
-  if (!hdr) throw new Error("Header 'Invoice No. / Payment Document / Payment Amount / Payment Date' tidak ditemukan.");
-  const [cInv, cDoc, cAmt, cDate] = hdr.cols;
-  const out: PaymentRow[] = [];
-  for (const r of rows.slice(hdr.row + 1)) {
-    const dt = parseDate(r?.[cDate]);
-    const amt = parseNumber(r?.[cAmt]);
-    if (dt && amt !== 0) out.push({ invoice_no: text(r[cInv]), payment_doc: text(r[cDoc]), payment_date: dt, amount: amt });
-  }
-  return out;
-}
-
 // Template unduhan (sama dengan sheet template lama).
-export const TEMPLATES: Record<"mutasi" | "invoice" | "payment" | "target", unknown[][]> = {
+export const TEMPLATES: Record<"mutasi" | "erp" | "target", unknown[][]> = {
   mutasi: [
     ["Template Mutasi Rekening"], [], ["No. rekening : 7090334888"], [], ["Periode : 01/09/2026 - 01/09/2026"], [],
     ["Tanggal Transaksi", "Keterangan", "Cabang", "Jumlah", "Saldo"],
     ["01/09/2026", "TRSF E-BANKING CR PT CONTOH", "0000", "1,000,000.00 CR", "1,000,000.00"],
   ],
-  invoice: [["Template Invoice"], [], [], [], [], ["Invoice No.", "Invoice Amount", "Invoice Date"]],
-  payment: [["Template Payment"], [], [], [], [], ["Invoice No.", "Payment Document", "Payment Amount", "Payment Date"]],
+  // Laporan ERP "Invoice and Payment Date Comparison" (dipakai bersama Presentasi & Marketplace).
+  erp: [["Organization :", "PT Penguin Trading"], ["Payment Group", ""], ["Date :", "01/09/2026", "/", "30/09/2026"], [],
+    ["BP Key", "BP Name", "BP Location", "BP Group", "Marketing Group", "Branch", "Credit Limit", "Payment Term", "Invoice No.",
+     "Invoice Amount", "Invoice Date", "Due Date", "Payment Document", "Payment Bank Account", "Payment Amount", "Payment Date", "PO No. Customer"]],
   target: [["Template Target"], [], [], [], [], ["Invoice No", "Open Amt"]],
 };

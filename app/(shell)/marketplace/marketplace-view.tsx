@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PLATFORMS } from "@/lib/modules/marketplace/config";
-import { emptyReport, parseErp, parseWorkbook, type Report } from "@/lib/modules/marketplace/parse";
+import { emptyReport, parseWorkbook, type Report } from "@/lib/modules/marketplace/parse";
+import { readAllSheets } from "@/lib/xlsx-client";
+import { parseErp } from "@/lib/uploads/parse";
+import { uploadShared } from "@/lib/uploads/commit";
 import { buildAudit, missingAdjustmentOrders, type OrderLookup } from "@/lib/modules/marketplace/analysis";
 import { erpDetail, orderDetail, orderTableCols, withGroups } from "@/lib/modules/marketplace/tables";
 import { DataTableModal, type TableSpec } from "@/components/data-table-modal";
@@ -44,10 +47,20 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
     setErpLimitState(readLimit(LS_ERP));
   }, []);
 
+  // Baris ERP tidak disimpan di laporan: dibaca dari tabel inti (erp_invoices/erp_payments) lewat
+  // PO customer pesanan + invoice subsidi tanpa PO pada Payment Group & periode laporan.
   const fetchReport = useCallback(async (id: string) => {
     const { data, error } = await supabase.from("mp_reports").select("data").eq("report_id", id).maybeSingle();
     if (error) throw error;
-    return (data?.data as unknown as Report) ?? null;
+    const rep = (data?.data as unknown as Report) ?? null;
+    if (!rep) return null;
+    const m = rep.erpMeta ?? {};
+    const { data: erp, error: e2 } = await supabase.rpc("mp_erp_rows", {
+      p_pos: rep.Orders.map((o) => String(o.no)), p_group: m.paymentGroup ?? null,
+      p_dari: m.dari ?? rep.meta.dari ?? null, p_ke: m.ke ?? rep.meta.ke ?? null,
+    });
+    if (e2) throw e2;
+    return { ...rep, Erp: (erp ?? []) as unknown as Report["Erp"] };
   }, [supabase]);
 
   // Muat laporan terpilih + pesanan asal refund dari periode lain.
@@ -82,7 +95,7 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
   }
 
   async function save(rep: Report) {
-    const { error } = await supabase.rpc("mp_save_report", { p_report: rep as unknown as Json });
+    const { error } = await supabase.rpc("mp_save_report", { p_report: { ...rep, Erp: [] } as unknown as Json });
     if (error) throw error;
     await refreshList(rep.meta.reportId);
   }
@@ -107,7 +120,7 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
         rep = parsed.data;
         const prev = await fetchReport(rep.meta.reportId);
         if (prev?.Balance?.length) { rep.Balance = prev.Balance; rep.balanceSummary = prev.balanceSummary; }
-        if (prev?.Erp?.length) { rep.Erp = prev.Erp; rep.erpMeta = prev.erpMeta; }
+        if (prev?.erpMeta) rep.erpMeta = prev.erpMeta;
         msg = `Berhasil: ${PLATFORMS[rep.meta.platform].label} — ${rep.Orders.length.toLocaleString("id-ID")} pesanan dimuat.`;
       }
       setBusy("Menyimpan…");
@@ -124,20 +137,22 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
   async function onErpFile(f: File) {
     setBusy(`Membaca file ERP ${f.name}…`);
     try {
-      const XLSX = await import("xlsx");
-      const erp = parseErp(XLSX, XLSX.read(await f.arrayBuffer(), { type: "array" }));
+      const erp = parseErp(await readAllSheets(f));
+      const erpMeta = { org: erp.meta.org, paymentGroup: erp.meta.paymentGroup, dari: erp.meta.dari, ke: erp.meta.ke };
       // Laporan dengan periode sama (dan platform sesuai Payment Group); bila tidak ada, laporan yang sedang dibuka.
-      const grup = (erp.erpMeta.paymentGroup ?? "").toLowerCase();
-      const cocok = list.filter((x) => (!erp.erpMeta.dari || x.dari === erp.erpMeta.dari) && (!erp.erpMeta.ke || x.ke === erp.erpMeta.ke));
+      const grup = (erpMeta.paymentGroup ?? "").toLowerCase();
+      const cocok = list.filter((x) => (!erpMeta.dari || x.dari === erpMeta.dari) && (!erpMeta.ke || x.ke === erpMeta.ke));
       const sama = cocok.filter((x) => !grup || x.platform === (grup.includes("tiktok") ? "tiktok" : "shopee"));
       const target = (sama[0] ?? cocok[0])?.report_id ?? (R?.Orders.length ? R.meta.reportId : null);
       if (!target) throw new Error("belum ada laporan marketplace untuk periode ERP ini. Upload laporannya dulu.");
       const rep = await fetchReport(target);
       if (!rep) throw new Error("laporan tujuan tidak ditemukan.");
       setBusy("Menyimpan…");
-      await save({ ...rep, Erp: erp.Erp, erpMeta: erp.erpMeta });
+      // Disimpan sekali ke tabel inti ERP (juga terbaca Mutasi & Presentasi); laporan hanya menyimpan periodenya.
+      await uploadShared(supabase, "erp", f, erp.rows, erp.meta);
+      await save({ ...rep, erpMeta });
       setView("erp");
-      toast(`Data ERP dimuat: ${erp.Erp.length.toLocaleString("id-ID")} baris untuk periode ${rep.meta.dari} s/d ${rep.meta.ke}.`, "success", 6000);
+      toast(`Data ERP disimpan: ${erp.invoices.toLocaleString("id-ID")} invoice untuk periode ${rep.meta.dari} s/d ${rep.meta.ke}.`, "success", 6000);
     } catch (e) {
       toast(`Gagal membaca file ERP: ${(e as Error).message}`, "danger", 6000);
     } finally {
