@@ -9,8 +9,9 @@ import { Sidebar } from "./sidebar";
 
 // Kerangka halaman (topbar + sidebar + konten). Client component karena menyimpan status
 // drawer mobile dan membersihkan cache browser saat logout.
-export function ShellChrome({ title, icon, menu, showHome, user, children }: {
+export function ShellChrome({ title, icon, portalHref, menu, showHome, user, children }: {
   title: string;
+  portalHref?: string | null; // akun SA / divisi AR + AP: kembali ke pemilih workspace (tangki.space)
   icon: string;
   menu: MenuGroup[];
   showHome: boolean;
@@ -58,6 +59,12 @@ export function ShellChrome({ title, icon, menu, showHome, user, children }: {
               {user.collection && ` · ${user.collection}`}
             </div>
           </div>
+          {portalHref && (
+            <a href={portalHref} title="Ganti workspace"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-fg">
+              <span className="material-symbols-outlined">apps</span>
+            </a>
+          )}
           <form action="/auth/signout" method="post" onSubmit={signOut}>
             <button type="submit" title="Keluar"
               className="flex h-9 w-9 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-fg">

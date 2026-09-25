@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HOME_ITEM, wsItem, canEnterWorkspace, MENU_REGISTRY, canAccess, findMenuById, findMenuByHref, firstAllowedHref, visibleMenu } from "./menu";
+import { HOME_ITEM, canEnterWorkspace, homeWorkspace, MENU_REGISTRY, canAccess, findMenuById, findMenuByHref, firstAllowedHref, visibleMenu } from "./menu";
 
 const item = (id: string) => MENU_REGISTRY.flatMap((g) => g.children).find((c) => c.id === id)!;
 
@@ -51,18 +51,23 @@ describe("Beranda", () => {
   });
 });
 
-describe("akses workspace", () => {
-  it("ws.ar / ws.ap lewat centang, Super Admin selalu bisa", () => {
-    expect(findMenuById("ws.ap")?.item).toBe(wsItem("ap"));
-    expect(canAccess(wsItem("ar"), { kind: "ctrl", allowed: new Set(["ws.ar"]) })).toBe(true);
-    expect(canAccess(wsItem("ap"), { kind: "ctrl", allowed: new Set(["ws.ar"]) })).toBe(false);
-    expect(canAccess(wsItem("ap"), { kind: "sa", allowed: new Set() })).toBe(true);
+describe("akses workspace (divisi akun)", () => {
+  const acc = (kind: string, division?: "ar" | "ap" | "both") => ({ kind, allowed: new Set<string>(), division });
+  it("Super Admin semua; AR + AP boleh portal; divisi tunggal hanya workspace-nya", () => {
+    for (const ws of ["finance", "ar", "ap"] as const) expect(canEnterWorkspace(ws, acc("sa", "ar"))).toBe(true);
+    expect(canEnterWorkspace("finance", acc("ctrl", "both"))).toBe(true);
+    expect(canEnterWorkspace("ap", acc("ctrl", "both"))).toBe(true);
+    expect(canEnterWorkspace("finance", acc("coll", "ar"))).toBe(false);
+    expect(canEnterWorkspace("ap", acc("coll", "ar"))).toBe(false);
+    expect(canEnterWorkspace("ap", acc("ctrl", "ap"))).toBe(true);
+    expect(canEnterWorkspace("ar", acc("ctrl", "ap"))).toBe(false);
+    expect(canEnterWorkspace("ar", acc("kurir"))).toBe(true); // default divisi AR
   });
-  it("Finance khusus Super Admin", () => {
-    expect(canEnterWorkspace("finance", { kind: "sa", allowed: new Set() })).toBe(true);
-    expect(canEnterWorkspace("finance", { kind: "ctrl", allowed: new Set(["ws.ar", "ws.ap"]) })).toBe(false);
-    expect(canEnterWorkspace("ar", { kind: "coll", allowed: new Set(["ws.ar"]) })).toBe(true);
-    expect(canEnterWorkspace("ap", { kind: "coll", allowed: new Set(["ws.ar"]) })).toBe(false);
+  it("tujuan setelah login", () => {
+    expect(homeWorkspace(acc("sa", "ap"))).toBe("finance");
+    expect(homeWorkspace(acc("ctrl", "both"))).toBe("finance");
+    expect(homeWorkspace(acc("coll", "ar"))).toBe("ar");
+    expect(homeWorkspace(acc("ctrl", "ap"))).toBe("ap");
   });
   it("menu admin pusat tidak lagi di AR", () => {
     const ids = MENU_REGISTRY.flatMap((g) => g.children.map((c) => c.id));

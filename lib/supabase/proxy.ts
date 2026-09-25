@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/database.types";
-import { authCookieOptions, routeFor, WORKSPACE_HEADER, workspaceFromHost, workspaceUrl } from "@/lib/workspace";
+import { authCookieOptions, isSharedHost, loginUrl, routeFor, WORKSPACE_HEADER, workspaceFromHost, workspaceUrl } from "@/lib/workspace";
 
 const PUBLIC_PATHS = ["/login", "/auth"];
 
@@ -11,7 +11,7 @@ const PUBLIC_PATHS = ["/login", "/auth"];
 export async function updateSession(request: NextRequest) {
   const host = request.headers.get("host");
   const ws = workspaceFromHost(host);
-  const route = routeFor(ws, request.nextUrl.pathname);
+  const route = routeFor(ws, request.nextUrl.pathname, isSharedHost(host));
   if (route.kind === "notfound") return new NextResponse("Not Found", { status: 404 });
   if (route.kind === "moved") return NextResponse.redirect(workspaceUrl(route.ws, host, route.path), 308);
 
@@ -44,10 +44,10 @@ export async function updateSession(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
 
   if (!data?.claims && !isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "";
-    return NextResponse.redirect(url);
+    // Produksi: satu pintu login di tangki.space; setelah login kembali ke alamat asal (?next).
+    const { protocol, pathname, search } = request.nextUrl;
+    const target = loginUrl(host, `${protocol}//${host}${pathname}${search}`);
+    return NextResponse.redirect(target.startsWith("/") ? new URL(target, request.url) : target);
   }
 
   let response: NextResponse;

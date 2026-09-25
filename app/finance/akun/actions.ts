@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/session";
 import { derivePassword, isValidPin, syntheticEmail } from "@/lib/auth/pin";
 import { err, ok, type ActionResult } from "../ui";
+import { isDivision } from "@/lib/menu";
 
 const PATH = "/finance/akun";
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
@@ -21,7 +22,9 @@ export async function createAccount(_prev: ActionResult, fd: FormData): Promise<
   const name = str(fd, "display_name");
   const roleId = str(fd, "role_id");
   const collection = str(fd, "collection_name") || null;
+  const division = str(fd, "division");
   const pin = str(fd, "pin");
+  if (!isDivision(division)) return err("Pilih divisi AR, AP, atau AR + AP.");
 
   if (!name) return err("Nama wajib diisi.");
   if (!isValidPin(pin)) return err("PIN harus 6 digit angka.");
@@ -46,6 +49,7 @@ export async function createAccount(_prev: ActionResult, fd: FormData): Promise<
     display_name: name,
     role_id: roleId,
     collection_name: collection,
+    division,
   });
   const { error: pinError } = profileError
     ? { error: profileError }
@@ -78,7 +82,9 @@ export async function updateAccount(_prev: ActionResult, fd: FormData): Promise<
   const name = str(fd, "display_name");
   const roleId = str(fd, "role_id");
   const collection = str(fd, "collection_name") || null;
+  const division = str(fd, "division");
   const active = fd.get("active") === "on";
+  if (!isDivision(division)) return err("Pilih divisi AR, AP, atau AR + AP.");
 
   if (!name) return err("Nama wajib diisi.");
   const kind = await roleKind(roleId);
@@ -92,7 +98,7 @@ export async function updateAccount(_prev: ActionResult, fd: FormData): Promise<
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: name, role_id: roleId, collection_name: collection, active })
+    .update({ display_name: name, role_id: roleId, collection_name: collection, division, active })
     .eq("id", id);
   if (error) return err(error.message);
 

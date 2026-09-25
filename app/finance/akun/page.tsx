@@ -11,7 +11,7 @@ export default async function AkunPage() {
   const [{ data: accounts }, { data: roles }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, display_name, collection_name, active, role_id, pin_hash, created_at")
+      .select("id, display_name, collection_name, active, role_id, division, pin_hash, created_at")
       .order("display_name"),
     supabase.from("roles").select("id, name, kind").order("name"),
   ]);

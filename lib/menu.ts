@@ -75,15 +75,9 @@ export const HOME_GROUP: MenuGroup = { id: "home", label: "Beranda", icon: "home
 ]};
 export const HOME_ITEM = HOME_GROUP.children[0];
 
-// Akses workspace (subdomain). Finance Workspace (tangki.space) selalu khusus Super Admin.
-export const WORKSPACE_GROUP: MenuGroup = { id: "ws", label: "Workspace", icon: "apps", children: [
-  { id: "ws.ar", label: "AR Workspace (ar.tangki.space)", href: "/" },
-  { id: "ws.ap", label: "AP Workspace (ap.tangki.space)", href: "/" },
-]};
-export const wsItem = (ws: "ar" | "ap") => WORKSPACE_GROUP.children[ws === "ar" ? 0 : 1];
 
 // Grup yang ditampilkan di Role & Akses Menu (urutan tampil).
-export const ACL_GROUPS: MenuGroup[] = [WORKSPACE_GROUP, HOME_GROUP];
+export const ACL_GROUPS: MenuGroup[] = [HOME_GROUP];
 
 // Menu AP Workspace — diisi fase berikutnya.
 export const AP_MENU_REGISTRY: MenuGroup[] = [];
@@ -97,7 +91,7 @@ export const FINANCE_NAV = [
 ] as const;
 
 export function findMenuById(id: string) {
-  for (const group of [WORKSPACE_GROUP, HOME_GROUP, ...MENU_REGISTRY]) {
+  for (const group of [HOME_GROUP, ...MENU_REGISTRY, ...AP_MENU_REGISTRY]) {
     const item = group.children.find((c) => c.id === id);
     if (item) return { group, item };
   }
@@ -113,7 +107,12 @@ export function findMenuByHref(pathname: string) {
   return null;
 }
 
-export type Access = { kind: string; allowed: Set<string> };
+// Divisi akun (Akun & PIN, diatur Super Admin): workspace mana yang boleh dibuka.
+export type Division = "ar" | "ap" | "both";
+export const DIVISION_LABEL: Record<Division, string> = { ar: "AR", ap: "AP", both: "AR + AP" };
+export const isDivision = (v: unknown): v is Division => v === "ar" || v === "ap" || v === "both";
+
+export type Access = { kind: string; allowed: Set<string>; division?: Division };
 
 function meetsNeeds(item: MenuItem, kind: string) {
   if (!item.needs) return true;
@@ -143,8 +142,18 @@ export function firstAllowedHref(access: Access): string | null {
   return null;
 }
 
-// Boleh masuk workspace? Finance khusus Super Admin; AR/AP lewat centang ws.ar / ws.ap.
+// Boleh masuk workspace? Super Admin semua. Finance (tangki.space) = portal pemilih untuk akun AR + AP
+// (halaman admin di dalamnya tetap khusus Super Admin). AR/AP mengikuti divisi akun.
 export function canEnterWorkspace(ws: "finance" | "ar" | "ap", access: Access) {
-  if (ws === "finance") return access.kind === "sa";
-  return canAccess(wsItem(ws), access);
+  if (access.kind === "sa") return true;
+  const d = access.division ?? "ar";
+  if (ws === "finance") return d === "both";
+  return d === "both" || d === ws;
+}
+
+// Tujuan setelah login: SA & AR + AP → tangki.space (pilih workspace), selain itu workspace divisinya.
+export function homeWorkspace(access: Access): "finance" | "ar" | "ap" {
+  if (access.kind === "sa") return "finance";
+  const d = access.division ?? "ar";
+  return d === "both" ? "finance" : d;
 }

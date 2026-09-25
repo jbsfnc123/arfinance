@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { createAccount, resetPin, updateAccount } from "./actions";
 import { btnGhost, btnPrimary, inputCls, type ActionResult } from "../ui";
+import { DIVISION_LABEL, type Division } from "@/lib/menu";
 
 type Role = { id: string; name: string; kind: string };
 type Account = {
@@ -11,6 +12,7 @@ type Account = {
   collection_name: string | null;
   active: boolean;
   role_id: string;
+  division: string;
   has_pin: boolean;
 };
 
@@ -54,23 +56,35 @@ function RoleSelect({ roles, defaultValue }: { roles: Role[]; defaultValue?: str
   );
 }
 
+// Divisi = workspace yang boleh dibuka (AR → ar.tangki.space, AP → ap.tangki.space, AR + AP → pilih di tangki.space).
+function DivisionSelect({ defaultValue }: { defaultValue?: string }) {
+  return (
+    <select name="division" required defaultValue={defaultValue ?? "ar"} className={inputCls} title="Divisi / workspace">
+      {(Object.keys(DIVISION_LABEL) as Division[]).map((d) => (
+        <option key={d} value={d}>Divisi {DIVISION_LABEL[d]}</option>
+      ))}
+    </select>
+  );
+}
+
 function CreateForm({ roles }: { roles: Role[] }) {
   const [state, action, pending] = useActionState(createAccount, null);
   return (
     <form
       action={action}
       key={state?.ok ? state.at : "create"}
-      className="mt-6 grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-5"
+      className="mt-6 grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-6"
     >
-      <h2 className="font-medium sm:col-span-5">Tambah akun</h2>
+      <h2 className="font-medium sm:col-span-6">Tambah akun</h2>
       <input name="display_name" required placeholder="Nama" className={inputCls} />
       <RoleSelect roles={roles} />
+      <DivisionSelect />
       <input name="collection_name" placeholder="Collection Name (khusus Collection)" className={inputCls} />
       <PinInput />
       <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Menyimpan…" : "Tambah"}
       </button>
-      <div className="sm:col-span-5">
+      <div className="sm:col-span-6">
         <Feedback state={state} />
       </div>
     </form>
@@ -93,6 +107,7 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
           </div>
           <div className="text-xs text-fg-2">
             {role?.name ?? "—"}
+            {" · "}{role?.kind === "sa" ? "Semua workspace" : `Divisi ${DIVISION_LABEL[account.division as Division] ?? "AR"}`}
             {account.collection_name && ` · ${account.collection_name}`}
             {!account.has_pin && " · belum ada PIN"}
           </div>
@@ -113,10 +128,11 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
       </div>
 
       {mode === "edit" && (
-        <form action={editAction} className="mt-3 grid gap-3 sm:grid-cols-5">
+        <form action={editAction} className="mt-3 grid gap-3 sm:grid-cols-6">
           <input type="hidden" name="id" value={account.id} />
           <input name="display_name" required defaultValue={account.display_name} className={inputCls} />
           <RoleSelect roles={roles} defaultValue={account.role_id} />
+          <DivisionSelect defaultValue={account.division} />
           <input
             name="collection_name"
             defaultValue={account.collection_name ?? ""}
@@ -129,7 +145,7 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
           <button type="submit" disabled={editPending} className={btnPrimary}>
             Simpan
           </button>
-          <div className="sm:col-span-5">
+          <div className="sm:col-span-6">
             <Feedback state={editState} />
           </div>
         </form>

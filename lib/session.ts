@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Access } from "@/lib/menu";
+import { isDivision, type Access } from "@/lib/menu";
 import type { Tables } from "@/lib/database.types";
 
 export type Session = {
@@ -35,7 +35,7 @@ export const getSession = cache(async (): Promise<Session> => {
   return {
     profile,
     role,
-    access: { kind: role.kind, allowed: new Set((menus ?? []).map((m) => m.submenu_id)) },
+    access: { kind: role.kind, allowed: new Set((menus ?? []).map((m) => m.submenu_id)), division: isDivision(profile.division) ? profile.division : "ar" },
   };
 });
 

@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/session";
 import { AP_MENU_REGISTRY, canEnterWorkspace, visibleMenu } from "@/lib/menu";
 import { currentHost } from "@/lib/workspace-server";
-import { WORKSPACES } from "@/lib/workspace";
+import { WORKSPACES, workspaceUrl } from "@/lib/workspace";
 import { WorkspaceDenied } from "@/components/workspace-denied";
 import { ShellChrome } from "../(shell)/shell-chrome";
 
@@ -13,6 +13,7 @@ export default async function ApLayout({ children }: LayoutProps<"/ap">) {
 
   return (
     <ShellChrome title={WORKSPACES.ap.label} icon={WORKSPACES.ap.icon} menu={menu} showHome
+      portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null}
       user={{ name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}
     </ShellChrome>

@@ -885,6 +885,7 @@ export type Database = {
           collection_name: string | null
           created_at: string
           display_name: string
+          division: string
           email: string
           id: string
           pin_hash: string | null
@@ -895,6 +896,7 @@ export type Database = {
           collection_name?: string | null
           created_at?: string
           display_name: string
+          division?: string
           email: string
           id: string
           pin_hash?: string | null
@@ -905,6 +907,7 @@ export type Database = {
           collection_name?: string | null
           created_at?: string
           display_name?: string
+          division?: string
           email?: string
           id?: string
           pin_hash?: string | null
@@ -1018,6 +1021,8 @@ export type Database = {
       pack_erp: { Args: Record<string, never>; Returns: Json }
       pack_tukar: { Args: Record<string, never>; Returns: Json }
       usage_report: { Args: Record<string, never>; Returns: Json }
+      login_names: { Args: { p_q: string; p_ip: string }; Returns: string[] }
+      pin_login_named: { Args: { p_name: string; p_pin: string; p_ip: string }; Returns: Json }
       pack_settings: { Args: Record<string, never>; Returns: Json }
       m10_gr_save: { Args: { p_id: number | null; p_row: Json }; Returns: number }
       m10_kw_save: { Args: { p_id: number | null; p_row: Json }; Returns: number }

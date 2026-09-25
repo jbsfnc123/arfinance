@@ -1,22 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/session";
 import { currentHost } from "@/lib/workspace-server";
 import { WORKSPACES, workspaceUrl, type Workspace } from "@/lib/workspace";
 import { card } from "@/components/ui";
 
-// Portal Finance Workspace: pintu ke semua workspace + ringkasan akun.
+// Portal Finance Workspace: pintu ke AR & AP. Ringkasan akun/role hanya untuk Super Admin.
 export default async function FinancePortal() {
-  const supabase = await createClient();
-  const [host, { count: accounts }, { count: active }, { count: roles }] = await Promise.all([
-    currentHost(),
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("active", true),
-    supabase.from("roles").select("*", { count: "exact", head: true }),
-  ]);
+  const [supabase, host, { role, profile }] = await Promise.all([createClient(), currentHost(), getSession()]);
+  const isSa = role.kind === "sa";
+  const [{ count: accounts }, { count: active }, { count: roles }] = isSa
+    ? await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("active", true),
+      supabase.from("roles").select("*", { count: "exact", head: true }),
+    ])
+    : [{ count: 0 }, { count: 0 }, { count: 0 }];
   const targets: Workspace[] = ["ar", "ap"];
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-2xl font-medium">Portal</h1>
+      <h1 className="text-2xl font-medium">{isSa ? "Portal" : `Halo, ${profile.display_name.split(" ")[0]}`}</h1>
       <p className="mt-1 text-sm text-fg-2">Pilih workspace. Login berlaku di semua workspace tangki.space.</p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -35,7 +38,7 @@ export default async function FinancePortal() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      {isSa && <div className="mt-6 grid gap-3 sm:grid-cols-3">
         {[
           { label: "Akun", value: accounts ?? 0, sub: `${active ?? 0} aktif`, href: "/akun" },
           { label: "Role", value: roles ?? 0, sub: "atur akses menu & workspace", href: "/acl" },
@@ -47,7 +50,7 @@ export default async function FinancePortal() {
             <div className="text-xs text-fg-2">{s.sub}</div>
           </a>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }
