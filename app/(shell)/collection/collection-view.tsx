@@ -4,12 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useDataset } from "@/lib/local/store";
-import { arInvoices, collectionRows, collectionSummary, filterOf } from "@/lib/modules/collection/rows";
+import { collectionSummary } from "@/lib/modules/collection/rows";
+import { arOf, collectionRowsOf } from "@/lib/local/derived";
 import { setRemarks, useRemarks } from "@/lib/modules/remarks";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, rupiah } from "@/lib/format";
 import {
-  applyExchange, DEFAULT_COLUMNS, EMPTY_FILTERS, enrichRow, filterRows, withSearch,
+  applyExchange, DEFAULT_COLUMNS, EMPTY_FILTERS, filterRows, withSearch,
   type CollectionRow, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
 import type { WaTemplate } from "@/lib/modules/collection/wa-message";
@@ -27,8 +28,6 @@ export function CollectionView(props: {
   initial: string;
   locked: boolean;
   own: string | null;
-  serverTemplate: Partial<WaTemplate> | null;
-  lastUpdate: string | null;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -36,22 +35,22 @@ export function CollectionView(props: {
   const activity = useDataset("activity");
   const settings = useDataset("settings");
   const remarks = useRemarks();
+  // Pengaturan (template WA, waktu update) dari dataset lokal — halaman server tanpa query tambahan.
+  const lastUpdate = (settings.data?.last_tagihan_update as string | undefined) ?? aging.data?.uploadedAt ?? null;
   const [coll, setColl] = useState(props.initial);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS);
   const [selection, setSelection] = useState<string[]>([]);
 
-  const ar = useMemo(() => (aging.data ? arInvoices(aging.data.lines, filterOf(settings.data)) : []), [aging.data, settings.data]);
+  // Hitungan dibagi antar halaman (lib/local/derived): tidak diulang saat kembali ke menu ini.
+  const ar = useMemo(() => (aging.data ? arOf(aging.data.lines, settings.data ?? null) : []), [aging.data, settings.data]);
   const collections = useMemo(() => {
     const list = collectionSummary(ar).filter((c) => !props.locked || c.name === props.own);
     if (props.locked && props.own && !list.length) list.push({ name: props.own, invoices: 0, total: 0 });
     return list;
   }, [ar, props.locked, props.own]);
-  const base = useMemo(() => {
-    if (!coll || !activity.data) return [];
-    const today = todayJakarta();
-    return collectionRows(ar.filter((a) => a.collection_name === coll), activity.data, remarks.map).map((r) => enrichRow(r, today));
-  }, [ar, activity.data, coll, remarks.map]);
+  const base = useMemo(() => (coll && activity.data ? collectionRowsOf(ar, activity.data, remarks.map, coll, todayJakarta()) : []),
+    [ar, activity.data, coll, remarks.map]);
 
   const [overrides, setOverrides] = useState<{ base: CollectionRow[]; map: Map<string, CollectionRow> }>({ base, map: new Map() });
   if (overrides.base !== base) setOverrides({ base, map: new Map() }); // data versi baru → override lama dibuang
@@ -117,7 +116,7 @@ export function CollectionView(props: {
     return (
       <div className="mx-auto max-w-5xl">
         <h1 className="text-2xl font-medium">Collection</h1>
-        <p className="mt-1 text-sm text-fg-2">Pilih collection. Data per: {fmtTimestamp(aging.data?.uploadedAt ?? props.lastUpdate)}</p>
+        <p className="mt-1 text-sm text-fg-2">Pilih collection. Data per: {fmtTimestamp(lastUpdate)}</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((c) => (
             <button key={c.name} type="button" onClick={() => pick(c.name)} className={`${card} p-4 text-left hover:border-accent`}>
@@ -147,7 +146,7 @@ export function CollectionView(props: {
             ))}
           </select>
         )}
-        <span className="text-xs text-fg-2">Data per: {fmtTimestamp(aging.data?.uploadedAt ?? props.lastUpdate)}</span>
+        <span className="text-xs text-fg-2">Data per: {fmtTimestamp(lastUpdate)}</span>
         <button type="button" className={`${btnGhost} relative ml-auto`} onClick={reload} disabled={loading}>
           <span className="material-symbols-outlined">refresh</span>
           Refresh
@@ -187,7 +186,7 @@ export function CollectionView(props: {
         columns={columns}
         clear={() => setSelection([])}
         patch={patch}
-        serverTemplate={props.serverTemplate}
+        serverTemplate={(settings.data?.wa_template as Partial<WaTemplate> | undefined) ?? null}
       />
     </div>
   );

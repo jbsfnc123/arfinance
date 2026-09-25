@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { useDataset } from "@/lib/local/store";
-import { arInvoices, computeSpvSummary, filterOf } from "@/lib/modules/collection/rows";
+import { arOf, spvSummaryOf } from "@/lib/local/derived";
 import { allocationSeries, reconcileCollected } from "@/lib/modules/collection/reconcile";
 import { DataTableModal, type TableSpec } from "@/components/data-table-modal";
 import { todayJakarta } from "@/lib/parsers/date";
@@ -15,22 +15,23 @@ import { btnGhost, card, inputCls, td, th } from "@/components/ui";
 
 const AGING_COLOR = ["#23ad7a", "#eebb3c", "#f08a3f", "#e25b5b"];
 
-export function DashboardView({ months, initialMonth }: { months: string[]; initialMonth: string }) {
-  const [month, setMonth] = useState(initialMonth);
+export function DashboardView() {
+  const [picked, setMonth] = useState<string | null>(null);
   const aging = useDataset("aging");
   const targets = useDataset("targets");
   const activity = useDataset("activity");
   const settings = useDataset("settings");
   const erp = useDataset("erp");
+  // Bulan target dari dataset lokal (tanpa query server); default bulan berjalan atau target terbaru.
+  const months = useMemo(() => [...new Set((targets.data?.targets ?? []).map((t) => t.month))].sort().reverse(), [targets.data]);
+  const current = todayJakarta().slice(0, 7);
+  const month = picked ?? (months.includes(current) ? current : months[0] ?? current);
   // Ringkasan dihitung di browser (port get_spv_summary) dan ikut berubah saat dataset diperbarui.
+  // Ringkasan dihitung di browser (port get_spv_summary), dibagi antar halaman lewat memo global.
   const data: SpvSummary | null = useMemo(() => {
     if (!aging.data || !targets.data || !activity.data) return null;
-    return computeSpvSummary({
-      month, today: todayJakarta(), targets: targets.data.targets, promises: activity.data.promises, notes: activity.data.notes,
-      ar: arInvoices(aging.data.lines, filterOf(settings.data)),
-      lastTagihanUpdate: (settings.data?.last_tagihan_update as string | undefined) ?? aging.data.uploadedAt,
-      agingAll: aging.data.lines,
-    });
+    const lastUpd = (settings.data?.last_tagihan_update as string | undefined) ?? aging.data.uploadedAt;
+    return spvSummaryOf(month, todayJakarta(), targets.data, arOf(aging.data.lines, settings.data ?? null), activity.data, lastUpd, aging.data.lines);
   }, [month, aging.data, targets.data, activity.data, settings.data]);
   // Alokasi Target & rekonsiliasi dari pembayaran ERP (data Mutasi vs Realisasi).
   const alloc = useMemo(() => (targets.data && erp.data

@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { optimistic, useDataset } from "@/lib/local/store";
+import { memoize } from "@/lib/local/memo";
+import type { Remark } from "@/lib/local/datasets";
+
+// Map ref → keterangan, dibuat sekali per versi data (dibagi semua halaman).
+const remarksMapOf = memoize((rows: Remark[]) => new Map(rows.map((r) => [r.ref, r.keterangan])));
 
 // Keterangan invoice BERSAMA (tabel invoice_remarks): satu nilai per No SJ, sama di Collection,
 // Mitra10 (Kertas Kerja), Hold Faktur Pajak & Daftar Pengajuan. Diikat ke No SJ karena No Invoice
@@ -19,9 +23,11 @@ export function remarkKey(noSj: string | null | undefined, invoiceNo: string | n
   return inv ? `INV:${inv.toUpperCase()}` : "";
 }
 
+const EMPTY = new Map<string, string>();
+
 export function useRemarks() {
   const ds = useDataset("remarks");
-  const map = useMemo(() => new Map((ds.data?.remarks ?? []).map((r) => [r.ref, r.keterangan])), [ds.data]);
+  const map = ds.data ? remarksMapOf(ds.data.remarks) : EMPTY;
   const get = (noSj: string | null | undefined, invoiceNo: string | null | undefined) => map.get(remarkKey(noSj, invoiceNo)) ?? "";
   return { map, get, rows: ds.data?.remarks ?? [], loading: !ds.data && !ds.error, error: ds.error };
 }
