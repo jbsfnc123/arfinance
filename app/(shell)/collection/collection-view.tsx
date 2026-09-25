@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useDataset } from "@/lib/local/store";
 import { arInvoices, collectionRows, collectionSummary, filterOf } from "@/lib/modules/collection/rows";
+import { setRemarks, useRemarks } from "@/lib/modules/remarks";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, rupiah } from "@/lib/format";
 import {
@@ -34,6 +35,7 @@ export function CollectionView(props: {
   const aging = useDataset("aging");
   const activity = useDataset("activity");
   const settings = useDataset("settings");
+  const remarks = useRemarks();
   const [coll, setColl] = useState(props.initial);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS);
@@ -48,8 +50,8 @@ export function CollectionView(props: {
   const base = useMemo(() => {
     if (!coll || !activity.data) return [];
     const today = todayJakarta();
-    return collectionRows(ar.filter((a) => a.collection_name === coll), activity.data).map((r) => enrichRow(r, today));
-  }, [ar, activity.data, coll]);
+    return collectionRows(ar.filter((a) => a.collection_name === coll), activity.data, remarks.map).map((r) => enrichRow(r, today));
+  }, [ar, activity.data, coll, remarks.map]);
 
   const [overrides, setOverrides] = useState<{ base: CollectionRow[]; map: Map<string, CollectionRow> }>({ base, map: new Map() });
   if (overrides.base !== base) setOverrides({ base, map: new Map() }); // data versi baru → override lama dibuang
@@ -170,6 +172,12 @@ export function CollectionView(props: {
         loading={loading}
         selection={selection}
         setSelection={setSelection}
+        onEditKeterangan={(inv, current) => {
+          const text = window.prompt(`Keterangan invoice ${inv} (sama dengan Mitra10 & Hold Faktur Pajak):`, current);
+          if (text === null) return;
+          patch([inv], (r) => withSearch({ ...r, keterangan: text.trim() }));
+          setRemarks([inv], text, "collection").catch(() => patch([inv], (r) => withSearch({ ...r, keterangan: current })));
+        }}
       />
 
       <ActionBar

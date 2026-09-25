@@ -350,7 +350,7 @@ export function ResiModal(props: { open: boolean; onClose: () => void; rows: Col
     const map = new Map<string, string[]>();
     for (const r of props.rows) {
       if (r.metode_tukar !== "Ekspedisi") continue;
-      const resi = r.resi || r.keterangan;
+      const resi = r.resi || r.ket_tukar;
       if (resi) map.set(resi, [...(map.get(resi) ?? []), r.invoice_no]);
     }
     return [...map.entries()];

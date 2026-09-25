@@ -27,8 +27,6 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
   const [qToko, setQToko] = useState("");
   const [done, setDone] = useState<Set<string>>(new Set());
   const [tanggal, setTanggal] = useState(todayJakarta());
-  const [ketDone, setKetDone] = useState("");
-  const [ketPending, setKetPending] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -102,8 +100,9 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
       const { data, error } = await supabase.rpc("courier_submit", {
         p_invoices: selectedInv.map((i) => ({ invoice_no: i.invoice_no, done: done.has(i.invoice_no) })),
         p_tanggal: tanggal,
-        p_ket_done: ketDone,
-        p_ket_pending: ketPending,
+        // Keterangan tukar faktur dihapus dari aplikasi kolektor (pakai Keterangan invoice bersama).
+        p_ket_done: "",
+        p_ket_pending: "",
         p_foto_path: path,
         p_kurir: kurir,
       });
@@ -113,8 +112,6 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
       setTokos(new Set());
       setDone(new Set());
       setPhoto(null);
-      setKetDone("");
-      setKetPending("");
       setReloadKey((k) => k + 1);
       setStep(3);
     } catch (e) {
@@ -239,12 +236,6 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
               <span className="text-fg-2">Tanggal Diterima <span className="text-danger">*</span></span>
               <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className={`${inputCls} mt-1`} />
             </label>
-            {doneCount > 0 && (
-              <textarea value={ketDone} onChange={(e) => setKetDone(e.target.value)} rows={2} placeholder="Keterangan Done, mis. diterima langsung oleh pemilik toko…" className={inputCls} />
-            )}
-            {doneCount < selectedInv.length && (
-              <textarea value={ketPending} onChange={(e) => setKetPending(e.target.value)} rows={2} placeholder="Keterangan Pending, mis. toko tutup, kembali besok…" className={inputCls} />
-            )}
             <div className="flex gap-2">
               <button type="button" className={btnGhost} onClick={() => setStep(3)} disabled={busy}>Kembali</button>
               <button type="button" className={`${btnPrimary} flex-1`} disabled={busy} onClick={submit}>

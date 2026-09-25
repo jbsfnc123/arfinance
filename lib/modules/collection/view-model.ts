@@ -10,6 +10,7 @@ export type RawRow = {
   business_partner: string | null; bp_value: string | null; invoice_date: string | null; due_date: string | null;
   open_amt: number | null; no_po: string | null; no_sj: string | null; catatan: string | null; janji_bayar: string | null;
   metode_tukar: string | null; tanggal_tukar: string | null; keterangan: string | null; resi: string | null; foto_path: string | null;
+  keterangan_tukar?: string | null; // keterangan/resi dari sumber tukar faktur (internal, untuk No Resi)
 };
 
 export type CollectionRow = {
@@ -28,7 +29,8 @@ export type CollectionRow = {
   janji_bayar: string | null;
   metode_tukar: string | null;
   tanggal_tukar: string | null;
-  keterangan: string;
+  keterangan: string;     // Keterangan invoice bersama (Collection = Mitra10 = Hold Faktur)
+  ket_tukar: string;      // keterangan sumber tukar faktur (internal)
   resi: string;
   foto_path: string | null;
   // turunan
@@ -58,6 +60,7 @@ export function enrichRow(r: RawRow, today: string): CollectionRow {
     metode_tukar: r.metode_tukar,
     tanggal_tukar: r.tanggal_tukar,
     keterangan: r.keterangan ?? "",
+    ket_tukar: r.keterangan_tukar ?? "",
     resi: r.resi ?? "",
     foto_path: r.foto_path,
     days,
@@ -84,7 +87,7 @@ export function applyExchange(
     ...row,
     metode_tukar: ex.metode,
     tanggal_tukar: ex.tanggal,
-    keterangan: ex.keterangan ?? ex.resi ?? "",
+    ket_tukar: ex.keterangan ?? ex.resi ?? "",
     resi: ex.resi ?? "",
     foto_path: ex.foto_path,
   });
@@ -93,7 +96,7 @@ export function applyExchange(
 // ── Kolom tabel ─────────────────────────────────────────────────────
 export type ColumnKey =
   | "payment_group" | "marketing" | "business_partner" | "invoice_no" | "invoice_date" | "due_date"
-  | "janji_bayar" | "aging" | "open_amt" | "bp_value" | "no_po" | "no_sj" | "catatan"
+  | "janji_bayar" | "aging" | "open_amt" | "bp_value" | "no_po" | "no_sj"
   | "tanggal_tukar" | "metode_tukar" | "status_tukar" | "keterangan" | "no_resi";
 
 export const COLUMN_DEFS: { key: ColumnKey; label: string; default?: boolean; money?: boolean }[] = [
@@ -109,18 +112,17 @@ export const COLUMN_DEFS: { key: ColumnKey; label: string; default?: boolean; mo
   { key: "bp_value", label: "Value" },
   { key: "no_po", label: "No PO" },
   { key: "no_sj", label: "No SJ" },
-  { key: "catatan", label: "Catatan Terbaru", default: true },
   { key: "tanggal_tukar", label: "Tgl Tukar Faktur" },
   { key: "metode_tukar", label: "Metode Tukar Faktur" },
   { key: "status_tukar", label: "Status Tukar Faktur" },
-  { key: "keterangan", label: "Keterangan" },
+  { key: "keterangan", label: "Keterangan", default: true },
   { key: "no_resi", label: "No Resi (Ekspedisi)" },
 ];
 
 export const DEFAULT_COLUMNS = COLUMN_DEFS.filter((c) => c.default).map((c) => c.key);
 
 export const statusTukar = (r: CollectionRow) => (r.metode_tukar ? "Sudah Tukar Faktur" : "Belum Tukar Faktur");
-export const noResi = (r: CollectionRow) => (r.metode_tukar === "Ekspedisi" ? r.resi || r.keterangan : "");
+export const noResi = (r: CollectionRow) => (r.metode_tukar === "Ekspedisi" ? r.resi || r.ket_tukar : "");
 
 export function cellText(r: CollectionRow, key: ColumnKey): string {
   switch (key) {

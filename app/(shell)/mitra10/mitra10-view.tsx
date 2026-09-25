@@ -14,6 +14,7 @@ import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { M10Dashboard } from "./m10-dashboard";
 import { M10Upload } from "./m10-upload";
 import { useM10 } from "./use-m10";
+import { setRemarks } from "@/lib/modules/remarks";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -33,10 +34,10 @@ const BAD = "bg-danger/20 text-danger";
 const KK_COLS: LCol<WorksheetRow>[] = [
   { k: "username", l: "Username" }, { k: "business_partner", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
   { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
-  { k: "branch", l: "Branch" }, { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
+  { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
   { k: "gr", l: "GR", badge: { Done: OK, Pending: WAIT } },
   { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
-  { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 160 },
+  { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 200 },
   { k: "status", l: "Status", badge: { Outstanding: WAIT, Lunas: OK } },
   { k: "jadwal_bayar", l: "Jadwal Bayar", d: true }, { k: "lama_tf", l: "Lama TF (hari)", n: true },
 ];
@@ -91,11 +92,18 @@ export function Mitra10View() {
     return data as unknown;
   };
 
-  function setKeterangan(ids: number[], text: string) {
-    const v = text.trim() || null;
-    optimistic("m10", (d) => ({ ...d, worksheet: d.worksheet.map((w) => (ids.includes(w.id) ? { ...w, keterangan: v } : w)) }),
-      () => rpc("m10_set_keterangan", { p_ids: ids, p_text: text })).catch(fail);
+  // Keterangan invoice bersama (sama dengan Collection & Hold Faktur Pajak).
+  function setKeterangan(rows: WorksheetRow[], text: string) {
+    setRemarks(rows.map((r) => r.invoice_no ?? "").filter(Boolean), text, "mitra10").catch(fail);
   }
+
+  // Filter Kertas Kerja: rentang Invoice Date & Username.
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [user, setUser] = useState("");
+  const users = useMemo(() => [...new Set((c?.worksheet ?? []).map((r) => r.username))].sort(), [c]);
+  const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) =>
+    (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user)), [c, from, to, user]);
 
   function editRow(table: "gr" | "kwitansi", id: number, key: string, value: unknown) {
     const fn = table === "gr" ? "m10_gr_save" : "m10_kw_save";
@@ -142,20 +150,33 @@ export function Mitra10View() {
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard />}
         {tab === "kk" && (
-          <LocalTable title="Kertas Kerja" rows={c?.worksheet ?? []} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Kertas Kerja" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["invoice_no", "business_partner", "no_sj", "no_po", "username", "keterangan"]}
             filters={[
               { k: "status", l: "Status", options: ["Outstanding", "Lunas"] },
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
               { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },
             ]}
-            onEdit={(r, _k, v) => setKeterangan([r.id], String(v ?? ""))}
+            onEdit={(r, _k, v) => setKeterangan([r], String(v ?? ""))}
+            toolbar={(
+              <span className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-fg-2">Invoice Date</span>
+                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} !w-auto`} />
+                <span className="text-fg-2">s/d</span>
+                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} !w-auto`} />
+                <select value={user} onChange={(e) => setUser(e.target.value)} className={`${inputCls} !w-auto`}>
+                  <option value="">Username: semua</option>
+                  {users.map((u) => <option key={u}>{u}</option>)}
+                </select>
+                {(from || to || user) && <button type="button" className={btnGhost} onClick={() => { setFrom(""); setTo(""); setUser(""); }}>Reset</button>}
+              </span>
+            )}
             selectable
             actions={(sel, clear) => (
               <span className="flex items-center gap-2">
                 <input list="m10-ket" value={ket} onChange={(e) => setKet(e.target.value)} placeholder="Keterangan (kosong = hapus)" className={`${inputCls} !w-56`} />
                 <datalist id="m10-ket"><option value="LTKP" /><option value="Litigasi" /><option value="new inbox" /></datalist>
-                <button type="button" className={btnGhost} onClick={() => { setKeterangan(sel.map((r) => r.id), ket); clear(); }}>Simpan untuk {sel.length}</button>
+                <button type="button" className={btnGhost} onClick={() => { setKeterangan(sel, ket); clear(); }}>Simpan untuk {sel.length}</button>
               </span>
             )} />
         )}

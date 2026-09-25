@@ -9,8 +9,8 @@ import { card } from "@/components/ui";
 const ROW_HEIGHT = 40;
 
 const WIDTH: Partial<Record<ColumnKey, number>> = {
-  business_partner: 260, invoice_no: 170, catatan: 280, payment_group: 200, marketing: 170,
-  open_amt: 140, aging: 150, keterangan: 180,
+  business_partner: 260, invoice_no: 170, payment_group: 200, marketing: 170,
+  open_amt: 140, aging: 150, keterangan: 260,
 };
 
 const AGING_BADGE: Record<string, string> = {
@@ -26,6 +26,7 @@ export function RowsTable(props: {
   loading: boolean;
   selection: string[];
   setSelection: (fn: (prev: string[]) => string[]) => void;
+  onEditKeterangan?: (invoiceNo: string, current: string) => void;
 }) {
   const { rows, columns, selection, setSelection } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -116,7 +117,8 @@ export function RowsTable(props: {
                     <td
                       key={c.key}
                       className={`max-w-80 truncate border-b border-line px-3 ${c.money ? "text-right tabular-nums" : ""}`}
-                      title={c.key === "catatan" || c.key === "business_partner" ? cellText(r, c.key) : undefined}
+                      title={c.key === "keterangan" ? `${cellText(r, c.key)}${props.onEditKeterangan ? " — klik dua kali untuk mengubah" : ""}` : c.key === "business_partner" ? cellText(r, c.key) : undefined}
+                      onDoubleClick={c.key === "keterangan" && props.onEditKeterangan ? () => props.onEditKeterangan!(r.invoice_no, r.keterangan) : undefined}
                     >
                       {c.key === "aging" ? (
                         r.aging === "-" ? "-" : <span className={`rounded-full px-2 py-0.5 text-xs ${AGING_BADGE[r.aging]}`}>{r.aging}</span>

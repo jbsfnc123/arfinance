@@ -4,7 +4,7 @@ import type { Database } from "@/lib/database.types";
 // Token versi dataset (tabel data_versions, dinaikkan trigger di database setiap ada
 // upload/perubahan). Satu request ringan menggantikan query data yang berat.
 export type DatasetKey =
-  | "aging" | "erp" | "targets" | "activity" | "mutasi" | "m10" | "settings" | "deck" | "tukar" | "faktur" | "cekharga";
+  | "aging" | "erp" | "targets" | "activity" | "mutasi" | "m10" | "settings" | "deck" | "tukar" | "faktur" | "cekharga" | "remarks";
 
 const MEMO_MS = 2000;
 let memo: { at: number; map: Map<string, string> } | null = null;

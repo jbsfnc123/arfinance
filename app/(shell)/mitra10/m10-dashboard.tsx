@@ -1,12 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { EChartsOption } from "echarts";
 import { fmtDate, fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { todayJakarta } from "@/lib/parsers/date";
 import { m10Dashboard, type Stat } from "@/lib/modules/m10/compute";
-import { Chart, CHART_GRID } from "@/components/chart";
-import { ImportLog } from "@/components/import-log";
 import { card, inputCls, td, th } from "@/components/ui";
 import { useM10 } from "./use-m10";
 
@@ -23,17 +20,6 @@ export function M10Dashboard() {
   const s = d.summary;
   const jadwal = d.daily.filter((x) => Number(x.jadwal) !== 0);
 
-  const chart: EChartsOption = {
-    grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
-    tooltip: { trigger: "axis" },
-    legend: { top: 0, textStyle: { color: "#9aa0a6" } },
-    xAxis: { type: "category", data: d.monthly.map((m) => monthLabel(m.month)) },
-    yAxis: { type: "value", minInterval: 1, splitLine: { lineStyle: { color: CHART_GRID } } },
-    series: [
-      { name: "Done", type: "bar", stack: "a", data: d.monthly.map((m) => m.done), itemStyle: { color: "#81c995" } },
-      { name: "Pending", type: "bar", stack: "a", data: d.monthly.map((m) => m.invoice - m.done), itemStyle: { color: "#fdd663" } },
-    ],
-  };
 
   return (
     <div className="space-y-4">
@@ -81,7 +67,6 @@ export function M10Dashboard() {
 
       <section className={`${card} p-4`}>
         <h2 className="text-sm font-medium">Rekap bulanan tukar faktur (berdasarkan Invoice Date)</h2>
-        <Chart option={chart} height={240} />
         <StatTable first="Bulan" rows={d.monthly.map((m) => ({ ...m, key: m.month, label: monthLabel(m.month) }))} />
       </section>
 
@@ -92,10 +77,9 @@ export function M10Dashboard() {
             {[...d.months].reverse().map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
           </select>
         </div>
-        <StatTable first="Tanggal" jadwal rows={d.daily.map((x) => ({ ...x, key: x.date, label: fmtDate(x.date) }))} />
+        <StatTable first="Tanggal" jadwal colorDone rows={d.daily.map((x) => ({ ...x, key: x.date, label: fmtDate(x.date) }))} />
       </section>
 
-      <ImportLog module={["mitra10", "data"]} version={0} />
     </div>
   );
 }
@@ -113,7 +97,7 @@ function Lines({ rows }: { rows: [string, string | number][] }) {
   );
 }
 
-function StatTable({ first, rows, jadwal }: { first: string; jadwal?: boolean; rows: (Stat & { key: string; label: string; jadwal?: number })[] }) {
+function StatTable({ first, rows, jadwal, colorDone }: { first: string; jadwal?: boolean; colorDone?: boolean; rows: (Stat & { key: string; label: string; jadwal?: number })[] }) {
   return (
     <div className="mt-3 overflow-x-auto">
       <table className="w-full text-sm">
@@ -126,7 +110,8 @@ function StatTable({ first, rows, jadwal }: { first: string; jadwal?: boolean; r
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.key} className="border-b border-line/50">
+            // Detail harian: hijau bila semua invoice sudah tukar faktur (100%), merah bila belum.
+            <tr key={r.key} className={`border-b border-line/50 ${colorDone && r.invoice > 0 ? (r.done >= r.invoice ? "text-success" : "text-danger") : ""}`}>
               <td className={td}>{r.label}</td>
               <td className={`${td} text-right`}>{r.invoice}</td>
               <td className={`${td} text-right`}>{r.done}</td>

@@ -1,5 +1,6 @@
 "use client";
 
+import { setRemarks } from "@/lib/modules/remarks";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { rupiah } from "@/lib/format";
@@ -92,7 +93,9 @@ export function ActionBar(props: {
       if (error) { restore(); toast(`Gagal menyimpan: ${error.message}`, "danger"); return false; }
     } else {
       const catatan = `[${kategori}]${isi ? " - " + isi : ""}`;
-      patch(invoices, (r) => withSearch({ ...r, catatan }));
+      // Catatan juga menjadi Keterangan invoice bersama (trigger database), tampilkan langsung.
+      const keterangan = `[${kategori}]${isi.trim() ? " " + isi.trim() : ""}`;
+      patch(invoices, (r) => withSearch({ ...r, catatan, keterangan }));
       const { error } = await supabase.from("notes").insert(
         selected.map((r) => ({
           invoice_no: r.invoice_no, kategori, isi, business_partner: r.business_partner, collection_name: collection,
@@ -104,6 +107,18 @@ export function ActionBar(props: {
     toast(`Catatan disimpan untuk ${selected.length} invoice.`, "success");
     clear();
     return true;
+  }
+
+  // Keterangan invoice bersama untuk semua invoice terpilih (kosong = hapus).
+  function editKeterangan() {
+    const current = selected.length === 1 ? selected[0].keterangan : "";
+    const text = window.prompt(`Keterangan untuk ${selected.length} invoice (kosongkan untuk menghapus):`, current);
+    if (text === null) return;
+    const before = new Map(selected.map((r) => [r.invoice_no, r]));
+    patch(invoices, (r) => withSearch({ ...r, keterangan: text.trim() }));
+    setRemarks(invoices, text, "collection")
+      .then(() => { toast(`Keterangan disimpan untuk ${selected.length} invoice.`, "success"); clear(); })
+      .catch((e: Error) => { patch(invoices, (r) => before.get(r.invoice_no) ?? r); toast(`Gagal menyimpan: ${e.message}`, "danger"); });
   }
 
   async function saveTukar(via: "WA" | "Email", date: string) {
@@ -156,6 +171,9 @@ export function ActionBar(props: {
             </button>
             <button type="button" className={btnGhost} onClick={() => setModal("note")}>
               <span className="material-symbols-outlined">edit_note</span>Catatan
+            </button>
+            <button type="button" className={btnGhost} onClick={editKeterangan} title="Keterangan invoice (sama dengan Mitra10 & Hold Faktur Pajak)">
+              <span className="material-symbols-outlined">sticky_note_2</span>Keterangan
             </button>
             <button type="button" className={btnGhost} onClick={() => setModal("tukar")}>
               <span className="material-symbols-outlined">swap_horiz</span>Tukar Faktur
