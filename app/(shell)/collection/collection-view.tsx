@@ -172,11 +172,12 @@ export function CollectionView(props: {
         loading={loading}
         selection={selection}
         setSelection={setSelection}
-        onEditKeterangan={(inv, current) => {
-          const text = window.prompt(`Keterangan invoice ${inv} (sama dengan Mitra10 & Hold Faktur Pajak):`, current);
+        onEditKeterangan={(row) => {
+          const inv = row.invoice_no, current = row.keterangan;
+          const text = window.prompt(`Keterangan ${row.no_sj || inv} (terikat No SJ — sama dengan Mitra10 & Hold Faktur Pajak):`, current);
           if (text === null) return;
           patch([inv], (r) => withSearch({ ...r, keterangan: text.trim() }));
-          setRemarks([inv], text, "collection").catch(() => patch([inv], (r) => withSearch({ ...r, keterangan: current })));
+          setRemarks([{ no_sj: row.no_sj, invoice_no: inv }], text, "collection").catch(() => patch([inv], (r) => withSearch({ ...r, keterangan: current })));
         }}
       />
 

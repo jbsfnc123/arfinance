@@ -26,7 +26,7 @@ export function RowsTable(props: {
   loading: boolean;
   selection: string[];
   setSelection: (fn: (prev: string[]) => string[]) => void;
-  onEditKeterangan?: (invoiceNo: string, current: string) => void;
+  onEditKeterangan?: (row: CollectionRow) => void;
 }) {
   const { rows, columns, selection, setSelection } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -118,7 +118,7 @@ export function RowsTable(props: {
                       key={c.key}
                       className={`max-w-80 truncate border-b border-line px-3 ${c.money ? "text-right tabular-nums" : ""}`}
                       title={c.key === "keterangan" ? `${cellText(r, c.key)}${props.onEditKeterangan ? " — klik dua kali untuk mengubah" : ""}` : c.key === "business_partner" ? cellText(r, c.key) : undefined}
-                      onDoubleClick={c.key === "keterangan" && props.onEditKeterangan ? () => props.onEditKeterangan!(r.invoice_no, r.keterangan) : undefined}
+                      onDoubleClick={c.key === "keterangan" && props.onEditKeterangan ? () => props.onEditKeterangan!(r) : undefined}
                     >
                       {c.key === "aging" ? (
                         r.aging === "-" ? "-" : <span className={`rounded-full px-2 py-0.5 text-xs ${AGING_BADGE[r.aging]}`}>{r.aging}</span>

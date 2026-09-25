@@ -157,7 +157,7 @@ export function PengajuanList({ myName }: { myName: string }) {
                         <div><span className="text-fg-2">Reason:</span> {r.reason}</div>
                         <div><span className="text-fg-2">Diproses:</span> {r.processed_at ? `${r.processed_by_name ?? ""} · ${fmtTimestamp(r.processed_at)}` : "Belum"}</div>
                         <div className="sm:col-span-2"><span className="text-fg-2">Keterangan pengajuan:</span> {r.keterangan}</div>
-                        <div className="sm:col-span-2"><span className="text-fg-2">Keterangan invoice:</span> {remarks.map.get(r.invoice_no) ?? "—"} <span className="text-xs text-fg-2">(sama dengan Collection, Mitra10 & Hold)</span></div>
+                        <div className="sm:col-span-2"><span className="text-fg-2">Keterangan invoice:</span> {remarks.get(r.no_sj, r.invoice_no) || "—"} <span className="text-xs text-fg-2">(sama dengan Collection, Mitra10 & Hold)</span></div>
                       </div>
                     </td>
                   </tr>

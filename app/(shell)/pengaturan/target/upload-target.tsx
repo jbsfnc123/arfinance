@@ -20,6 +20,7 @@ const FIELD_LABEL: Record<keyof TargetRow, string> = {
   business_partner: "Business Partner",
   due_date: "Due Date",
   branch: "Branch",
+  no_sj: "No SJ",
 };
 
 export function UploadTarget() {

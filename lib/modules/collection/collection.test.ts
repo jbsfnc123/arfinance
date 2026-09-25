@@ -16,7 +16,7 @@ describe("parseTarget", () => {
     expect(res.skipped).toBe(1);
     expect(res.rows).toEqual([{
       invoice_no: "INV-1", target: 6000000, marketing: "", collection_name: "",
-      business_partner: "Toko A", due_date: "2026-09-15", branch: "Jakarta",
+      business_partner: "Toko A", due_date: "2026-09-15", branch: "Jakarta", no_sj: "",
     }]);
   });
 
@@ -28,7 +28,7 @@ describe("parseTarget", () => {
     expect(res.legacy).toBe(true);
     expect(res.rows[0]).toMatchObject({
       invoice_no: "INV-9", target: 2500000, marketing: "03-Reseller", collection_name: "Budi",
-      business_partner: "Toko B", due_date: "2026-09-15", branch: "Surabaya",
+      business_partner: "Toko B", due_date: "2026-09-15", branch: "Surabaya", no_sj: "",
     });
   });
 });

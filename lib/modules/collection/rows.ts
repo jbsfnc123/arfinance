@@ -4,6 +4,8 @@ import type { AgingLine, Datasets, Note, Promise_, Target } from "@/lib/local/da
 import type { RawRow } from "./view-model";
 import type { NoteLatest } from "./note-groups";
 import type { ForecastRow, GroupRow, OverdueRow, SpvSummary } from "./spv-summary";
+import { remarkKey } from "@/lib/modules/remarks";
+import { revisionLookup } from "./revision";
 
 // Port view SQL Collection ke browser: ar_invoices (filter aging), v_collection_rows,
 // v_note_latest, v_collection_summary, dan RPC get_spv_summary.
@@ -67,7 +69,7 @@ export function collectionRows(ar: ArInvoice[], act: Datasets["activity"], remar
       catatan: n ? `[${n.kategori}]${n.isi ? " - " + n.isi : ""}` : null,
       janji_bayar: promise.get(a.invoice_no)?.promise_date ?? null,
       metode_tukar: x?.metode ?? null, tanggal_tukar: x?.tanggal ?? null,
-      keterangan: remarks?.get(a.invoice_no) ?? null,
+      keterangan: remarks?.get(remarkKey(a.no_sj, a.invoice_no)) ?? null,
       keterangan_tukar: x ? x.keterangan ?? x.resi : null, resi: x?.resi ?? null, foto_path: x?.foto_path ?? null,
     };
   });
@@ -106,11 +108,15 @@ export function computeSpvSummary(input: {
     if (l.invoice_no && !openAll.has(l.invoice_no)) openAll.set(l.invoice_no, { open: num(l.open_amt), due: l.due_date });
   }
   const jb = latestBy(input.promises);
-  const r2 = input.targets.filter((t) => t.month === input.month).map((t) => {
+  const monthTargets = input.targets.filter((t) => t.month === input.month);
+  const revised = revisionLookup(input.agingAll ?? [], new Set(monthTargets.map((t) => t.invoice_no)));
+  const r2 = monthTargets.map((t) => {
     const a = ar.get(t.invoice_no);
     const o = openAll.get(t.invoice_no);
-    const sisa = a ? a.open_amt : o ? o.open : 0;
-    const due = t.due_date ?? a?.due_date ?? o?.due ?? null;
+    // Invoice direvisi (SJ sama, No Invoice baru) → sisa = open invoice pengganti, bukan terkumpul.
+    const rev = !a && !o ? revised(t.invoice_no, t.no_sj) : null;
+    const sisa = a ? a.open_amt : o ? o.open : rev ? rev.open : 0;
+    const due = t.due_date ?? a?.due_date ?? o?.due ?? rev?.due ?? null;
     const days = due ? daysBetween(input.today, due) : null;
     const promise = jb.get(t.invoice_no)?.promise_date ?? null;
     return {

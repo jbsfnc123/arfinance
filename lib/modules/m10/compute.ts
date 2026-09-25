@@ -1,6 +1,7 @@
 import { daysBetween } from "@/lib/parsers/date";
 import { num } from "@/lib/local/pack";
 import type { AgingLine, Gr, Kwitansi, Schedule, Worksheet } from "@/lib/local/datasets";
+import { remarkKey } from "@/lib/modules/remarks";
 
 // Rumus workbook "VBA Mitra10 Tukar Faktur.xlsm" dihitung di browser (dulu view SQL yang
 // timeout). Semua lookup memakai Map → O(n) untuk ribuan baris.
@@ -53,7 +54,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
       ...w,
       open_amt: num(w.open_amt),
       username: usernameOf(w.payment_group),
-      keterangan: (w.invoice_no && input.remarks?.get(w.invoice_no)) || null,
+      keterangan: input.remarks?.get(remarkKey(w.no_sj, w.invoice_no)) || null,
       gr: grSj.has(w.no_sj) ? "Done" : "Pending",
       tukar_faktur: total > 10000 ? "Done" : "Pending",
       selisih: num(w.open_amt) - total,
