@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/session";
-import { visibleMenu } from "@/lib/menu";
+import { canAccess, HOME_ITEM, visibleMenu } from "@/lib/menu";
 import { ShellChrome } from "./shell-chrome";
 
 export default async function ShellLayout({ children }: LayoutProps<"/">) {
@@ -7,7 +7,7 @@ export default async function ShellLayout({ children }: LayoutProps<"/">) {
   const menu = visibleMenu(access);
 
   return (
-    <ShellChrome menu={menu} user={{ name: profile.display_name, role: role.name, collection: profile.collection_name }}>
+    <ShellChrome menu={menu} showHome={canAccess(HOME_ITEM, access)} user={{ name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}
     </ShellChrome>
   );

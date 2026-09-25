@@ -20,7 +20,7 @@ const useStored = (k: string) => useSyncExternalStore(subscribe, () => read(k), 
 
 const CLOSE_DELAY = 250;
 
-export function Sidebar({ menu, mobileOpen, onClose }: { menu: MenuGroup[]; mobileOpen: boolean; onClose: () => void }) {
+export function Sidebar({ menu, showHome, mobileOpen, onClose }: { menu: MenuGroup[]; showHome: boolean; mobileOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const pinned = useStored(KEY_PIN) === "1";
   const groupsRaw = useStored(KEY_GROUPS);
@@ -41,11 +41,13 @@ export function Sidebar({ menu, mobileOpen, onClose }: { menu: MenuGroup[]; mobi
   const panel = (full: boolean, onNavigate?: () => void) => (
     <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden py-3">
       <div className="mb-2 flex items-center gap-1 px-2">
-        <Link href="/" onClick={onNavigate} title="Beranda"
-          className={`flex min-w-0 flex-1 items-center gap-3 rounded-full px-3 py-2 text-sm ${pathname === "/" ? "bg-pill text-pill-fg" : "text-fg hover:bg-surface-2"}`}>
-          <span className="material-symbols-outlined shrink-0">home</span>
-          {full && <span className="truncate">Beranda</span>}
-        </Link>
+        {showHome ? (
+          <Link href="/" onClick={onNavigate} title="Beranda"
+            className={`flex min-w-0 flex-1 items-center gap-3 rounded-full px-3 py-2 text-sm ${pathname === "/" ? "bg-pill text-pill-fg" : "text-fg hover:bg-surface-2"}`}>
+            <span className="material-symbols-outlined shrink-0">home</span>
+            {full && <span className="truncate">Beranda</span>}
+          </Link>
+        ) : <div className="flex-1" />}
         {full && !onNavigate && (
           <button type="button" onClick={() => write(KEY_PIN, pinned ? "0" : "1")}
             title={pinned ? "Lepas pin (sidebar sembunyi otomatis)" : "Pin sidebar (selalu terbuka)"}

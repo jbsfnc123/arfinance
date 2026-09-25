@@ -759,6 +759,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sticky_notes: {
+        Row: {
+          body: string
+          color: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          id: number
+          updated_at: string
+          updated_by_name: string | null
+        }
+        Insert: {
+          body?: string
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: never
+          updated_at?: string
+          updated_by_name?: string | null
+        }
+        Update: {
+          body?: string
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: never
+          updated_at?: string
+          updated_by_name?: string | null
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           business_partner: string | null

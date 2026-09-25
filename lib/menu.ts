@@ -71,8 +71,15 @@ export const MENU_REGISTRY: MenuGroup[] = [
   ]},
 ];
 
+// Beranda (papan sticky notes) diatur lewat centang ACL seperti submenu lain, tetapi tidak
+// tampil sebagai grup dropdown sidebar (punya link sendiri di atas sidebar).
+export const HOME_GROUP: MenuGroup = { id: "home", label: "Beranda", icon: "home", children: [
+  { id: "home", label: "Beranda", href: "/" },
+]};
+export const HOME_ITEM = HOME_GROUP.children[0];
+
 export function findMenuById(id: string) {
-  for (const group of MENU_REGISTRY) {
+  for (const group of [HOME_GROUP, ...MENU_REGISTRY]) {
     const item = group.children.find((c) => c.id === id);
     if (item) return { group, item };
   }
@@ -107,4 +114,13 @@ export function visibleMenu(access: Access): MenuGroup[] {
   return MENU_REGISTRY
     .map((g) => ({ ...g, children: g.children.filter((c) => canAccess(c, access)) }))
     .filter((g) => g.children.length > 0);
+}
+
+// Tujuan awal untuk role tanpa akses Beranda: menu internal pertama yang diizinkan.
+export function firstAllowedHref(access: Access): string | null {
+  for (const g of visibleMenu(access)) {
+    const item = g.children.find((c) => !c.external);
+    if (item) return item.href;
+  }
+  return null;
 }

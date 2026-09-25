@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MENU_REGISTRY, canAccess, findMenuByHref, visibleMenu } from "./menu";
+import { HOME_ITEM, MENU_REGISTRY, canAccess, findMenuById, findMenuByHref, firstAllowedHref, visibleMenu } from "./menu";
 
 const item = (id: string) => MENU_REGISTRY.flatMap((g) => g.children).find((c) => c.id === id)!;
 
@@ -33,5 +33,20 @@ describe("ACL menu", () => {
   it("findMenuByHref menemukan route internal", () => {
     expect(findMenuByHref("/coretax")?.item.id).toBe("rek.coretax");
     expect(findMenuByHref("/tidak-ada")).toBeNull();
+  });
+});
+
+describe("Beranda", () => {
+  it("diatur lewat centang ACL, Super Admin selalu bisa", () => {
+    expect(findMenuById("home")?.item).toBe(HOME_ITEM);
+    expect(canAccess(HOME_ITEM, { kind: "sa", allowed: new Set() })).toBe(true);
+    expect(canAccess(HOME_ITEM, { kind: "kurir", allowed: new Set(["home"]) })).toBe(true);
+    expect(canAccess(HOME_ITEM, { kind: "ctrl", allowed: new Set(["dash.coll"]) })).toBe(false);
+  });
+
+  it("tanpa Beranda diarahkan ke menu internal pertama yang diizinkan", () => {
+    expect(firstAllowedHref({ kind: "coll", allowed: new Set(["bill.detail", "coll.tagihan"]) })).toBe("/collection");
+    expect(firstAllowedHref({ kind: "coll", allowed: new Set(["bill.detail"]) })).toBeNull();
+    expect(firstAllowedHref({ kind: "coll", allowed: new Set() })).toBeNull();
   });
 });
