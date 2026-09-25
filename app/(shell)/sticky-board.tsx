@@ -6,6 +6,7 @@ import type { Tables } from "@/lib/database.types";
 import { fmtTimestamp } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnPrimary } from "@/components/ui";
+import { sortNotes } from "@/lib/modules/sticky";
 
 type Note = Tables<"sticky_notes">;
 
@@ -21,7 +22,6 @@ const COLORS: Record<string, { bg: string; border: string; dot: string }> = {
   purple: { bg: "rgba(197,138,249,.16)", border: "rgba(197,138,249,.55)", dot: "#c58af9" },
 };
 
-const sortNotes = (list: Note[]) => [...list].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id);
 
 // Papan sticky notes bersama (maks. 10, dijaga juga oleh trigger server). Semua pemilik akses
 // Beranda boleh menambah/mengubah/menghapus; perubahan pengguna lain masuk lewat realtime.
@@ -59,11 +59,11 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
 
   const replace = (row: Note) => setNotes((list) => list.map((n) => (n.id === row.id ? { ...row, body: drafts.current.get(row.id) ?? row.body } : n)));
 
-  async function save(id: number, patch: Partial<Pick<Note, "body" | "color">>, prev: Note) {
+  async function save(id: number, patch: Partial<Pick<Note, "body" | "color" | "pinned_at">>, prev: Note) {
     const { data, error } = await supabase.from("sticky_notes").update(patch).eq("id", id).select().single();
     if (error) {
       drafts.current.delete(id);
-      setNotes((list) => list.map((n) => (n.id === id ? prev : n)));
+      setNotes((list) => sortNotes(list.map((n) => (n.id === id ? prev : n))));
       toast(`Gagal menyimpan note: ${error.message}`, "danger");
       return;
     }
@@ -95,6 +95,12 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
     if (note.color === color) return;
     setNotes((list) => list.map((n) => (n.id === note.id ? { ...n, color } : n)));
     void save(note.id, { color }, note);
+  }
+
+  function togglePin(note: Note) {
+    const pinned_at = note.pinned_at ? null : new Date().toISOString();
+    setNotes((list) => sortNotes(list.map((n) => (n.id === note.id ? { ...n, pinned_at } : n))));
+    void save(note.id, { pinned_at }, note);
   }
 
   async function add() {
@@ -146,8 +152,12 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
           {notes.map((n) => {
             const c = COLORS[n.color] ?? COLORS.yellow;
             return (
-              <div key={n.id} className="flex min-h-52 flex-col rounded-2xl border p-3 shadow-sm"
+              <div key={n.id} className="relative flex min-h-52 flex-col rounded-2xl border p-3 shadow-sm"
                 style={{ background: c.bg, borderColor: c.border }}>
+                <button type="button" onClick={() => togglePin(n)} title={n.pinned_at ? "Lepas pin" : "Pin (selalu teratas)"}
+                  className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-2 ${n.pinned_at ? "text-accent" : "text-fg-2"}`}>
+                  <span className="material-symbols-outlined !text-lg" style={{ fontVariationSettings: n.pinned_at ? "'FILL' 1" : undefined }}>push_pin</span>
+                </button>
                 <textarea
                   value={n.body}
                   autoFocus={n.id === focusId}
@@ -155,7 +165,7 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
                   onBlur={() => flush(n.id)}
                   maxLength={1000}
                   placeholder="Tulis catatan…"
-                  className="min-h-36 flex-1 resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-fg-2"
+                  className="min-h-36 flex-1 resize-none bg-transparent pr-7 text-sm leading-relaxed outline-none placeholder:text-fg-2"
                 />
                 <div className="mt-2 flex items-center gap-1.5">
                   {Object.entries(COLORS).map(([key, col]) => (
