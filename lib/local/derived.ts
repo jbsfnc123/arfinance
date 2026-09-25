@@ -4,6 +4,7 @@ import { arInvoices, collectionRows, computeSpvSummary, filterOf, type ArInvoice
 import { enrichRow } from "@/lib/modules/collection/view-model";
 import { collectionAllocation } from "@/lib/modules/collection/allocation";
 import { computeM10, m10AgingLines } from "@/lib/modules/m10/compute";
+import { computeRkm, rkmAgingLines } from "@/lib/modules/rkm/compute";
 
 // Hasil hitungan berat dibagi ANTAR halaman: dihitung sekali per versi data (identitas objek
 // dataset di store lokal), jadi pindah menu lalu kembali tidak menghitung ulang.
@@ -26,3 +27,7 @@ export const m10Of = memoize((m10: Datasets["m10"], aging: AgingLine[], remarks:
 // Alokasi (pembayaran ERP) per hari untuk satu collection & bulan (Daftar Tagihan).
 export const collectionAllocationOf = memoize((month: string, collection: string, erp: Datasets["erp"], targets: Datasets["targets"], agingAll: AgingLine[]) =>
   collectionAllocation({ month, collection, payments: erp.payments, invoices: erp.invoices, targets: targets.targets, agingAll }));
+
+export const rkmLinesOf = memoize((lines: AgingLine[], taxName: string) => rkmAgingLines(lines, taxName));
+
+export const rkmOf = memoize((rkm: Datasets["rkm"], aging: AgingLine[], remarks: Map<string, string>) => computeRkm({ ...rkm, aging, remarks }));

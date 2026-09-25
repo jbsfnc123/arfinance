@@ -22,6 +22,10 @@ export type Worksheet = { id: number; payment_group: string | null; business_par
 export type Gr = { id: number; no: string | null; store_no: string | null; delivery_to: string | null; gr_no: string | null; gr_date: string | null; po_no: string | null; po_date: string | null; vendor_ship_no: string | null; item_code: string | null; item_name: string | null; uom: string | null; qty_order: number | null; qty_received: number | null; status: string | null; sj_no: string | null };
 export type Kwitansi = { id: number; username: string | null; invoice_no: string; vendor_invoice_no: string | null; invoice_date: string | null; kuitansi_no: string | null; kuitansi_date: string | null; accepted_date: string | null; pfi_no: string | null; gr_no: string | null; po_no: string | null; total_net: number };
 export type Schedule = { no_kw: string; spp: string | null; nilai_kw: number; tgl_tukar_faktur: string | null; jadwal_transfer: string | null; notes: string | null };
+// RKM Tukar Faktur (Anyar Retail Indonesia): Kertas Kerja dari aging + file portal RKM (kunci No SJ).
+export type RkmWorksheet = { id: number; business_partner: string | null; invoice_no: string | null; invoice_date: string | null; due_date: string | null; open_amt: number; branch: string | null; no_po: string | null; no_sj: string };
+export type RkmGr = { id: number; no: string | null; grpo_no: string | null; no_sj: string | null; tgl_grpo: string | null; jumlah_grpo_grn: number | null; no_faktur_pajak: string | null; tgl_pajak: string | null; jumlah: number | null; selisih: number | null; cabang: string | null; no_po: string | null; jumlah_grpo: number | null; no_grn: string | null; jumlah_grn: number | null };
+export type RkmKw = { id: number; no: string | null; grpo_no: string | null; tgl_grpo: string | null; cabang: string | null; no_sj: string | null; no_po: string | null; jumlah_grpo: number | null; no_grn: string | null; total_grn: number | null; total_grpo_grn: number | null; tgl_faktur_pajak: string | null; no_faktur_pajak: string | null; jumlah_faktur_pajak: number | null; selisih: number | null; pembuat: string | null; tanggal_input: string | null };
 export type Mutation = { id: number; account: string; tx_date: string; amount: number; keterangan: string | null; catatan: string | null; excluded: boolean; excluded_note: string | null };
 export type Remark = { ref: string; no_sj: string | null; invoice_no: string | null; keterangan: string; source: string; updated_at: string; updated_by_name: string | null };
 export type Account = { code: string; last4: string; sort: number; active: boolean };
@@ -31,6 +35,7 @@ export type Datasets = {
   activity: { notes: Note[]; promises: Promise_[]; exchanges: Exchange[] };
   targets: { targets: Target[] };
   m10: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[] };
+  rkm: { worksheet: RkmWorksheet[]; gr: RkmGr[]; kwitansi: RkmKw[] };
   mutasi: { accounts: Account[]; mutations: Mutation[] };
   erp: { invoices: { invoice_no: string; invoice_date: string; amount: number; bp_key?: string | null }[]; payments: { invoice_no: string; payment_date: string; amount: number }[] };
   tukar: { done: { tanggal_tukar: string | null; kurir: string | null; business_partner: string | null; kode: string | null }[] };
@@ -47,6 +52,7 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; deps: DatasetKey[]; 
   activity: { rpc: "pack_activity", deps: ["activity"], decode: (r) => tables(r, ["notes", "promises", "exchanges"]) as Datasets["activity"] },
   targets: { rpc: "pack_targets", deps: ["targets"], decode: (r) => tables(r, ["targets"]) as Datasets["targets"] },
   m10: { rpc: "pack_m10", deps: ["m10"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi", "schedule"]) as Datasets["m10"] },
+  rkm: { rpc: "pack_rkm", deps: ["rkm"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi"]) as Datasets["rkm"] },
   mutasi: { rpc: "pack_mutasi", deps: ["mutasi"], decode: (r) => tables(r, ["accounts", "mutations"]) as Datasets["mutasi"] },
   erp: { rpc: "pack_erp", deps: ["erp"], decode: (r) => tables(r, ["invoices", "payments"]) as Datasets["erp"] },
   tukar: { rpc: "pack_tukar", deps: ["tukar"], decode: (r) => tables(r, ["done"]) as Datasets["tukar"] },
