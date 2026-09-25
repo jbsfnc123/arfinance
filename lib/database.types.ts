@@ -981,6 +981,7 @@ export type Database = {
       pack_mutasi: { Args: Record<string, never>; Returns: Json }
       pack_erp: { Args: Record<string, never>; Returns: Json }
       pack_tukar: { Args: Record<string, never>; Returns: Json }
+      usage_report: { Args: Record<string, never>; Returns: Json }
       pack_settings: { Args: Record<string, never>; Returns: Json }
       m10_gr_save: { Args: { p_id: number | null; p_row: Json }; Returns: number }
       m10_kw_save: { Args: { p_id: number | null; p_row: Json }; Returns: number }

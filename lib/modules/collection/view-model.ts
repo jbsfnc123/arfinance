@@ -147,8 +147,6 @@ export function cellText(r: CollectionRow, key: ColumnKey): string {
 // ── Filter ─────────────────────────────────────────────────────────
 export const CATEGORY_CARDS = ["Case", "Janji Bayar", "Reminder", "No Respon", "Tidak Ada Catatan"] as const;
 export type CategoryFilter = (typeof CATEGORY_CARDS)[number] | "Administratif";
-export const NO_DATE = "∅";
-export type TukarMetric ="total" | "belum" | "sudah" | (typeof TUKAR_METHODS)[number];
 
 export type Filters = {
   search: string;
@@ -156,14 +154,13 @@ export type Filters = {
   bp: string;
   aging: AgingBucket | "Sudah Jatuh Tempo" | "";
   category: CategoryFilter | "";
-  tukar: { ym: string; metric: TukarMetric } | null;
   due: string | null; // "YYYY-MM" atau "__KOSONG__"
   dateFrom: string;
   dateTo: string;
 };
 
 export const EMPTY_FILTERS: Filters = {
-  search: "", pg: "", bp: "", aging: "", category: "", tukar: null, due: null, dateFrom: "", dateTo: "",
+  search: "", pg: "", bp: "", aging: "", category: "", due: null, dateFrom: "", dateTo: "",
 };
 
 export function categoryOf(catatan: string): string {
@@ -185,14 +182,6 @@ function passes(r: CollectionRow, f: Filters, skip: "pg" | "bp" | null) {
     } else if (f.category === "Tidak Ada Catatan") {
       if (r.catatan) return false;
     } else if (!r.catatan.startsWith(`[${f.category}]`)) return false;
-  }
-  if (f.tukar) {
-    // ym "" = semua bulan; NO_DATE = hanya invoice tanpa tanggal.
-    if (f.tukar.ym && (monthKey(r.invoice_date) || NO_DATE) !== f.tukar.ym) return false;
-    const m = f.tukar.metric;
-    if (m === "belum" && r.metode_tukar) return false;
-    if (m === "sudah" && !r.metode_tukar) return false;
-    if (m !== "total" && m !== "belum" && m !== "sudah" && r.metode_tukar !== m) return false;
   }
   if (f.due !== null) {
     const key = r.due_date ? monthKey(r.due_date) : "__KOSONG__";
@@ -235,34 +224,6 @@ export function agingCards(rows: CollectionRow[]) {
     if (r.aging !== "Belum Jatuh Tempo") out["Sudah Jatuh Tempo"] = add(out["Sudah Jatuh Tempo"], r);
   }
   return out;
-}
-
-export type TukarRecapRow = { ym: string; total: number; belum: number; sudah: number } & Record<string, number | string>;
-
-// Per bulan invoice date, bulan terbaru di atas, "(Tanpa Tgl)" paling bawah.
-export function tukarRecap(rows: CollectionRow[]) {
-  const map = new Map<string, TukarRecapRow>();
-  const blank = (ym: string): TukarRecapRow => {
-    const r: TukarRecapRow = { ym, total: 0, belum: 0, sudah: 0 };
-    for (const m of TUKAR_METHODS) r[m] = 0;
-    return r;
-  };
-  const total = blank("");
-  for (const r of rows) {
-    const ym = monthKey(r.invoice_date);
-    const rec = map.get(ym) ?? blank(ym);
-    for (const target of [rec, total]) {
-      target.total++;
-      if (r.metode_tukar) {
-        target.sudah++;
-        target[r.metode_tukar] = (Number(target[r.metode_tukar]) || 0) + 1;
-      } else target.belum++;
-    }
-    map.set(ym, rec);
-  }
-  const months = [...map.values()].sort((a, b) =>
-    a.ym === "" ? 1 : b.ym === "" ? -1 : b.ym.localeCompare(a.ym));
-  return { months, total };
 }
 
 // Per bulan due date, terbaru di atas, "Tanpa Tanggal" paling bawah.

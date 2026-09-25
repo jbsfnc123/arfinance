@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agingCards, applyExchange, categoryCounts, dueRecap, EMPTY_FILTERS, enrichRow, filterRows,
-  groupByBp, optionCounts, tukarRecap, type RawRow,
+  groupByBp, optionCounts, type RawRow,
 } from "./view-model";
 
 const TODAY = "2026-09-25";
@@ -46,13 +46,6 @@ describe("view-model Collection", () => {
     const f = { ...EMPTY_FILTERS, pg: "PG2" };
     expect(optionCounts(rows, f, "pg")).toEqual([["PG1", 3], ["PG2", 1]]);
     expect(optionCounts(rows, f, "bp")).toEqual([["Toko B", 1]]);
-  });
-
-  it("rekap tukar faktur per bulan, tanpa tanggal paling bawah", () => {
-    const { months, total } = tukarRecap(rows);
-    expect(months.map((m) => m.ym)).toEqual(["2026-08", ""]);
-    expect(total).toMatchObject({ total: 4, sudah: 2, belum: 2, WA: 1, Ekspedisi: 1 });
-    expect(filterRows(rows, { ...EMPTY_FILTERS, tukar: { ym: "2026-08", metric: "Ekspedisi" } })).toHaveLength(1);
   });
 
   it("rekap jatuh tempo, tanpa tanggal paling bawah", () => {

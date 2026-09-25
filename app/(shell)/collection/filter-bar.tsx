@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { fmtDate, monthLabel } from "@/lib/format";
 import {
-  COLUMN_DEFS, EMPTY_FILTERS, NO_DATE, optionCounts,
+  COLUMN_DEFS, EMPTY_FILTERS, optionCounts,
   type CollectionRow, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
 import { btnGhost, inputCls } from "@/components/ui";
 
-const METRIC_LABEL: Record<string, string> = { total: "Total", belum: "Belum TT", sudah: "Sudah TT" };
 
 export function FilterBar(props: {
   rows: CollectionRow[];
@@ -37,10 +36,6 @@ export function FilterBar(props: {
   if (filters.aging) chips.push({ label: `Aging: ${filters.aging}`, clear: { aging: "" } });
   if (filters.category) chips.push({ label: `Status: ${filters.category}`, clear: { category: "" } });
   if (filters.bp) chips.push({ label: `Partner: ${filters.bp}`, clear: { bp: "" } });
-  if (filters.tukar) {
-    const ym = filters.tukar.ym === "" ? "Semua Bulan" : filters.tukar.ym === NO_DATE ? "(Tanpa Tgl)" : monthLabel(filters.tukar.ym);
-    chips.push({ label: `Tukar Faktur: ${ym} · ${METRIC_LABEL[filters.tukar.metric] ?? filters.tukar.metric}`, clear: { tukar: null } });
-  }
   if (filters.due !== null) {
     chips.push({ label: `Bulan JT: ${filters.due === "__KOSONG__" ? "Tanpa Tanggal" : monthLabel(filters.due)}`, clear: { due: null } });
   }

@@ -153,7 +153,7 @@ export function CollectionView(props: {
         </button>
       </div>
 
-      <KpiPanel rows={rows} filters={filters} setFilters={setFilters} loading={loading} />
+      <KpiPanel rows={rows} filters={filters} setFilters={setFilters} loading={loading} collection={coll} />
       <CategoryCards rows={rows} filters={filters} setFilters={setFilters} />
 
       <FilterBar
