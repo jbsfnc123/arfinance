@@ -79,6 +79,9 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
 }
 
 // ── Dashboard (port m10_dashboard) ──────────────────────────────
+// Generik untuk semua modul tukar faktur (Mitra10, RKM): cukup baris Kertas Kerja dengan kolom di bawah.
+export type DashRow = Pick<WorksheetRow, "no_sj" | "invoice_date" | "open_amt" | "keterangan" | "gr" | "tukar_faktur" | "selisih" | "status" | "jadwal_bayar" | "lama_tf">;
+export type DashInput = { worksheet: DashRow[]; gr: { check_status: string }[] };
 export type Stat = { invoice: number; done: number; avgLama: number | null };
 export type M10Dashboard = {
   month: string; months: string[]; prevMonth: string; curMonth: string;
@@ -97,7 +100,7 @@ const addMonth = (ym: string, k: number) => {
 };
 
 export function m10Dashboard(
-  c: ReturnType<typeof computeM10>, aging: AgingLine[], schedule: Schedule[],
+  c: DashInput, aging: AgingLine[], schedule: Schedule[],
   opt: { month: string | null; today: string; lastAging: string | null },
 ): M10Dashboard {
   const w = c.worksheet;
@@ -112,12 +115,12 @@ export function m10Dashboard(
   const sum = (f: (a: AgingLine) => number) => aging.reduce((s, a) => s + num(f(a)), 0);
   const totalOpen = sum((a) => a.open_amt);
 
-  const byMonth = new Map<string, WorksheetRow[]>();
+  const byMonth = new Map<string, DashRow[]>();
   for (const r of w) if (r.invoice_date) {
     const m = r.invoice_date.slice(0, 7);
     (byMonth.get(m) ?? byMonth.set(m, []).get(m)!).push(r);
   }
-  const stat = (rs: WorksheetRow[]): Stat => ({
+  const stat = (rs: DashRow[]): Stat => ({
     invoice: rs.length, done: rs.filter((r) => r.tukar_faktur === "Done").length,
     avgLama: avg1(rs.map((r) => r.lama_tf).filter((x): x is number => x !== null)),
   });

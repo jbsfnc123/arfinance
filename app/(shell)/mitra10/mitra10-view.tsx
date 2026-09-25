@@ -148,7 +148,7 @@ export function Mitra10View() {
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
-        {tab === "dash" && <M10Dashboard />}
+        {tab === "dash" && <M10Dashboard m={m} />}
         {tab === "kk" && (
           <LocalTable title="Kertas Kerja" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["invoice_no", "business_partner", "no_sj", "no_po", "username", "keterangan"]}

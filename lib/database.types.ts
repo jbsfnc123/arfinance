@@ -1021,6 +1021,13 @@ export type Database = {
       pack_erp: { Args: Record<string, never>; Returns: Json }
       pack_tukar: { Args: Record<string, never>; Returns: Json }
       usage_report: { Args: Record<string, never>; Returns: Json }
+      pack_rkm: { Args: Record<string, never>; Returns: Json }
+      rkm_sync: { Args: Record<string, never>; Returns: number }
+      rkm_set_tax_name: { Args: { p_value: string }; Returns: number }
+      rkm_gr_replace: { Args: { p_rows: Json; p_file_name: string }; Returns: number }
+      rkm_kw_replace: { Args: { p_rows: Json; p_file_name: string }; Returns: number }
+      rkm_row_save: { Args: { p_table: string; p_id: number | null; p_row: Json }; Returns: number }
+      rkm_rows_delete: { Args: { p_table: string; p_ids: number[] }; Returns: number }
       login_names: { Args: { p_q: string; p_ip: string }; Returns: string[] }
       pin_login_named: { Args: { p_name: string; p_pin: string; p_ip: string }; Returns: Json }
       pack_settings: { Args: Record<string, never>; Returns: Json }

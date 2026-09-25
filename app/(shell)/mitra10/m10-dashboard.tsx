@@ -3,15 +3,17 @@
 import { useMemo, useState } from "react";
 import { fmtDate, fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { todayJakarta } from "@/lib/parsers/date";
-import { m10Dashboard, type Stat } from "@/lib/modules/m10/compute";
+import { m10Dashboard, type DashInput, type Stat } from "@/lib/modules/m10/compute";
+import type { AgingLine, Schedule } from "@/lib/local/datasets";
 import { card, inputCls, td, th } from "@/components/ui";
-import { useM10 } from "./use-m10";
 
 const pct = (a: number, b: number) => (b ? `${(Math.floor((a / b) * 1000) / 10).toFixed(1)}%` : "0%");
 
+export type DashSource = { computed: DashInput | null; agingLines: AgingLine[]; schedule: Schedule[]; lastAging: string | null };
+
 // Port sheet Dashboard: dihitung di browser dari data lokal (dulu RPC SQL yang timeout).
-export function M10Dashboard() {
-  const m = useM10();
+// Dipakai Mitra10 & RKM (tanpa jadwal bayar → kartu Jadwal disembunyikan).
+export function M10Dashboard({ m, showJadwal = true }: { m: DashSource; showJadwal?: boolean }) {
   const [month, setMonth] = useState<string | null>(null);
   const d = useMemo(() => (m.computed ? m10Dashboard(m.computed, m.agingLines, m.schedule, { month, today: todayJakarta(), lastAging: m.lastAging }) : null),
     [m.computed, m.agingLines, m.schedule, m.lastAging, month]);
@@ -29,7 +31,7 @@ export function M10Dashboard() {
         {" · "}Pending {monthLabel(d.curMonth)}: <b className="text-fg">{s.pendingCur}</b>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className={`grid gap-4 ${showJadwal ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
         <section className={`${card} p-4`}>
           <h2 className="mb-2 text-sm font-medium">Ringkasan Kertas Kerja</h2>
           <Lines rows={[
@@ -55,14 +57,14 @@ export function M10Dashboard() {
             ["Rata-rata umur (hari)", d.aging.avgDays],
           ]} />
         </section>
-        <section className={`${card} p-4`}>
+        {showJadwal && <section className={`${card} p-4`}>
           <h2 className="mb-2 text-sm font-medium">Jadwal Bayar {monthLabel(d.month)}</h2>
           <Lines rows={[
             ...jadwal.map((x): [string, string] => [fmtDate(x.date), rupiah(x.jadwal)]),
             ["Total jadwal bayar", rupiah(jadwal.reduce((a, x) => a + Number(x.jadwal), 0))],
             ["Rata-rata tukar faktur → transfer", `${d.scheduleAvgDays ?? "-"} hari`],
           ]} />
-        </section>
+        </section>}
       </div>
 
       <section className={`${card} p-4`}>
@@ -77,7 +79,7 @@ export function M10Dashboard() {
             {[...d.months].reverse().map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
           </select>
         </div>
-        <StatTable first="Tanggal" jadwal colorDone rows={d.daily.map((x) => ({ ...x, key: x.date, label: fmtDate(x.date) }))} />
+        <StatTable first="Tanggal" jadwal={showJadwal} colorDone rows={d.daily.map((x) => ({ ...x, key: x.date, label: fmtDate(x.date) }))} />
       </section>
 
     </div>

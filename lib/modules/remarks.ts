@@ -12,7 +12,7 @@ const remarksMapOf = memoize((rows: Remark[]) => new Map(rows.map((r) => [r.ref,
 // Mitra10 (Kertas Kerja), Hold Faktur Pajak & Daftar Pengajuan. Diikat ke No SJ karena No Invoice
 // bisa berubah saat revisi; invoice tanpa SJ memakai kunci "INV:<invoice>".
 
-export type RemarkSource = "collection" | "mitra10" | "hold" | "pengajuan";
+export type RemarkSource = "collection" | "mitra10" | "rkm" | "hold" | "pengajuan";
 export type RemarkItem = { no_sj?: string | null; invoice_no?: string | null };
 
 // Harus sama dengan private.remark_ref di database.
