@@ -582,3 +582,12 @@ di `lib/supabase/proxy.ts` + `lib/workspace.ts`.
   `https://*.tangki.space/**`, `http://localhost:3000/**`.
 - **Dev lokal:** `http://localhost:3000` = AR, `http://finance.localhost:3000` = Finance, `http://ap.localhost:3000` = AP
   (cookie host-only di dev, login per host).
+
+### Fase 17 (2026-09-26): satu pintu login & divisi akun
+- **Login hanya di `tangki.space`** (Nama → PIN). `ar.`/`ap.` `/login` → 308 ke `tangki.space/login`; request tanpa sesi
+  → 307 ke `tangki.space/login?next=<alamat asal>`. `next` hanya diterima untuk `https://*.tangki.space` (anti open-redirect).
+- **Divisi akun** (`profiles.division`: `ar` / `ap` / `both`, diatur Super Admin di Akun & PIN) menggantikan centang
+  `ws.ar`/`ws.ap`. Tujuan setelah login: SA & AR + AP → `tangki.space` (pemilih workspace; menu Akun/Role/Database
+  khusus SA), AR → `ar.`, AP → `ap.`. Tombol "Ganti workspace" di topbar AR/AP untuk SA & AR + AP.
+- **Nama di login:** RPC `login_names` (≥ 2 huruf, maks. 5 nama akun aktif, 30 permintaan/menit/IP) dan
+  `pin_login_named` (nama + PIN, batas gagal sama seperti `pin_login`). Keduanya hanya untuk service role.
