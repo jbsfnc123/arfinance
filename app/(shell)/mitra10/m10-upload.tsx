@@ -57,7 +57,7 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
         msg = `Kwitansi (${kwUser || "-"}): ${r.added} baru, ${r.skipped + dupInFile} sudah ada.`;
       } else if (kind === "jadwal") {
         const rows = parseSchedule(await readFirstSheetRows(file));
-        const { data, error } = await supabase.rpc("m10_schedule_upsert", { p_rows: rows });
+        const { data, error } = await supabase.rpc("m10_schedule_upsert", { p_rows: rows, p_file_name: file.name });
         if (error) throw error;
         msg = `Jadwal bayar: ${data} No KW disimpan/diperbarui.`;
       }

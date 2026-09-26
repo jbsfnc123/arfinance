@@ -8,6 +8,7 @@ import { runUpload, summarize, type Summary } from "@/lib/uploads/run";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, monthLabel } from "@/lib/format";
 import { ImportLog } from "@/components/import-log";
+import { UploadChecklist } from "./upload-checklist";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
 
@@ -71,6 +72,8 @@ export function UploadCenter() {
           Upload ulang file yang sama tidak membuat data dobel.
         </p>
       </div>
+
+      <UploadChecklist version={version} />
 
       <label
         onDragOver={(e) => { e.preventDefault(); setOver(true); }}

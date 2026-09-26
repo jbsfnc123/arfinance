@@ -1021,6 +1021,7 @@ export type Database = {
       pack_erp: { Args: Record<string, never>; Returns: Json }
       pack_tukar: { Args: Record<string, never>; Returns: Json }
       usage_report: { Args: Record<string, never>; Returns: Json }
+      upload_status: { Args: Record<string, never>; Returns: Json }
       pack_rkm: { Args: Record<string, never>; Returns: Json }
       rkm_sync: { Args: Record<string, never>; Returns: number }
       rkm_set_tax_name: { Args: { p_value: string }; Returns: number }
@@ -1044,7 +1045,7 @@ export type Database = {
       mutasi_import: { Args: { p_sheets: Json; p_file_name: string }; Returns: number }
       m10_gr_add: { Args: { p_rows: Json; p_file_name: string; p_first: boolean }; Returns: number }
       m10_kw_add: { Args: { p_rows: Json; p_username: string; p_file_name: string }; Returns: Json }
-      m10_schedule_upsert: { Args: { p_rows: Json }; Returns: number }
+      m10_schedule_upsert: { Args: { p_rows: Json; p_file_name?: string | null }; Returns: number }
       m10_schedule_delete: { Args: { p_no_kw: string[] }; Returns: number }
       m10_set_keterangan: { Args: { p_ids: number[]; p_text: string }; Returns: number }
       m10_set_tax_name: { Args: { p_value: string }; Returns: number }
