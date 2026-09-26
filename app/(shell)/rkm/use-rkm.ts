@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useDataset } from "@/lib/local/store";
 import { RKM_TAX_DEFAULT } from "@/lib/modules/rkm/compute";
-import { rkmLinesOf, rkmOf } from "@/lib/local/derived";
+import { rkmCabangsOf, rkmLinesOf, rkmOf, rkmScopeOf } from "@/lib/local/derived";
 import { useRemarks } from "@/lib/modules/remarks";
 
 let synced = false; // sekali per sesi browser
@@ -25,15 +25,24 @@ export function useRkm() {
   }, [rkm]);
 
   const agingLines = useMemo(() => (aging.data ? rkmLinesOf(aging.data.lines, taxName) : []), [aging.data, taxName]);
-  const computed = useMemo(() => (rkm.data ? rkmOf(rkm.data, agingLines, remarks.map) : null), [rkm.data, agingLines, remarks.map]);
+  // Dihitung setelah aging termuat — tanpa aging semua invoice akan terbaca "Lunas".
+  const computed = useMemo(() => (rkm.data && aging.data ? rkmOf(rkm.data, agingLines, remarks.map) : null), [rkm.data, aging.data, agingLines, remarks.map]);
+
+  // Filter dashboard: Cabang (dari nama Business Partner).
+  const filter = useMemo(() => ({
+    label: "Cabang",
+    options: computed ? rkmCabangsOf(computed, agingLines) : [],
+    scope: (c: string) => (computed ? rkmScopeOf(computed, agingLines, c) : null),
+  }), [computed, agingLines]);
 
   return {
     computed,
+    filter,
     agingLines,
     schedule: [],
     taxName,
     lastAging: aging.data?.uploadedAt ?? null,
-    loading: rkm.loading || aging.loading || (!rkm.data && !rkm.error),
+    loading: rkm.loading || aging.loading || (!rkm.data && !rkm.error) || (!aging.data && !aging.error),
     error: rkm.error ?? aging.error,
   };
 }

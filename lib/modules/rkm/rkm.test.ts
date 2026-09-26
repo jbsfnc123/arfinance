@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseRkmGr, parseRkmKw } from "./parse";
-import { cabangOf, computeRkm, rkmAgingLines } from "./compute";
+import { cabangOf, computeRkm, rkmAgingLines, rkmCabangs, scopeRkm } from "./compute";
 import type { AgingLine, RkmGr, RkmKw, RkmWorksheet } from "@/lib/local/datasets";
 
 // Data tiruan dengan header persis template portal RKM (tanpa data asli).
@@ -70,5 +70,27 @@ describe("hitungan RKM", () => {
     expect(c.gr.map((g) => g.check_status)).toEqual(["Done", "Check"]);
     expect(c.gr[0].aging_open).toBe(500);
     expect(c.kwitansi[0]).toMatchObject({ aging: 1000, selisih_aging: -100 });
+  });
+});
+
+describe("RKM filter dashboard per Cabang", () => {
+  const ag = [aging({ invoice_no: "I1", business_partner: "Anyar Retail Indonesia - RKM A", no_sj: "SJ/1/X/TRA" }),
+    aging({ invoice_no: "I2", business_partner: "Anyar Retail Indonesia - RKM B", no_sj: "SJ/2/X/TRA-SJ/3/X/TRA" })];
+  const c = computeRkm({
+    worksheet: [ws({ id: 1, invoice_no: "I1", business_partner: "Anyar Retail Indonesia - RKM A", no_sj: "SJ/1/X/TRA" }),
+      ws({ id: 2, invoice_no: "I2", business_partner: "Anyar Retail Indonesia - RKM B", no_sj: "SJ/2/X/TRA-SJ/3/X/TRA" })],
+    gr: [gr({ id: 1, no_sj: "SJ/1/X/TRA" }), gr({ id: 2, no_sj: "SJ/3/X/TRA" })],
+    kwitansi: [kw({ id: 1, no_sj: "SJ/2/X/TRA" })],
+    aging: ag,
+  });
+
+  it("opsi cabang & filter ke semua data (SJ gabungan ikut)", () => {
+    expect(rkmCabangs(c, ag)).toEqual(["RKM A", "RKM B"]);
+    const s = scopeRkm(c, ag, "RKM B");
+    expect(s.computed.worksheet.map((r) => r.invoice_no)).toEqual(["I2"]);
+    expect(s.agingLines.map((l) => l.invoice_no)).toEqual(["I2"]);
+    expect(s.computed.gr.map((g) => g.no_sj)).toEqual(["SJ/3/X/TRA"]);
+    expect(s.computed.kwitansi).toHaveLength(1);
+    expect(scopeRkm(c, ag, "").computed).toBe(c);
   });
 });

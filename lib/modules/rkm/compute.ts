@@ -82,3 +82,20 @@ export function computeRkm(input: { worksheet: RkmWorksheet[]; gr: RkmGr[]; kwit
 
   return { worksheet, gr, kwitansi };
 }
+
+// ── Filter dashboard per Cabang ──────────────────────────────────
+// Kertas Kerja & aging per cabang (nama BP), Receiving & kwitansi lewat No SJ terfilter. "" = semua.
+export function rkmCabangs(c: ReturnType<typeof computeRkm>, aging: AgingLine[]) {
+  return [...new Set([...c.worksheet.map((r) => r.cabang), ...aging.map((l) => cabangOf(l.business_partner))])].sort();
+}
+
+export function scopeRkm(c: ReturnType<typeof computeRkm>, aging: AgingLine[], cabang: string) {
+  if (!cabang) return { computed: c, agingLines: aging, schedule: [] };
+  const worksheet = c.worksheet.filter((r) => r.cabang === cabang);
+  const sj = new Set(worksheet.flatMap((r) => splitSj(r.no_sj)));
+  return {
+    computed: { worksheet, gr: c.gr.filter((g) => sj.has(up(g.no_sj))), kwitansi: c.kwitansi.filter((k) => sj.has(up(k.no_sj))) },
+    agingLines: aging.filter((l) => cabangOf(l.business_partner) === cabang),
+    schedule: [],
+  };
+}

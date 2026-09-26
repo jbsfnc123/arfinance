@@ -9,14 +9,22 @@ import { card, inputCls, td, th } from "@/components/ui";
 
 const pct = (a: number, b: number) => (b ? `${(Math.floor((a / b) * 1000) / 10).toFixed(1)}%` : "0%");
 
-export type DashSource = { computed: DashInput | null; agingLines: AgingLine[]; schedule: Schedule[]; lastAging: string | null };
+type Scoped = { computed: DashInput; agingLines: AgingLine[]; schedule: Schedule[] };
+export type DashSource = {
+  computed: DashInput | null; agingLines: AgingLine[]; schedule: Schedule[]; lastAging: string | null;
+  // Satu filter (Username / Cabang) yang memengaruhi seluruh data dashboard.
+  filter?: { label: string; options: string[]; scope: (key: string) => Scoped | null };
+};
 
 // Port sheet Dashboard: dihitung di browser dari data lokal (dulu RPC SQL yang timeout).
 // Dipakai Mitra10 & RKM (tanpa jadwal bayar → kartu Jadwal disembunyikan).
 export function M10Dashboard({ m, showJadwal = true }: { m: DashSource; showJadwal?: boolean }) {
   const [month, setMonth] = useState<string | null>(null);
-  const d = useMemo(() => (m.computed ? m10Dashboard(m.computed, m.agingLines, m.schedule, { month, today: todayJakarta(), lastAging: m.lastAging }) : null),
-    [m.computed, m.agingLines, m.schedule, m.lastAging, month]);
+  const [key, setKey] = useState("");
+  const src = useMemo<Scoped | null>(() => (key && m.filter ? m.filter.scope(key) : m.computed ? { computed: m.computed, agingLines: m.agingLines, schedule: m.schedule } : null),
+    [key, m.filter, m.computed, m.agingLines, m.schedule]);
+  const d = useMemo(() => (src ? m10Dashboard(src.computed, src.agingLines, src.schedule, { month, today: todayJakarta(), lastAging: m.lastAging }) : null),
+    [src, m.lastAging, month]);
 
   if (!d) return <div className="h-40 animate-pulse rounded-xl bg-surface-2" />;
   const s = d.summary;
@@ -25,6 +33,20 @@ export function M10Dashboard({ m, showJadwal = true }: { m: DashSource; showJadw
 
   return (
     <div className="space-y-4">
+      {m.filter && (
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={key} onChange={(e) => setKey(e.target.value)} className={`${inputCls} !w-auto`} aria-label={`Filter ${m.filter.label}`}>
+            <option value="">{m.filter.label}: semua</option>
+            {m.filter.options.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+          {key && (
+            <>
+              <span className="rounded-full bg-pill px-2 py-0.5 text-xs text-pill-fg">Filter {m.filter.label}: {key}</span>
+              <button type="button" className="text-xs text-fg-2 underline hover:text-fg" onClick={() => setKey("")}>hapus filter</button>
+            </>
+          )}
+        </div>
+      )}
       <div className="text-sm text-fg-2">
         Update aging terakhir: {d.lastAging ? fmtTimestamp(d.lastAging) : "belum pernah"}
         {" · "}Pending {monthLabel(d.prevMonth)}: <b className="text-fg">{s.pendingPrev}</b>
@@ -44,7 +66,7 @@ export function M10Dashboard({ m, showJadwal = true }: { m: DashSource; showJadw
             ["Tukar faktur Done", `${s.tfDone} (${pct(s.tfDone, s.outstanding)})`],
             ["Selisih tidak nol (TF Done)", s.selisihNonZero],
             ["LTKP / Litigasi", `${s.ltkp} / ${s.litigasi}`],
-            ["GR Update perlu dicek (Check)", d.grCheck],
+            ["Receiving perlu dicek (Check)", d.grCheck],
             ["Invoice aging belum masuk Kertas Kerja", d.agingNotInWorksheet],
           ]} />
         </section>

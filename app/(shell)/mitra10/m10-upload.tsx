@@ -97,7 +97,7 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
 
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">2. Upload CSV GR</h2>
-        <p className="text-xs text-fg-2">GR_Report_Detail.csv (pemisah &quot;;&quot;). SJ NO dibentuk dari Vendor Ship No (SJ/00000/tahun romawi/TRA), lalu baris baru (GR No + Item Code belum ada) ditambahkan ke GR Update.</p>
+        <p className="text-xs text-fg-2">GR_Report_Detail.csv (pemisah &quot;;&quot;). SJ NO dibentuk dari Vendor Ship No (SJ/00000/tahun romawi/TRA), lalu baris baru (GR No + Item Code belum ada) ditambahkan ke Receiving.</p>
         {fileInput("gr", ".csv")}
       </div>
 

@@ -6,7 +6,6 @@ import { optimistic } from "@/lib/local/store";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import type { Gr, Kwitansi, Schedule } from "@/lib/local/datasets";
 import type { GrRow, KwRow, WorksheetRow } from "@/lib/modules/m10/compute";
-import type { AgingLine } from "@/lib/local/datasets";
 import { Tabs } from "@/components/tabs";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
@@ -19,10 +18,9 @@ import { setRemarks } from "@/lib/modules/remarks";
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
   { key: "kk", label: "Kertas Kerja", icon: "table" },
-  { key: "gr", label: "GR Update", icon: "inventory" },
+  { key: "gr", label: "Receiving", icon: "inventory" },
   { key: "kw", label: "Kwitansi", icon: "receipt_long" },
   { key: "jadwal", label: "Jadwal Bayar", icon: "event" },
-  { key: "aging", label: "Data Aging", icon: "hourglass_bottom" },
   { key: "upload", label: "Upload & Setting", icon: "upload_file" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
@@ -64,11 +62,6 @@ const KW_COLS: LCol<KwRow>[] = [
 const JADWAL_COLS: LCol<Schedule>[] = [
   { k: "no_kw", l: "NO KW" }, { k: "spp", l: "SPP" }, { k: "nilai_kw", l: "Nilai KW", n: true },
   { k: "tgl_tukar_faktur", l: "Tgl Tukar Faktur", d: true }, { k: "jadwal_transfer", l: "Jadwal Transfer", d: true }, { k: "notes", l: "Notes" },
-];
-const AGING_COLS: LCol<AgingLine>[] = [
-  { k: "payment_group", l: "Payment Group" }, { k: "business_partner", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
-  { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
-  { k: "days", l: "Days", n: true }, { k: "branch", l: "Branch" }, { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
 ];
 
 type AddKind = { table: "gr" | "kwitansi"; fields: { k: string; l: string; t?: "number" | "date" }[] } | null;
@@ -181,7 +174,7 @@ export function Mitra10View() {
             )} />
         )}
         {tab === "gr" && (
-          <LocalTable title="GR Update" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Receiving" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["gr_no", "po_no", "sj_no", "item_name", "delivery_to", "vendor_ship_no", "item_code"]}
             filters={[{ k: "check_status", l: "Check", options: ["Done", "Check"] }]}
             onEdit={(r, k, v) => editRow("gr", r.id, k, v)}
@@ -198,10 +191,6 @@ export function Mitra10View() {
         {tab === "jadwal" && (
           <LocalTable title="Jadwal Bayar" rows={m.schedule} cols={JADWAL_COLS} rowKey={(r) => r.no_kw} loading={m.loading}
             search={["no_kw", "spp", "notes"]} selectable onDelete={deleteSchedule} />
-        )}
-        {tab === "aging" && (
-          <LocalTable title="Data Aging" rows={m.agingLines} cols={AGING_COLS} rowKey={(r) => r.line_no} loading={m.loading}
-            search={["invoice_no", "business_partner", "no_sj", "no_po", "payment_group"]} />
         )}
         {tab === "upload" && <M10Upload version={0} onDone={() => undefined} />}
       </div>

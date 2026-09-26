@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { optimistic } from "@/lib/local/store";
 import { LocalTable, type LCol } from "@/lib/local/table";
-import type { AgingLine, RkmGr, RkmKw } from "@/lib/local/datasets";
+import type { RkmGr, RkmKw } from "@/lib/local/datasets";
 import type { RkmGrRow, RkmKwRow, RkmRow } from "@/lib/modules/rkm/compute";
 import { Tabs } from "@/components/tabs";
 import { Modal } from "@/components/modal";
@@ -18,9 +18,8 @@ import { useRkm } from "./use-rkm";
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
   { key: "kk", label: "Kertas Kerja", icon: "table" },
-  { key: "gr", label: "GR Update", icon: "inventory" },
+  { key: "gr", label: "Receiving", icon: "inventory" },
   { key: "kw", label: "Kwitansi", icon: "receipt_long" },
-  { key: "aging", label: "Data Aging", icon: "hourglass_bottom" },
   { key: "upload", label: "Upload & Setting", icon: "upload_file" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
@@ -64,11 +63,6 @@ const KW_EDIT: Field<RkmKw>[] = [
 const KW_COLS: LCol<RkmKwRow>[] = [
   ...KW_EDIT.map((f): LCol<RkmKwRow> => ({ k: f.k, l: f.l, n: f.t === "number", d: f.t === "date", edit: f.t ?? "text" })),
   { k: "aging", l: "Open Amt Aging", n: true }, { k: "selisih_aging", l: "Selisih vs Aging", n: true },
-];
-const AGING_COLS: LCol<AgingLine>[] = [
-  { k: "business_partner", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
-  { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
-  { k: "days", l: "Days", n: true }, { k: "branch", l: "Branch" }, { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
 ];
 
 type Table = "gr" | "kwitansi";
@@ -180,7 +174,7 @@ export function RkmView() {
             )} />
         )}
         {tab === "gr" && (
-          <LocalTable title="GR Update" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Receiving" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["grpo_no", "no_sj", "cabang", "no_po", "no_grn", "no_faktur_pajak"]}
             filters={[{ k: "check_status", l: "Check", options: ["Done", "Check"] }]}
             onEdit={(r, k, v) => editRow("gr", r.id, k, v)}
@@ -193,10 +187,6 @@ export function RkmView() {
             onEdit={(r, k, v) => editRow("kwitansi", r.id, k, v)}
             onAdd={() => setAdd({ table: "kwitansi", fields: KW_EDIT })}
             selectable onDelete={(rows) => deleteRows("kwitansi", rows.map((r) => r.id))} />
-        )}
-        {tab === "aging" && (
-          <LocalTable title="Data Aging" rows={m.agingLines} cols={AGING_COLS} rowKey={(r) => r.line_no} loading={m.loading}
-            search={["invoice_no", "business_partner", "no_sj", "no_po"]} />
         )}
         {tab === "upload" && <RkmUpload taxName={m.taxName} />}
       </div>

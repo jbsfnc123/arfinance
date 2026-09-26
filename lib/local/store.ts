@@ -26,6 +26,7 @@ let watching = false;
 
 const sb = () => (client ??= createClient());
 const empty = <K extends DatasetName>(): Entry<K> => ({ data: null, token: null, loading: false, error: null, at: null, version: 0 });
+const SERVER_EMPTY = empty();
 
 export function getEntry<K extends DatasetName>(name: K): Entry<K> {
   return (entries.get(name) as Entry<K>) ?? (empty() as Entry<K>);
@@ -103,7 +104,7 @@ export function useDataset<K extends DatasetName>(name: K) {
   const entry = useSyncExternalStore(
     (fn) => subscribe(name, fn),
     () => getEntry(name),
-    () => empty<K>(),
+    () => SERVER_EMPTY as Entry<K>, // snapshot server harus stabil (objek sama) agar React tidak loop
   ) as Entry<K>;
   useEffect(() => {
     watch();

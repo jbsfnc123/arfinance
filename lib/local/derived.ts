@@ -3,8 +3,8 @@ import { memoize } from "./memo";
 import { arInvoices, collectionRows, computeSpvSummary, filterOf, type ArInvoice } from "@/lib/modules/collection/rows";
 import { enrichRow } from "@/lib/modules/collection/view-model";
 import { collectionAllocation } from "@/lib/modules/collection/allocation";
-import { computeM10, m10AgingLines } from "@/lib/modules/m10/compute";
-import { computeRkm, rkmAgingLines } from "@/lib/modules/rkm/compute";
+import { computeM10, m10AgingLines, m10Usernames, scopeM10 } from "@/lib/modules/m10/compute";
+import { computeRkm, rkmAgingLines, rkmCabangs, scopeRkm } from "@/lib/modules/rkm/compute";
 
 // Hasil hitungan berat dibagi ANTAR halaman: dihitung sekali per versi data (identitas objek
 // dataset di store lokal), jadi pindah menu lalu kembali tidak menghitung ulang.
@@ -31,3 +31,9 @@ export const collectionAllocationOf = memoize((month: string, collection: string
 export const rkmLinesOf = memoize((lines: AgingLine[], taxName: string) => rkmAgingLines(lines, taxName));
 
 export const rkmOf = memoize((rkm: Datasets["rkm"], aging: AgingLine[], remarks: Map<string, string>) => computeRkm({ ...rkm, aging, remarks }));
+
+// Filter dashboard (Username / Cabang) — dibagi antar render.
+export const m10UsersOf = memoize(m10Usernames);
+export const m10ScopeOf = memoize(scopeM10);
+export const rkmCabangsOf = memoize(rkmCabangs);
+export const rkmScopeOf = memoize(scopeRkm);
