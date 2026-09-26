@@ -2,6 +2,7 @@ import { daysBetween } from "@/lib/parsers/date";
 import { num } from "@/lib/local/pack";
 import type { AgingLine, Gr, Kwitansi, Schedule, Worksheet } from "@/lib/local/datasets";
 import { remarkKey } from "@/lib/modules/remarks";
+import { bpShort } from "@/lib/modules/bp";
 
 // Rumus workbook "VBA Mitra10 Tukar Faktur.xlsm" dihitung di browser (dulu view SQL yang
 // timeout). Semua lookup memakai Map → O(n) untuk ribuan baris.
@@ -17,7 +18,7 @@ export const usernameOf = (paymentGroup: string | null | undefined) => {
 };
 
 export type WorksheetRow = Worksheet & {
-  username: string; keterangan: string | null; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
+  username: string; bp_short: string; keterangan: string | null; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
   status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null;
 };
 export type GrRow = Gr & { po_aging: string; check_status: "Done" | "Check" };
@@ -54,6 +55,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
       ...w,
       open_amt: num(w.open_amt),
       username: usernameOf(w.payment_group),
+      bp_short: bpShort(w.business_partner),
       keterangan: input.remarks?.get(remarkKey(w.no_sj, w.invoice_no)) || null,
       gr: grSj.has(w.no_sj) ? "Done" : "Pending",
       tukar_faktur: total > 10000 ? "Done" : "Pending",

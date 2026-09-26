@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { fmtDate } from "@/lib/format";
 import { parseNumber } from "@/lib/parsers/number";
@@ -17,6 +17,21 @@ export type LCol<T> = {
 export type LFilter<T> = { k: keyof T & string; l: string; options: string[] };
 
 const ROW_H = 34;
+
+// Kolom tersembunyi per tabel (localStorage, per browser). Dibaca lewat useSyncExternalStore agar aman untuk
+// render server (snapshot server = null → semua kolom tampil).
+const hiddenListeners = new Set<() => void>();
+const readHidden = (k: string) => { try { return localStorage.getItem(`table:hidden:${k}`); } catch { return null; } };
+function writeHidden(k: string, keys: string[]) {
+  try { if (keys.length) localStorage.setItem(`table:hidden:${k}`, JSON.stringify(keys)); else localStorage.removeItem(`table:hidden:${k}`); } catch { /* opsional */ }
+  hiddenListeners.forEach((fn) => fn());
+}
+const subscribeHidden = (fn: () => void) => { hiddenListeners.add(fn); return () => { hiddenListeners.delete(fn); }; };
+function useHidden(key: string | undefined): [string[], (keys: string[]) => void] {
+  const raw = useSyncExternalStore(subscribeHidden, () => (key ? readHidden(key) : null), () => null);
+  const list = useMemo(() => { try { return raw ? (JSON.parse(raw) as string[]) : []; } catch { return []; } }, [raw]);
+  return [list, (keys) => { if (key) writeHidden(key, keys); }];
+}
 
 function display<T>(r: T, c: LCol<T>) {
   const v = r[c.k] as unknown;
@@ -39,6 +54,7 @@ export function LocalTable<T>(props: {
   onEdit?: (row: T, key: keyof T & string, value: unknown) => void;
   onAdd?: () => void;
   onDelete?: (rows: T[]) => void;
+  hideKey?: string; // aktifkan sembunyikan/tampilkan kolom dari header (disimpan per tabel)
 }) {
   const [q, setQ] = useState("");
   const [f, setF] = useState<Record<string, string>>({});
@@ -46,6 +62,14 @@ export function LocalTable<T>(props: {
   const [sel, setSel] = useState<Set<string | number>>(new Set());
   const [editing, setEditing] = useState<{ id: string | number; k: string; v: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [hidden, setHidden] = useHidden(props.hideKey);
+  const [hiddenOpen, setHiddenOpen] = useState(false);
+  // Minimal satu kolom selalu tampil.
+  const cols = useMemo(() => {
+    const vis = props.cols.filter((c) => !hidden.includes(c.k));
+    return vis.length ? vis : props.cols.slice(0, 1);
+  }, [props.cols, hidden]);
+  const hiddenCols = props.cols.filter((c) => !cols.includes(c));
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -86,7 +110,7 @@ export function LocalTable<T>(props: {
 
   async function exportXlsx() {
     await downloadXlsx(`${props.title}.xlsx`, props.title.slice(0, 31), [
-      props.cols.map((c) => c.l), ...rows.map((r) => props.cols.map((c) => (r[c.k] as unknown) ?? "")),
+      cols.map((c) => c.l), ...rows.map((r) => cols.map((c) => (r[c.k] as unknown) ?? "")),
     ]);
   }
 
@@ -111,6 +135,25 @@ export function LocalTable<T>(props: {
             )}
           </>
         )}
+        {props.hideKey && hiddenCols.length > 0 && (
+          <span className="relative">
+            <button type="button" className={btnGhost} onClick={() => setHiddenOpen(!hiddenOpen)} aria-expanded={hiddenOpen}>
+              <span className="material-symbols-outlined !text-base">visibility</span>Kolom tersembunyi ({hiddenCols.length})
+            </button>
+            {hiddenOpen && (
+              <div className="absolute left-0 top-full z-20 mt-1 min-w-56 rounded-xl border border-line bg-surface p-1 shadow-lg">
+                {hiddenCols.map((c) => (
+                  <button key={c.k} type="button" onClick={() => setHidden(hidden.filter((k) => k !== c.k))}
+                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2">
+                    <span className="material-symbols-outlined !text-base text-fg-2">visibility</span>{c.l}
+                  </button>
+                ))}
+                <button type="button" onClick={() => { setHidden([]); setHiddenOpen(false); }}
+                  className="mt-1 w-full rounded-lg border-t border-line px-2 py-1.5 text-left text-sm text-accent hover:bg-surface-2">Tampilkan semua</button>
+              </div>
+            )}
+          </span>
+        )}
         <span className="ml-auto text-sm text-fg-2">{props.loading ? "Memuat…" : `${rows.length.toLocaleString("id-ID")} baris`}</span>
         {props.onAdd && (
           <button type="button" className={btnGhost} onClick={props.onAdd}><span className="material-symbols-outlined !text-base">add</span>Tambah baris</button>
@@ -127,11 +170,18 @@ export function LocalTable<T>(props: {
                   <input type="checkbox" checked={allSel} onChange={() => setSel(allSel ? new Set() : new Set(rows.map(props.rowKey)))} />
                 </th>
               )}
-              {props.cols.map((c) => (
+              {cols.map((c) => (
                 <th key={c.k} onClick={() => setSort(sort?.k === c.k ? (sort.dir === 1 ? { k: c.k, dir: -1 } : null) : { k: c.k, dir: 1 })}
-                  className={`${th} cursor-pointer select-none border-b border-line ${c.n ? "text-right" : ""}`} style={{ minWidth: c.w }}>
+                  className={`${th} group cursor-pointer select-none border-b border-line ${c.n ? "text-right" : ""}`} style={{ minWidth: c.w }}>
                   {c.l}{c.edit && <span className="ml-1 text-accent" title="Bisa diedit">✎</span>}
                   {sort?.k === c.k && (sort.dir === 1 ? " ▲" : " ▼")}
+                  {props.hideKey && cols.length > 1 && (
+                    <button type="button" title={`Sembunyikan kolom ${c.l}`} aria-label={`Sembunyikan kolom ${c.l}`}
+                      onClick={(e) => { e.stopPropagation(); setHidden([...hidden, c.k]); }}
+                      className="ml-1 inline-flex align-middle text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100">
+                      <span className="material-symbols-outlined !text-sm">visibility_off</span>
+                    </button>
+                  )}
                 </th>
               ))}
             </tr>
@@ -148,7 +198,7 @@ export function LocalTable<T>(props: {
                       <input type="checkbox" checked={sel.has(id)} onChange={() => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; })} />
                     </td>
                   )}
-                  {props.cols.map((c) => {
+                  {cols.map((c) => {
                     const isEdit = editing?.id === id && editing.k === c.k;
                     const v = r[c.k] as unknown;
                     return (
@@ -172,7 +222,7 @@ export function LocalTable<T>(props: {
               );
             })}
             {padBottom > 0 && <tr><td style={{ height: padBottom }} /></tr>}
-            {!rows.length && <tr><td colSpan={props.cols.length + 1} className="px-3 py-4 text-fg-2">{props.loading ? "Memuat…" : "Tidak ada data."}</td></tr>}
+            {!rows.length && <tr><td colSpan={cols.length + 1} className="px-3 py-4 text-fg-2">{props.loading ? "Memuat…" : "Tidak ada data."}</td></tr>}
           </tbody>
         </table>
       </div>

@@ -102,3 +102,10 @@ describe("Mitra10 filter dashboard per Username", () => {
     expect(scopeM10(c, aging, schedule, "").computed).toBe(c);
   });
 });
+
+describe("Mitra10 BP ringkas", () => {
+  it("kolom Business Partner = teks setelah ' - '", () => {
+    const c = computeM10({ worksheet: [ws({ business_partner: "Catur Mitra Sejati Sentosa - Batam", no_sj: "SJ/9" })], gr: [], kwitansi: [], schedule: [], aging: [] });
+    expect(c.worksheet[0].bp_short).toBe("Batam");
+  });
+});

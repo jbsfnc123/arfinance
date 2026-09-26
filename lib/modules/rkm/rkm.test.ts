@@ -64,7 +64,7 @@ describe("hitungan RKM", () => {
       remarks: new Map([["SJ/4/X/TRA", "LTKP"]]),
     });
     const [a, b, d] = c.worksheet;
-    expect(a).toMatchObject({ cabang: "RKM A", gr: "Done", tukar_faktur: "Done", selisih: 100, status: "Outstanding", lama_tf: 10, no_faktur_pajak: "FP1" });
+    expect(a).toMatchObject({ cabang: "RKM A", bp_short: "RKM A", gr: "Done", tukar_faktur: "Done", selisih: 100, status: "Outstanding", lama_tf: 10, no_faktur_pajak: "FP1" });
     expect(b).toMatchObject({ gr: "Done", tukar_faktur: "Pending", selisih: 500, status: "Outstanding" });
     expect(d).toMatchObject({ gr: "Pending", tukar_faktur: "Pending", status: "Lunas", keterangan: "LTKP" });
     expect(c.gr.map((g) => g.check_status)).toEqual(["Done", "Check"]);
