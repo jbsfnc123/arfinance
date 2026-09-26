@@ -759,6 +759,144 @@ export type Database = {
         }
         Relationships: []
       }
+      deck_periods: {
+        Row: {
+          month: string
+          status: string
+          closed_at: string | null
+          closed_by: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          note: string | null
+        }
+        Insert: {
+          month: string
+          status?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          note?: string | null
+        }
+        Update: {
+          month?: string
+          status?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          note?: string | null
+        }
+        Relationships: []
+      }
+      deck_metrics: {
+        Row: {
+          month: string
+          key: string
+          source: string
+          value: number
+          label: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          month: string
+          key: string
+          source: string
+          value: number
+          label?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          month?: string
+          key?: string
+          source?: string
+          value?: number
+          label?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      deck_bp_snapshot: {
+        Row: {
+          month: string
+          kind: string
+          bp: Json
+          stats: Json
+          captured_at: string
+        }
+        Insert: {
+          month: string
+          kind: string
+          bp?: Json
+          stats?: Json
+          captured_at?: string
+        }
+        Update: {
+          month?: string
+          kind?: string
+          bp?: Json
+          stats?: Json
+          captured_at?: string
+        }
+        Relationships: []
+      }
+      deck_manual_rows: {
+        Row: {
+          id: number
+          month: string
+          table_name: string
+          sort: number
+          row: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: never
+          month: string
+          table_name: string
+          sort?: number
+          row: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: never
+          month?: string
+          table_name?: string
+          sort?: number
+          row?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      deck_texts: {
+        Row: {
+          month: string
+          slide_key: string
+          text: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          month: string
+          slide_key: string
+          text: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          month?: string
+          slide_key?: string
+          text?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       sticky_notes: {
         Row: {
           body: string
@@ -1021,6 +1159,10 @@ export type Database = {
       pack_erp: { Args: Record<string, never>; Returns: Json }
       pack_tukar: { Args: Record<string, never>; Returns: Json }
       usage_report: { Args: Record<string, never>; Returns: Json }
+      deck_save: { Args: { p_metrics: Json; p_metric_deletes: Json; p_rows: Json; p_texts: Json }; Returns: number }
+      deck_close_month: { Args: { p_month: string; p_auto?: Json }; Returns: Json }
+      deck_close_until: { Args: { p_until: string }; Returns: number }
+      deck_reopen_month: { Args: { p_month: string }; Returns: undefined }
       upload_status: { Args: Record<string, never>; Returns: Json }
       pack_rkm: { Args: Record<string, never>; Returns: Json }
       rkm_sync: { Args: Record<string, never>; Returns: number }

@@ -591,3 +591,18 @@ di `lib/supabase/proxy.ts` + `lib/workspace.ts`.
   khusus SA), AR → `ar.`, AP → `ap.`. Tombol "Ganti workspace" di topbar AR/AP untuk SA & AR + AP.
 - **Nama di login:** RPC `login_names` (≥ 2 huruf, maks. 5 nama akun aktif, 30 permintaan/menit/IP) dan
   `pin_login_named` (nama + PIN, batas gagal sama seperti `pin_login`). Keduanya hanya untuk service role.
+
+## Presentasi AR — data per bulan & snapshot (Fase 23, 2026-09-26)
+- Tabel (migrasi 0030): `deck_periods` (open/closed), `deck_metrics` (month, key, source excel|raw|auto|manual,
+  value — prioritas manual > raw/auto > excel), `deck_bp_snapshot` (rincian BP & master beku per bulan tertutup),
+  `deck_manual_rows` (8 tabel manual per bulan), `deck_texts` (teks slide per bulan). `deck_state` hanya config/label/impor.
+- **Tutup Bulan** (Controller/SA, toolbar di atas deck): `deck_close_month` menyalin agregat `deck_derived` + master BP
+  menjadi snapshot, menyimpan Collection otomatis, dan mengunci bulan. Upload ulang tidak mengubah bulan tertutup
+  (`recomputeDirty` melewatinya; `deck_save` menolak). **Buka Kembali** hanya SA (`deck_reopen_month`).
+- **Collection otomatis** (`lib/modules/deck/collection.ts`): target per marketing group dari Upload Target Bulanan,
+  realisasi = Alloc in Target (ERP payment), s/d minggu W, target bulan berikut, Collection %. Input manual tetap menimpa.
+- **Riwayat** dari `Data Finance Presentation.xlsm` (sheet `Input`) diimpor sekali 2026-09-26 memakai parser app
+  (`parseExcel_`): 303 nilai, 85 seri, Jan 2025 – Agu 2026 (sumber "Manual" → manual, lainnya → excel). Jan 2025 –
+  Agu 2026 sudah ditutup; Sep 2026 terbuka. File workbook tidak disimpan di repo.
+- Data yang tetap manual (tidak ada sumber sistem): TOP 5 / tanpa TOP 5, Top Unpaid W, Uncollected, Due90 Cicil,
+  Bad Debt (manual, `aging:5` — berbeda dari `baddebt:*` = aging >90 hari per group), Unallocated.
