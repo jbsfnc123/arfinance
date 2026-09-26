@@ -8,6 +8,7 @@ import { downloadXlsxSheets } from "@/lib/xlsx-client";
 import { fmtTimestamp, rupiah } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { card, td, th } from "@/components/ui";
+import { TableBox } from "@/components/table-box";
 
 type Batch = Tables<"coretax_batches">;
 type Line = Tables<"coretax_lines">;
@@ -51,34 +52,36 @@ export function HistoryView() {
   }
 
   return (
-    <section className={`${card} overflow-x-auto`}>
-      <table className="w-full text-sm">
-        <thead>
-          <tr>
-            {["Waktu", "File", "Filter", "Oleh"].map((h) => <th key={h} className={th}>{h}</th>)}
-            {["Faktur", "Baris", "DPP", "PPN"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
-            <th className={th} />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((b) => (
-            <tr key={b.id} className="border-t border-line">
-              <td className={td}>{fmtTimestamp(b.created_at)}</td>
-              <td className={`${td} max-w-64 truncate`} title={b.file_name ?? ""}>{b.file_name}</td>
-              <td className={td}>{b.types || "Semua"}</td>
-              <td className={td}>{b.created_by_name}</td>
-              <td className={`${td} text-right`}>{b.invoice_count}</td>
-              <td className={`${td} text-right`}>{b.line_count}</td>
-              <td className={`${td} text-right`}>{rupiah(Math.round(b.dpp))}</td>
-              <td className={`${td} text-right`}>{rupiah(Math.round(b.ppn))}</td>
-              <td className={td}>
-                <button type="button" className="text-accent hover:underline" onClick={() => downloadBatch(b)}>Excel</button>
-              </td>
+    <section className={`${card} overflow-hidden`}>
+      <TableBox bare>
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              {["Waktu", "File", "Filter", "Oleh"].map((h) => <th key={h} className={th}>{h}</th>)}
+              {["Faktur", "Baris", "DPP", "PPN"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
+              <th className={th} />
             </tr>
-          ))}
-          {rows.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={9}>Belum ada data tersimpan.</td></tr>}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((b) => (
+              <tr key={b.id} className="border-t border-line">
+                <td className={td}>{fmtTimestamp(b.created_at)}</td>
+                <td className={`${td} max-w-64 truncate`} title={b.file_name ?? ""}>{b.file_name}</td>
+                <td className={td}>{b.types || "Semua"}</td>
+                <td className={td}>{b.created_by_name}</td>
+                <td className={`${td} text-right`}>{b.invoice_count}</td>
+                <td className={`${td} text-right`}>{b.line_count}</td>
+                <td className={`${td} text-right`}>{rupiah(Math.round(b.dpp))}</td>
+                <td className={`${td} text-right`}>{rupiah(Math.round(b.ppn))}</td>
+                <td className={td}>
+                  <button type="button" className="text-accent hover:underline" onClick={() => downloadBatch(b)}>Excel</button>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={9}>Belum ada data tersimpan.</td></tr>}
+          </tbody>
+        </table>
+      </TableBox>
     </section>
   );
 }

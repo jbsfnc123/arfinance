@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { compressImage } from "@/lib/image";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtDate, rupiah } from "@/lib/format";
@@ -47,11 +48,12 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
   useEffect(() => {
     if (!date) return;
     let cancelled = false;
-    supabase
+    fetchAll((a, b) => supabase
       .from("v_courier_pending")
       .select("invoice_no, business_partner, payment_group, invoice_date, open_amt")
       .eq("send_date", date)
-      .limit(5000)
+      .order("invoice_no")
+      .range(a, b))
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) toast(`Gagal memuat invoice: ${error.message}`, "danger");
@@ -146,13 +148,13 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
           <div className="space-y-3">
             <label className="block text-sm">
               <span className="text-fg-2">Nama Kurir</span>
-              <select value={kurir} onChange={(e) => setKurir(e.target.value)} className={`${inputCls} mt-1`}>
+              <select value={kurir} onChange={(e) => setKurir(e.target.value)} className={`${inputCls} mt-1 min-h-11`}>
                 <option value="">Pilih kurir…</option>
                 {kurirList.map((k) => <option key={k}>{k}</option>)}
               </select>
             </label>
-            <input value={kurir} onChange={(e) => setKurir(e.target.value)} placeholder="…atau ketik nama kurir" className={inputCls} />
-            <button type="button" className={`${btnPrimary} w-full`} disabled={!kurir.trim()} onClick={() => setStep(2)}>Lanjut</button>
+            <input value={kurir} onChange={(e) => setKurir(e.target.value)} placeholder="…atau ketik nama kurir" className={`${inputCls} min-h-11`} />
+            <button type="button" className={`${btnPrimary} min-h-11 w-full`} disabled={!kurir.trim()} onClick={() => setStep(2)}>Lanjut</button>
           </div>
         )}
 
@@ -168,38 +170,43 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
                 <span className="text-sm text-fg-2">{d.invoices} invoice</span>
               </button>
             ))}
-            {!ownName && <button type="button" className={btnGhost} onClick={() => setStep(1)}>Kembali</button>}
+            {!ownName && <button type="button" className={`${btnGhost} min-h-11`} onClick={() => setStep(1)}>Kembali</button>}
           </div>
         )}
 
         {step === 3 && (
-          <div className="space-y-3">
-            <div>
-              <input value={qPg} onChange={(e) => setQPg(e.target.value)} placeholder="🔍 Cari Payment Group…" className={inputCls} />
-              <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
-                {pgs.filter((p) => p.toLowerCase().includes(qPg.toLowerCase())).map((p) => (
-                  <label key={p} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-surface-2">
-                    <input type="checkbox" checked={pgFilter.has(p)} onChange={() => toggle(pgFilter, p, setPgFilter)} /> {p}
-                  </label>
-                ))}
+          <div className="space-y-4">
+            {pgs.length > 1 && (
+              <div>
+                <div className="mb-2 text-sm text-fg-2">Payment Group <span className="text-xs">(opsional, untuk menyaring toko)</span></div>
+                {pgs.length > 8 && <input value={qPg} onChange={(e) => setQPg(e.target.value)} placeholder="🔍 Cari Payment Group…" className={`${inputCls} mb-2`} />}
+                <div className="flex flex-wrap gap-2">
+                  {pgs.filter((p) => p.toLowerCase().includes(qPg.toLowerCase())).map((p) => (
+                    <button key={p} type="button" aria-pressed={pgFilter.has(p)} onClick={() => toggle(pgFilter, p, setPgFilter)}
+                      className={`min-h-11 rounded-full border px-4 text-sm ${pgFilter.has(p) ? "border-accent bg-accent/15 text-accent" : "border-line"}`}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             <div>
-              <input value={qToko} onChange={(e) => setQToko(e.target.value)} placeholder="🔍 Cari nama toko…" className={inputCls} />
-              <div className="mt-2 max-h-72 space-y-1 overflow-y-auto">
+              <div className="mb-2 text-sm text-fg-2">Pilih toko yang dikunjungi</div>
+              {tokoList.length > 8 && <input value={qToko} onChange={(e) => setQToko(e.target.value)} placeholder="🔍 Cari nama toko…" className={`${inputCls} mb-2`} />}
+              <div className="divide-y divide-line rounded-xl border border-line">
                 {tokoList.filter(([t]) => t.toLowerCase().includes(qToko.toLowerCase())).map(([t, n]) => (
-                  <label key={t} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-2">
-                    <input type="checkbox" checked={tokos.has(t)} onChange={() => toggle(tokos, t, setTokos)} />
-                    <span className="flex-1">{t}</span>
-                    <span className="text-xs text-fg-2">{n} inv</span>
+                  <label key={t} className="flex min-h-12 items-center gap-3 px-3 py-2 text-sm active:bg-surface-2">
+                    <input type="checkbox" className="h-5 w-5 shrink-0 accent-[var(--color-accent)]" checked={tokos.has(t)} onChange={() => toggle(tokos, t, setTokos)} />
+                    <span className="flex-1 break-words">{t}</span>
+                    <span className="shrink-0 text-xs text-fg-2">{n} inv</span>
                   </label>
                 ))}
-                {tokoList.length === 0 && <p className="text-sm text-fg-2">Semua invoice tanggal ini sudah diproses.</p>}
+                {tokoList.length === 0 && <p className="p-3 text-sm text-fg-2">Semua invoice tanggal ini sudah diproses.</p>}
               </div>
             </div>
-            <div className="flex gap-2">
-              <button type="button" className={btnGhost} onClick={() => setStep(2)}>Kembali</button>
-              <button type="button" className={`${btnPrimary} flex-1`} disabled={!tokos.size}
+            <div className="sticky bottom-0 -mx-4 -mb-4 flex gap-2 rounded-b-xl border-t border-line bg-surface p-3">
+              <button type="button" className={`${btnGhost} min-h-11`} onClick={() => setStep(2)}>Kembali</button>
+              <button type="button" className={`${btnPrimary} min-h-11 flex-1`} disabled={!tokos.size}
                 onClick={() => { setDone(new Set(selectedInv.map((i) => i.invoice_no))); setStep(4); }}>
                 Lanjut ({selectedInv.length} invoice)
               </button>
@@ -208,38 +215,53 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
         )}
 
         {step === 4 && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="text-sm">
               Centang = <b className="text-success">Done</b>, tidak dicentang = <b className="text-warning">Pending</b>
-              <span className="ml-1 text-fg-2">({doneCount} Done / {selectedInv.length - doneCount} Pending)</span>
+              <div className="text-fg-2">{doneCount} Done · {selectedInv.length - doneCount} Pending</div>
             </div>
-            <div className="max-h-80 space-y-1 overflow-y-auto">
-              {[...tokos].sort().map((t) => (
-                <div key={t}>
-                  <div className="mt-2 text-xs font-medium text-fg-2">{t}</div>
-                  {selectedInv.filter((i) => i.business_partner === t).map((i) => (
-                    <label key={i.invoice_no} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-2">
-                      <input type="checkbox" checked={done.has(i.invoice_no)} onChange={() => toggle(done, i.invoice_no, setDone)} />
-                      <span className="flex-1">{i.invoice_no}<span className="ml-2 text-xs text-fg-2">{fmtDate(i.invoice_date)}</span></span>
-                      <span className="text-xs">{rupiah(i.open_amt)}</span>
-                    </label>
-                  ))}
+            {[...tokos].sort().map((t) => {
+              const list = selectedInv.filter((i) => i.business_partner === t);
+              const all = list.every((i) => done.has(i.invoice_no));
+              return (
+                <div key={t} className="rounded-xl border border-line">
+                  <div className="flex items-center gap-2 border-b border-line px-3 py-2">
+                    <span className="flex-1 break-words text-sm font-medium">{t}</span>
+                    <button type="button" className="min-h-11 shrink-0 px-2 text-sm text-accent"
+                      onClick={() => setDone((d) => { const n = new Set(d); for (const i of list) { if (all) n.delete(i.invoice_no); else n.add(i.invoice_no); } return n; })}>
+                      {all ? "Kosongkan" : "Semua"}
+                    </button>
+                  </div>
+                  <div className="divide-y divide-line">
+                    {list.map((i) => (
+                      <label key={i.invoice_no} className="flex min-h-14 items-center gap-3 px-3 py-2 active:bg-surface-2">
+                        <input type="checkbox" className="h-5 w-5 shrink-0 accent-[var(--color-accent)]" checked={done.has(i.invoice_no)} onChange={() => toggle(done, i.invoice_no, setDone)} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block break-all text-sm font-medium">{i.invoice_no}</span>
+                          <span className="flex justify-between gap-2 text-xs text-fg-2">
+                            <span>{fmtDate(i.invoice_date)}</span>
+                            <span className="tabular-nums text-fg">{rupiah(i.open_amt)}</span>
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
 
             <label className="block text-sm">
               <span className="text-fg-2">Foto Tanda Terima {doneCount > 0 && <span className="text-danger">*</span>}</span>
-              <input type="file" accept="image/*" capture="environment" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} className={`${inputCls} mt-1`} />
+              <input type="file" accept="image/*" capture="environment" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} className={`${inputCls} mt-1 min-h-11`} />
             </label>
             <label className="block text-sm">
               <span className="text-fg-2">Tanggal Diterima <span className="text-danger">*</span></span>
-              <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className={`${inputCls} mt-1`} />
+              <input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className={`${inputCls} mt-1 min-h-11`} />
             </label>
-            <div className="flex gap-2">
-              <button type="button" className={btnGhost} onClick={() => setStep(3)} disabled={busy}>Kembali</button>
-              <button type="button" className={`${btnPrimary} flex-1`} disabled={busy} onClick={submit}>
-                {busy ? "Menyimpan…" : "Simpan"}
+            <div className="sticky bottom-0 -mx-4 -mb-4 flex gap-2 rounded-b-xl border-t border-line bg-surface p-3">
+              <button type="button" className={`${btnGhost} min-h-11`} onClick={() => setStep(3)} disabled={busy}>Kembali</button>
+              <button type="button" className={`${btnPrimary} min-h-11 flex-1`} disabled={busy} onClick={submit}>
+                {busy ? "Menyimpan…" : `Simpan (${doneCount} Done, ${selectedInv.length - doneCount} Pending)`}
               </button>
             </div>
           </div>

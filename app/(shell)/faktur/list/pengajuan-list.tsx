@@ -3,11 +3,13 @@
 import { useRemarks } from "@/lib/modules/remarks";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { fmtDate, fmtTimestamp } from "@/lib/format";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { LtkpPreview } from "../ltkp-preview";
+import { TableBox } from "@/components/table-box";
 
 type Req = {
   id: number; created_at: string; created_by_name: string | null; bp_value: string; invoice_date: string | null;
@@ -33,11 +35,11 @@ export function PengajuanList({ myName }: { myName: string }) {
   const [preview, setPreview] = useState<{ path: string; title: string } | null>(null);
 
   useEffect(() => {
-    supabase
+    fetchAll((a, b) => supabase
       .from("tax_invoice_requests")
       .select("id, created_at, created_by_name, bp_value, invoice_date, invoice_no, no_sj, tax_no, request, reason, keterangan, processed_at, processed_by_name, ltkp:ltkp_documents(no_ltkp, storage_path)")
       .order("id", { ascending: false })
-      .limit(2000)
+      .range(a, b))
       .then(({ data, error }) => {
         if (error) toast(`Gagal memuat: ${error.message}`, "danger");
         setRows((data ?? []) as unknown as Req[]);
@@ -96,7 +98,7 @@ export function PengajuanList({ myName }: { myName: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="w-full space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-auto text-2xl font-medium">Daftar Pengajuan Pembatalan &amp; Revisi</h1>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari invoice, BP, tax no, LTKP…" className={`${inputCls} !w-64`} />
@@ -111,62 +113,64 @@ export function PengajuanList({ myName }: { myName: string }) {
         </button>
       </div>
 
-      <section className={`${card} overflow-x-auto`}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr>
-              <th className={`${th} w-10`} />
-              <th className={th}>Waktu</th><th className={th}>Invoice</th><th className={th}>Business Partner_Value</th>
-              <th className={th}>Request</th><th className={th}>LTKP</th><th className={th}>Diproses</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((r) => (
-              <Fragment key={r.id}>
-                <tr className="cursor-pointer border-t border-line hover:bg-surface-2" onClick={() => setOpen(open === r.id ? null : r.id)}>
-                  <td className={td} onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSel(r.id)} aria-label={`Pilih ${r.invoice_no}`} />
-                  </td>
-                  <td className={td}>{fmtTimestamp(r.created_at)}</td>
-                  <td className={td}>{r.invoice_no}</td>
-                  <td className={`${td} max-w-64 truncate`}>{r.bp_value}</td>
-                  <td className={td}>{r.request}</td>
-                  <td className={td} onClick={(e) => e.stopPropagation()}>
-                    {r.ltkp ? (
-                      <button type="button" className="text-accent hover:underline" onClick={() => setPreview({ path: r.ltkp!.storage_path, title: `LTKP ${r.ltkp!.no_ltkp}` })}>
-                        {r.ltkp.no_ltkp}
-                      </button>
-                    ) : "—"}
-                  </td>
-                  <td className={td} onClick={(e) => e.stopPropagation()}>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={!!r.processed_at} onChange={() => toggleProcessed(r)} />
-                      {r.processed_at && <span className="text-xs text-success">{r.processed_by_name}</span>}
-                    </label>
-                  </td>
-                </tr>
-                {open === r.id && (
-                  <tr className="bg-surface-2/50 text-xs">
-                    <td />
-                    <td className={`${td} whitespace-normal`} colSpan={6}>
-                      <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-                        <div><span className="text-fg-2">Diajukan oleh:</span> {r.created_by_name ?? "—"}</div>
-                        <div><span className="text-fg-2">Invoice Date:</span> {fmtDate(r.invoice_date) || "—"}</div>
-                        <div><span className="text-fg-2">No SJ:</span> {r.no_sj ?? "—"}</div>
-                        <div><span className="text-fg-2">Tax No:</span> {r.tax_no}</div>
-                        <div><span className="text-fg-2">Reason:</span> {r.reason}</div>
-                        <div><span className="text-fg-2">Diproses:</span> {r.processed_at ? `${r.processed_by_name ?? ""} · ${fmtTimestamp(r.processed_at)}` : "Belum"}</div>
-                        <div className="sm:col-span-2"><span className="text-fg-2">Keterangan pengajuan:</span> {r.keterangan}</div>
-                        <div className="sm:col-span-2"><span className="text-fg-2">Keterangan invoice:</span> {remarks.get(r.no_sj, r.invoice_no) || "—"} <span className="text-xs text-fg-2">(sama dengan Collection, Mitra10 & Hold)</span></div>
-                      </div>
+      <section className={`${card} overflow-hidden`}>
+        <TableBox bare>
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th className={`${th} w-10`} />
+                <th className={th}>Waktu</th><th className={th}>Invoice</th><th className={th}>Business Partner_Value</th>
+                <th className={th}>Request</th><th className={th}>LTKP</th><th className={th}>Diproses</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((r) => (
+                <Fragment key={r.id}>
+                  <tr className="cursor-pointer border-t border-line hover:bg-surface-2" onClick={() => setOpen(open === r.id ? null : r.id)}>
+                    <td className={td} onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSel(r.id)} aria-label={`Pilih ${r.invoice_no}`} />
+                    </td>
+                    <td className={td}>{fmtTimestamp(r.created_at)}</td>
+                    <td className={td}>{r.invoice_no}</td>
+                    <td className={`${td} max-w-64 truncate`} title={r.bp_value ?? ""}>{r.bp_value}</td>
+                    <td className={td}>{r.request}</td>
+                    <td className={td} onClick={(e) => e.stopPropagation()}>
+                      {r.ltkp ? (
+                        <button type="button" className="text-accent hover:underline" onClick={() => setPreview({ path: r.ltkp!.storage_path, title: `LTKP ${r.ltkp!.no_ltkp}` })}>
+                          {r.ltkp.no_ltkp}
+                        </button>
+                      ) : "—"}
+                    </td>
+                    <td className={td} onClick={(e) => e.stopPropagation()}>
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={!!r.processed_at} onChange={() => toggleProcessed(r)} />
+                        {r.processed_at && <span className="text-xs text-success">{r.processed_by_name}</span>}
+                      </label>
                     </td>
                   </tr>
-                )}
-              </Fragment>
-            ))}
-            {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Tidak ada pengajuan.</td></tr>}
-          </tbody>
-        </table>
+                  {open === r.id && (
+                    <tr className="bg-surface-2/50 text-xs">
+                      <td />
+                      <td className={`${td} whitespace-normal`} colSpan={6}>
+                        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                          <div><span className="text-fg-2">Diajukan oleh:</span> {r.created_by_name ?? "—"}</div>
+                          <div><span className="text-fg-2">Invoice Date:</span> {fmtDate(r.invoice_date) || "—"}</div>
+                          <div><span className="text-fg-2">No SJ:</span> {r.no_sj ?? "—"}</div>
+                          <div><span className="text-fg-2">Tax No:</span> {r.tax_no}</div>
+                          <div><span className="text-fg-2">Reason:</span> {r.reason}</div>
+                          <div><span className="text-fg-2">Diproses:</span> {r.processed_at ? `${r.processed_by_name ?? ""} · ${fmtTimestamp(r.processed_at)}` : "Belum"}</div>
+                          <div className="sm:col-span-2"><span className="text-fg-2">Keterangan pengajuan:</span> {r.keterangan}</div>
+                          <div className="sm:col-span-2"><span className="text-fg-2">Keterangan invoice:</span> {remarks.get(r.no_sj, r.invoice_no) || "—"} <span className="text-xs text-fg-2">(sama dengan Collection, Mitra10 & Hold)</span></div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+              {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Tidak ada pengajuan.</td></tr>}
+            </tbody>
+          </table>
+        </TableBox>
       </section>
 
       <Modal

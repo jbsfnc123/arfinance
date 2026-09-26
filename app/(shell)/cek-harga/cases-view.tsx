@@ -2,10 +2,12 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import type { Tables } from "@/lib/database.types";
 import { fmtTimestamp } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { TableBox } from "@/components/table-box";
 
 type Case = Tables<"po_so_cases">;
 const AKSI = ["Litigasi", "LTKP", "Internal"];
@@ -23,8 +25,8 @@ export function CasesView({ status, version, onChange }: { status: "archived" | 
   const [q, setQ] = useState("");
 
   useEffect(() => {
-    supabase.from("po_so_cases").select("*").eq("status", status)
-      .order(status === "archived" ? "archived_at" : "completed_at", { ascending: false }).limit(3000)
+    fetchAll((a, b) => supabase.from("po_so_cases").select("*").eq("status", status)
+      .order(status === "archived" ? "archived_at" : "completed_at", { ascending: false }).order("id").range(a, b))
       .then(({ data, error }) => {
         if (error) toast(`Gagal memuat: ${error.message}`, "danger");
         setRows(data ?? []);
@@ -62,67 +64,69 @@ export function CasesView({ status, version, onChange }: { status: "archived" | 
         {status === "archived" && <span className="text-xs text-fg-2">· baris kuning = Tindakan Koreksi / Keterangan belum diisi</span>}
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari PO, SO, BP…" className={`${inputCls} ml-auto !w-60`} />
       </div>
-      <div className="max-h-[65vh] overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-surface">
-            <tr>
-              {["Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status"].map((h) => <th key={h} className={th}>{h}</th>)}
-              {["Total PO", "Total SO", "Selisih"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
-              {status === "completed" && <><th className={th}>Aksi</th><th className={th}>Tindakan Koreksi</th><th className={th}>Keterangan</th><th className={th}>Selesai</th></>}
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((c) => {
-              const incomplete = !c.tindakan?.trim() || !c.keterangan?.trim();
-              return (
-                <Fragment key={c.id}>
-                  <tr onClick={() => status === "archived" && toggle(c)}
-                    className={`border-t border-line ${status === "archived" ? "cursor-pointer hover:bg-surface-2" : ""} ${status === "archived" && incomplete ? "bg-warning/10" : ""}`}>
-                    <td className={td}>{c.document_no}</td>
-                    <td className={td}>{c.date_po}</td>
-                    <td className={td}>{c.po_customer}</td>
-                    <td className={`${td} max-w-56 truncate`}>{c.business_partner}</td>
-                    <td className={td}>{c.price_list}</td>
-                    <td className={td}>{c.document_status}</td>
-                    <td className={`${td} text-right`}>{money(c.total_po)}</td>
-                    <td className={`${td} text-right`}>{money(c.total_so)}</td>
-                    <td className={`${td} text-right`}>{money(c.selisih)}</td>
-                    {status === "completed" && (
-                      <>
-                        <td className={td}>{c.aksi}</td>
-                        <td className={`${td} max-w-56 truncate`} title={c.tindakan ?? ""}>{c.tindakan}</td>
-                        <td className={`${td} max-w-56 truncate`} title={c.keterangan ?? ""}>{c.keterangan}</td>
-                        <td className={td}>{fmtTimestamp(c.completed_at)}</td>
-                      </>
-                    )}
-                  </tr>
-                  {open === c.id && (
-                    <tr className="bg-surface-2/50">
-                      <td colSpan={9} className="px-3 py-3">
-                        <div className="flex flex-wrap items-end gap-3">
-                          <label className="text-xs text-fg-2">Aksi
-                            <select value={draft.aksi} onChange={(e) => setDraft({ ...draft, aksi: e.target.value })} className={`${inputCls} mt-1 !w-36`}>
-                              {AKSI.map((a) => <option key={a}>{a}</option>)}
-                            </select>
-                          </label>
-                          <label className="min-w-56 flex-1 text-xs text-fg-2">Tindakan Koreksi
-                            <input value={draft.tindakan} onChange={(e) => setDraft({ ...draft, tindakan: e.target.value })} className={`${inputCls} mt-1`} />
-                          </label>
-                          <label className="min-w-56 flex-1 text-xs text-fg-2">Keterangan
-                            <input value={draft.keterangan} onChange={(e) => setDraft({ ...draft, keterangan: e.target.value })} className={`${inputCls} mt-1`} />
-                          </label>
-                          <button type="button" className={btnGhost} disabled={busy} onClick={() => save(c, false)}>Simpan</button>
-                          <button type="button" className={btnPrimary} disabled={busy} onClick={() => save(c, true)}>Complete</button>
-                        </div>
-                      </td>
+      <div>
+        <TableBox bare>
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-surface">
+              <tr>
+                {["Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status"].map((h) => <th key={h} className={th}>{h}</th>)}
+                {["Total PO", "Total SO", "Selisih"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
+                {status === "completed" && <><th className={th}>Aksi</th><th className={th}>Tindakan Koreksi</th><th className={th}>Keterangan</th><th className={th}>Selesai</th></>}
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((c) => {
+                const incomplete = !c.tindakan?.trim() || !c.keterangan?.trim();
+                return (
+                  <Fragment key={c.id}>
+                    <tr onClick={() => status === "archived" && toggle(c)}
+                      className={`border-t border-line ${status === "archived" ? "cursor-pointer hover:bg-surface-2" : ""} ${status === "archived" && incomplete ? "bg-warning/10" : ""}`}>
+                      <td className={td}>{c.document_no}</td>
+                      <td className={td}>{c.date_po}</td>
+                      <td className={td}>{c.po_customer}</td>
+                      <td className={`${td} max-w-56 truncate`} title={c.business_partner ?? ""}>{c.business_partner}</td>
+                      <td className={td}>{c.price_list}</td>
+                      <td className={td}>{c.document_status}</td>
+                      <td className={`${td} text-right`}>{money(c.total_po)}</td>
+                      <td className={`${td} text-right`}>{money(c.total_so)}</td>
+                      <td className={`${td} text-right`}>{money(c.selisih)}</td>
+                      {status === "completed" && (
+                        <>
+                          <td className={td}>{c.aksi}</td>
+                          <td className={`${td} max-w-56 truncate`} title={c.tindakan ?? ""}>{c.tindakan}</td>
+                          <td className={`${td} max-w-56 truncate`} title={c.keterangan ?? ""}>{c.keterangan}</td>
+                          <td className={td}>{fmtTimestamp(c.completed_at)}</td>
+                        </>
+                      )}
                     </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-            {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={13}>{status === "archived" ? "Belum ada data di arsip." : "Belum ada task complete."}</td></tr>}
-          </tbody>
-        </table>
+                    {open === c.id && (
+                      <tr className="bg-surface-2/50">
+                        <td colSpan={9} className="px-3 py-3">
+                          <div className="flex flex-wrap items-end gap-3">
+                            <label className="text-xs text-fg-2">Aksi
+                              <select value={draft.aksi} onChange={(e) => setDraft({ ...draft, aksi: e.target.value })} className={`${inputCls} mt-1 !w-36`}>
+                                {AKSI.map((a) => <option key={a}>{a}</option>)}
+                              </select>
+                            </label>
+                            <label className="min-w-56 flex-1 text-xs text-fg-2">Tindakan Koreksi
+                              <input value={draft.tindakan} onChange={(e) => setDraft({ ...draft, tindakan: e.target.value })} className={`${inputCls} mt-1`} />
+                            </label>
+                            <label className="min-w-56 flex-1 text-xs text-fg-2">Keterangan
+                              <input value={draft.keterangan} onChange={(e) => setDraft({ ...draft, keterangan: e.target.value })} className={`${inputCls} mt-1`} />
+                            </label>
+                            <button type="button" className={btnGhost} disabled={busy} onClick={() => save(c, false)}>Simpan</button>
+                            <button type="button" className={btnPrimary} disabled={busy} onClick={() => save(c, true)}>Complete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+              {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={13}>{status === "archived" ? "Belum ada data di arsip." : "Belum ada task complete."}</td></tr>}
+            </tbody>
+          </table>
+        </TableBox>
       </div>
     </section>
   );

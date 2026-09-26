@@ -609,3 +609,15 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   upload. Daftar cut-off 12 bulan terakhir: ✔ lengkap (semua sheet wajib terisi), `x/8 sheet` sebagian, ✖ belum ada.
 - **App deck** (`public/presentasi-app`): fitur per-BP dihapus (slide Kinerja PIC & BP Explorer, top BP di drill,
   pelanggan tidak aktif); `STANDALONE_` di `engine/insights.js`. Tren antar bulan dibaca dari bulan-bulan tersimpan.
+
+## QC/QA UI tabel (Fase 25, 2026-09-27)
+- Audit browser otomatis (Playwright, 30 halaman × 1366/1920/2560 + HP kurir). Temuan utama: lebar halaman dikunci
+  (max-w 5xl–1600px), kotak tabel melewati bawah layar & scrollbar bertumpuk (65vh/68vh), Mutasi Data 1.800 baris
+  non-virtual, kurir HP sempit, modal rincian dibatasi 500 baris, query daftar >1.000 baris terpotong (max_rows REST).
+- **Pola tabel:** `LocalTable` (`lib/local/table.tsx`) = tabel standar (virtual + measureElement, `render`, `text`,
+  `sum`, `wrap`, `rowClass`, `onRowClick`, tombol Teks penuh, filter basi diabaikan, kosong di akhir sort).
+  Tabel non-virtual dibungkus `TableBox` (`components/table-box.tsx`, header sticky). Tinggi = sisa layar lewat
+  `useFillHeight` (`lib/ui/fill-height.ts`, max-height, satu scrollbar per halaman); JANGAN pakai `max-h-[65vh]`.
+- Halaman bertabel lebar penuh (`w-full`); dashboard `max-w-[1800px]`; form tetap sempit.
+- Query daftar dari tabel yang bisa >1.000 baris WAJIB lewat `fetchAll` (`lib/supabase/fetch-all.ts`).
+- `DataTableModal` tanpa batas baris (virtual) + Excel; `Modal` punya ukuran `xl` (96vw).

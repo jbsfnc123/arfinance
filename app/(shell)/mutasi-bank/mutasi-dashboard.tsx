@@ -9,6 +9,7 @@ import { monthLabel, rupiah } from "@/lib/format";
 import { buildMutasi, type MutasiRaw } from "@/lib/modules/mutasi/dashboard";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { card, inputCls, td, th } from "@/components/ui";
+import { TableBox } from "@/components/table-box";
 
 const juta = (n: number | null) => (n === null ? null : Math.round(n / 1e4) / 100);
 const num = (n: number) => Math.round(n).toLocaleString("id-ID");
@@ -67,37 +68,39 @@ export function MutasiDashboard() {
             ])} />
           </section>
 
-          <section className={`${card} overflow-x-auto`}>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line">
-                  <th className={th}>Tanggal</th>
-                  {raw.accounts.map((a) => <th key={a} className={`${th} text-right`}>{a}</th>)}
-                  <th className={`${th} text-right`}>Total</th><th className={`${th} text-right`}>Allocated</th>
-                  <th className={`${th} text-right`}>Alloc in Target</th><th className={`${th} text-right`}>Invoice Create</th>
-                </tr>
-              </thead>
-              <tbody>
-                {v.daily.map((d) => (
-                  <tr key={d.date} className={`border-b border-line/50 ${d.date === today ? "bg-surface-2" : ""}`}>
-                    <td className={td}>{d.date.slice(8)}/{d.date.slice(5, 7)}</td>
-                    {raw.accounts.map((a) => <td key={a} className={`${td} text-right`}>{num(d.perAccount[a])}</td>)}
-                    <td className={`${td} text-right font-medium`}>{num(d.total)}</td>
-                    <td className={`${td} text-right`}>{num(d.alloc)}</td>
-                    <td className={`${td} text-right`}>{num(d.allocT)}</td>
-                    <td className={`${td} text-right`}>{num(d.inv)}</td>
+          <section className={`${card} overflow-hidden`}>
+            <TableBox bare fill={false} maxHeight="max-h-[60vh]">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-line">
+                    <th className={th}>Tanggal</th>
+                    {raw.accounts.map((a) => <th key={a} className={`${th} text-right`}>{a}</th>)}
+                    <th className={`${th} text-right`}>Total</th><th className={`${th} text-right`}>Allocated</th>
+                    <th className={`${th} text-right`}>Alloc in Target</th><th className={`${th} text-right`}>Invoice Create</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="font-medium">
-                  <td className={td}>Total</td>
-                  {raw.accounts.map((a) => <td key={a} className={`${td} text-right`}>{num(v.perAccount[a])}</td>)}
-                  <td className={`${td} text-right`}>{num(v.total)}</td><td className={`${td} text-right`}>{num(v.alloc)}</td>
-                  <td className={`${td} text-right`}>{num(v.allocT)}</td><td className={`${td} text-right`}>{num(v.inv)}</td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody>
+                  {v.daily.map((d) => (
+                    <tr key={d.date} className={`border-b border-line/50 ${d.date === today ? "bg-surface-2" : ""}`}>
+                      <td className={td}>{d.date.slice(8)}/{d.date.slice(5, 7)}</td>
+                      {raw.accounts.map((a) => <td key={a} className={`${td} text-right`}>{num(d.perAccount[a])}</td>)}
+                      <td className={`${td} text-right font-medium`}>{num(d.total)}</td>
+                      <td className={`${td} text-right`}>{num(d.alloc)}</td>
+                      <td className={`${td} text-right`}>{num(d.allocT)}</td>
+                      <td className={`${td} text-right`}>{num(d.inv)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="font-medium">
+                    <td className={td}>Total</td>
+                    {raw.accounts.map((a) => <td key={a} className={`${td} text-right`}>{num(v.perAccount[a])}</td>)}
+                    <td className={`${td} text-right`}>{num(v.total)}</td><td className={`${td} text-right`}>{num(v.alloc)}</td>
+                    <td className={`${td} text-right`}>{num(v.allocT)}</td><td className={`${td} text-right`}>{num(v.inv)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </TableBox>
           </section>
         </>
       )}

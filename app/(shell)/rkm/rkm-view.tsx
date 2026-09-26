@@ -132,7 +132,7 @@ export function RkmView() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px]">
+    <div className="w-full">
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-medium">RKM Tukar Faktur</h1>
         <span className="text-sm text-fg-2">Tax Name: {m.taxName}</span>

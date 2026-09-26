@@ -6,6 +6,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { fmtDate, monthLabel } from "@/lib/format";
 import { tukarDays, tukarKpi, type TukarDay } from "@/lib/modules/tukar/dashboard";
 import { card, inputCls, td, th } from "@/components/ui";
+import { TableBox } from "@/components/table-box";
 
 type Raw = { months: string[]; kurirs: string[]; days: TukarDay[] };
 
@@ -21,7 +22,7 @@ export function TukarDashboard() {
   const months = data ? (data.months.includes(month) ? data.months : [month, ...data.months]) : [month];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="mx-auto max-w-[1800px] space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-medium">Dashboard Tukar Faktur</h1>
         <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} ml-auto !w-auto`}>
@@ -45,38 +46,40 @@ export function TukarDashboard() {
       {data && kpi && (
         <section className={`${card} overflow-hidden`}>
           <h2 className="px-4 pt-4 text-sm font-medium">Tukar Faktur per Hari · {monthLabel(month)}</h2>
-          <div className="mt-2 max-h-[65vh] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-surface">
-                <tr className="border-b border-line">
-                  <th className={th}>Tanggal</th>
-                  <th className={`${th} text-right`}>Jumlah Invoice</th>
-                  <th className={`${th} text-right`}>Jumlah Business Partner</th>
-                  <th className={`${th} text-right`}>Titik Lokasi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.days.map((d) => {
-                  const idle = !d.inv && !d.bp && !d.lok;
-                  return (
-                    <tr key={d.day} className={`border-b border-line/50 ${idle ? "text-fg-2 opacity-60" : ""}`}>
-                      <td className={td}>{fmtDate(`${month}-${String(d.day).padStart(2, "0")}`)}</td>
-                      <td className={`${td} text-right`}>{d.inv.toLocaleString("id-ID")}</td>
-                      <td className={`${td} text-right`}>{d.bp.toLocaleString("id-ID")}</td>
-                      <td className={`${td} text-right`}>{d.lok.toLocaleString("id-ID")}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot className="sticky bottom-0 bg-surface font-medium">
-                <tr className="border-t border-line">
-                  <td className={td}>Total ({kpi.activeDays} hari aktif)</td>
-                  <td className={`${td} text-right`}>{kpi.totalInvoice.toLocaleString("id-ID")}</td>
-                  <td className={`${td} text-right`}>{kpi.totalBP.toLocaleString("id-ID")}</td>
-                  <td className={`${td} text-right`}>{kpi.totalLokasi.toLocaleString("id-ID")}</td>
-                </tr>
-              </tfoot>
-            </table>
+          <div className="mt-2 overflow-hidden">
+            <TableBox bare className="mt-2">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-surface">
+                  <tr className="border-b border-line">
+                    <th className={th}>Tanggal</th>
+                    <th className={`${th} text-right`}>Jumlah Invoice</th>
+                    <th className={`${th} text-right`}>Jumlah Business Partner</th>
+                    <th className={`${th} text-right`}>Titik Lokasi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.days.map((d) => {
+                    const idle = !d.inv && !d.bp && !d.lok;
+                    return (
+                      <tr key={d.day} className={`border-b border-line/50 ${idle ? "text-fg-2 opacity-60" : ""}`}>
+                        <td className={td}>{fmtDate(`${month}-${String(d.day).padStart(2, "0")}`)}</td>
+                        <td className={`${td} text-right`}>{d.inv.toLocaleString("id-ID")}</td>
+                        <td className={`${td} text-right`}>{d.bp.toLocaleString("id-ID")}</td>
+                        <td className={`${td} text-right`}>{d.lok.toLocaleString("id-ID")}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="sticky bottom-0 bg-surface font-medium">
+                  <tr className="border-t border-line">
+                    <td className={td}>Total ({kpi.activeDays} hari aktif)</td>
+                    <td className={`${td} text-right`}>{kpi.totalInvoice.toLocaleString("id-ID")}</td>
+                    <td className={`${td} text-right`}>{kpi.totalBP.toLocaleString("id-ID")}</td>
+                    <td className={`${td} text-right`}>{kpi.totalLokasi.toLocaleString("id-ID")}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </TableBox>
           </div>
         </section>
       )}

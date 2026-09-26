@@ -152,20 +152,22 @@ export function Dashboard(props: { R: Report; audit: AuditRow[]; auditLimit: num
               : "Tidak ada pesanan yang ditarik melebihi dana yang diterima."}
           </p>
           {topAudit.length > 0 && (
-            <table className="w-full text-xs">
-              <thead><tr>{["No. Pesanan", "Tanggal", "Diterima", "Ditarik", "Selisih", "Status"].map((h, i) => <th key={h} className={`px-2 py-1 font-medium text-fg-2 ${i >= 2 && i <= 4 ? "text-right" : "text-left"}`}>{h}</th>)}</tr></thead>
-              <tbody>
-                {topAudit.map((r, i) => (
-                  <tr key={i} className="border-t border-line">
-                    <td className="px-2 py-1">{r.no}</td><td className="px-2 py-1">{r.tanggal}</td>
-                    <td className="px-2 py-1 text-right">{r.diterima === null ? "?" : r.diterima.toLocaleString("id-ID")}</td>
-                    <td className="px-2 py-1 text-right">{r.ditarik.toLocaleString("id-ID")}</td>
-                    <td className="px-2 py-1 text-right text-danger">{r.selisih.toLocaleString("id-ID")}</td>
-                    <td className="px-2 py-1">{r.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead><tr>{["No. Pesanan", "Tanggal", "Diterima", "Ditarik", "Selisih", "Status"].map((h, i) => <th key={h} className={`px-2 py-1 font-medium text-fg-2 ${i >= 2 && i <= 4 ? "text-right" : "text-left"}`}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {topAudit.map((r, i) => (
+                    <tr key={i} className="border-t border-line">
+                      <td className="px-2 py-1">{r.no}</td><td className="px-2 py-1">{r.tanggal}</td>
+                      <td className="px-2 py-1 text-right">{r.diterima === null ? "?" : r.diterima.toLocaleString("id-ID")}</td>
+                      <td className="px-2 py-1 text-right">{r.ditarik.toLocaleString("id-ID")}</td>
+                      <td className="px-2 py-1 text-right text-danger">{r.selisih.toLocaleString("id-ID")}</td>
+                      <td className="px-2 py-1">{r.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       )}

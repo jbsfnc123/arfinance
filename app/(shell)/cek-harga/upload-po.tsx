@@ -9,6 +9,7 @@ import {
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { TableBox } from "@/components/table-box";
 
 const money = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 2 });
 const BADGE: Record<ReconStatus, string> = {
@@ -129,44 +130,46 @@ export function UploadPo({ casesVersion, onArchived }: { casesVersion: number; o
               <span className="material-symbols-outlined">download</span>Export Excel
             </button>
           </div>
-          <div className="max-h-[65vh] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-surface">
-                <tr>
-                  {["Status", "Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status"].map((h) => <th key={h} className={th}>{h}</th>)}
-                  {["Total PO", "Total SO", "Selisih"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
-                  <th className={th}>Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((r) => {
-                  const cs = cases.get(r.po_customer);
-                  return (
-                    <tr key={r.po_customer} className="border-t border-line">
-                      <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs ${BADGE[r.status]}`}>{RECON_STATUS_TEXT[r.status]}</span></td>
-                      <td className={td}>{r.document_no}</td>
-                      <td className={td}>{r.date_po}</td>
-                      <td className={td}>
-                        {r.po_customer}
-                        {r.is_manual && <span className="ml-1 rounded bg-warning/20 px-1 text-[10px] font-medium text-warning">Manual PO</span>}
-                      </td>
-                      <td className={`${td} max-w-56 truncate`}>{r.business_partner}</td>
-                      <td className={td}>{r.price_list}</td>
-                      <td className={td}>{r.document_status}</td>
-                      <td className={`${td} text-right`}>{money(r.total_po)}</td>
-                      <td className={`${td} text-right`}>{r.hasSO ? money(r.total_so) : "-"}</td>
-                      <td className={`${td} text-right font-medium ${r.selisih < 0 ? "text-danger" : "text-accent"}`}>{r.hasSO ? money(r.selisih) : "-"}</td>
-                      <td className={td}>
-                        {r.status !== "SELISIH" ? "-" : cs === "completed" ? <span className="text-xs text-fg-2">Sudah Selesai</span>
-                          : cs === "archived" ? <span className="text-xs text-success">Sudah di Arsip</span>
-                          : <button type="button" className={btnGhost} onClick={() => archive(r)}>Pindahkan ke Arsip</button>}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {visible.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={11}>Tidak ada data untuk status ini.</td></tr>}
-              </tbody>
-            </table>
+          <div>
+            <TableBox bare>
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-surface">
+                  <tr>
+                    {["Status", "Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status"].map((h) => <th key={h} className={th}>{h}</th>)}
+                    {["Total PO", "Total SO", "Selisih"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
+                    <th className={th}>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((r) => {
+                    const cs = cases.get(r.po_customer);
+                    return (
+                      <tr key={r.po_customer} className="border-t border-line">
+                        <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs ${BADGE[r.status]}`}>{RECON_STATUS_TEXT[r.status]}</span></td>
+                        <td className={td}>{r.document_no}</td>
+                        <td className={td}>{r.date_po}</td>
+                        <td className={td}>
+                          {r.po_customer}
+                          {r.is_manual && <span className="ml-1 rounded bg-warning/20 px-1 text-[10px] font-medium text-warning">Manual PO</span>}
+                        </td>
+                        <td className={`${td} max-w-56 truncate`} title={r.business_partner ?? ""}>{r.business_partner}</td>
+                        <td className={td}>{r.price_list}</td>
+                        <td className={td}>{r.document_status}</td>
+                        <td className={`${td} text-right`}>{money(r.total_po)}</td>
+                        <td className={`${td} text-right`}>{r.hasSO ? money(r.total_so) : "-"}</td>
+                        <td className={`${td} text-right font-medium ${r.selisih < 0 ? "text-danger" : "text-accent"}`}>{r.hasSO ? money(r.selisih) : "-"}</td>
+                        <td className={td}>
+                          {r.status !== "SELISIH" ? "-" : cs === "completed" ? <span className="text-xs text-fg-2">Sudah Selesai</span>
+                            : cs === "archived" ? <span className="text-xs text-success">Sudah di Arsip</span>
+                            : <button type="button" className={btnGhost} onClick={() => archive(r)}>Pindahkan ke Arsip</button>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {visible.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={11}>Tidak ada data untuk status ini.</td></tr>}
+                </tbody>
+              </table>
+            </TableBox>
           </div>
         </section>
       )}

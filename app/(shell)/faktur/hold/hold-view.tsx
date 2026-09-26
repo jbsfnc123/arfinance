@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { EMPTY_INVOICE, type InvoiceFields } from "@/lib/modules/faktur/constants";
 import { fmtDate, fmtTimestamp } from "@/lib/format";
 import type { Tables } from "@/lib/database.types";
@@ -9,6 +10,7 @@ import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { InvoiceLookup } from "../invoice-lookup";
 import { setRemarks, useRemarks } from "@/lib/modules/remarks";
+import { TableBox } from "@/components/table-box";
 
 type Hold = Tables<"tax_invoice_holds">;
 
@@ -27,7 +29,7 @@ export function HoldView() {
   const remarks = useRemarks();
 
   useEffect(() => {
-    supabase.from("tax_invoice_holds").select("*").order("id", { ascending: false }).limit(2000).then(({ data, error }) => {
+    fetchAll((a, b) => supabase.from("tax_invoice_holds").select("*").order("id", { ascending: false }).range(a, b)).then(({ data, error }) => {
       if (error) toast(`Gagal memuat: ${error.message}`, "danger");
       setRows(data ?? []);
     });
@@ -79,7 +81,7 @@ export function HoldView() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="w-full space-y-4">
       <h1 className="text-2xl font-medium">Hold Faktur Pajak</h1>
 
       <div className={`${card} space-y-3 p-5`}>
@@ -92,44 +94,46 @@ export function HoldView() {
         </div>
       </div>
 
-      <section className={`${card} overflow-x-auto`}>
+      <section className={`${card} overflow-hidden`}>
         <div className="flex items-center gap-2 px-4 pt-4">
           <h2 className="text-sm font-medium">Daftar Hold ({shown.length})</h2>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari di semua kolom…" className={`${inputCls} ml-auto !w-72`} />
         </div>
-        <table className="mt-2 w-full text-sm">
-          <thead>
-            <tr>
-              <th className={th}>Waktu</th><th className={th}>Invoice</th><th className={th}>BP_Value</th>
-              <th className={th}>Invoice Date</th><th className={th}>No SJ</th><th className={th}>Keterangan</th><th className={th} />
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((h) => (
-              <tr key={h.id} className="border-t border-line">
-                <td className={td}>
-                  {fmtTimestamp(h.created_at)}
-                  <div className="text-[11px] text-fg-2">{h.created_by_name}</div>
-                </td>
-                <td className={td}>{h.invoice_no}</td>
-                <td className={`${td} max-w-56 truncate`} title={h.bp_value}>{h.bp_value}</td>
-                <td className={td}>{fmtDate(h.invoice_date)}</td>
-                <td className={td}>{h.no_sj}</td>
-                <td className={`${td} max-w-72 whitespace-normal`}>{remarks.get(h.no_sj, h.invoice_no)}</td>
-                <td className={`${td} text-right`}>
-                  <button type="button" className="px-1 text-fg-2 hover:text-fg" title="Ubah"
-                    onClick={() => { setEditing(h.id); setInv({ invoice_no: h.invoice_no, bp_value: h.bp_value, invoice_date: h.invoice_date ?? "", no_sj: h.no_sj ?? "" }); setKet(remarks.get(h.no_sj, h.invoice_no)); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                    <span className="material-symbols-outlined">edit</span>
-                  </button>
-                  <button type="button" className="px-1 text-fg-2 hover:text-danger" title="Hapus" onClick={() => remove(h)}>
-                    <span className="material-symbols-outlined">delete</span>
-                  </button>
-                </td>
+        <TableBox bare className="mt-2">
+          <table className="mt-2 w-full text-sm">
+            <thead>
+              <tr>
+                <th className={th}>Waktu</th><th className={th}>Invoice</th><th className={th}>BP_Value</th>
+                <th className={th}>Invoice Date</th><th className={th}>No SJ</th><th className={th}>Keterangan</th><th className={th} />
               </tr>
-            ))}
-            {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Belum ada hold faktur.</td></tr>}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {shown.map((h) => (
+                <tr key={h.id} className="border-t border-line">
+                  <td className={td}>
+                    {fmtTimestamp(h.created_at)}
+                    <div className="text-[11px] text-fg-2">{h.created_by_name}</div>
+                  </td>
+                  <td className={td}>{h.invoice_no}</td>
+                  <td className={`${td} max-w-56 truncate`} title={h.bp_value}>{h.bp_value}</td>
+                  <td className={td}>{fmtDate(h.invoice_date)}</td>
+                  <td className={td}>{h.no_sj}</td>
+                  <td className={`${td} max-w-72 whitespace-normal`}>{remarks.get(h.no_sj, h.invoice_no)}</td>
+                  <td className={`${td} text-right`}>
+                    <button type="button" className="px-1 text-fg-2 hover:text-fg" title="Ubah"
+                      onClick={() => { setEditing(h.id); setInv({ invoice_no: h.invoice_no, bp_value: h.bp_value, invoice_date: h.invoice_date ?? "", no_sj: h.no_sj ?? "" }); setKet(remarks.get(h.no_sj, h.invoice_no)); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                      <span className="material-symbols-outlined">edit</span>
+                    </button>
+                    <button type="button" className="px-1 text-fg-2 hover:text-danger" title="Hapus" onClick={() => remove(h)}>
+                      <span className="material-symbols-outlined">delete</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Belum ada hold faktur.</td></tr>}
+            </tbody>
+          </table>
+        </TableBox>
       </section>
     </div>
   );
