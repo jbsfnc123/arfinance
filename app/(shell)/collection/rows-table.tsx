@@ -5,6 +5,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { rupiah } from "@/lib/format";
 import { cellText, COLUMN_DEFS, type CollectionRow, type ColumnKey } from "@/lib/modules/collection/view-model";
 import { useFillHeight } from "@/lib/ui/fill-height";
+import { useScrollMemory } from "@/lib/ui/view-state";
 import { btnGhost, card } from "@/components/ui";
 
 const ROW_HEIGHT = 40;
@@ -28,13 +29,15 @@ export function RowsTable(props: {
   selection: string[];
   setSelection: (fn: (prev: string[]) => string[]) => void;
   onEditKeterangan?: (row: CollectionRow) => void;
+  scrollKey?: string; // posisi scroll diingat selama tab terbuka
 }) {
   const { rows, columns, selection, setSelection } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const selected = useMemo(() => new Set(selection), [selection]);
   const drag = useRef<boolean | null>(null); // mode seret: true = centang, false = hapus centang
   const [wrap, setWrap] = useState(false);
-  useFillHeight(scrollRef, { reserve: 48, min: 280 }); // 48 = baris status di bawah tabel + tepi kartu
+  useFillHeight(scrollRef, { reserve: 48, min: 280 });
+  useScrollMemory(scrollRef, props.scrollKey ?? "collection:scroll", !props.loading && rows.length > 0); // 48 = baris status di bawah tabel + tepi kartu
 
   const virtualizer = useVirtualizer({
     count: rows.length,

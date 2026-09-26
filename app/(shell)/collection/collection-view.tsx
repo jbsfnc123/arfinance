@@ -14,6 +14,7 @@ import {
   type CollectionRow, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
 import type { WaTemplate } from "@/lib/modules/collection/wa-message";
+import { useViewState } from "@/lib/ui/view-state";
 import { btnGhost, card, inputCls } from "@/components/ui";
 import { KpiPanel, CategoryCards } from "./kpi-panel";
 import { FilterBar } from "./filter-bar";
@@ -37,10 +38,16 @@ export function CollectionView(props: {
   const remarks = useRemarks();
   // Pengaturan (template WA, waktu update) dari dataset lokal — halaman server tanpa query tambahan.
   const lastUpdate = (settings.data?.last_tagihan_update as string | undefined) ?? aging.data?.uploadedAt ?? null;
-  const [coll, setColl] = useState(props.initial);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS);
-  const [selection, setSelection] = useState<string[]>([]);
+  // Collection terpilih, filter, kolom & centang diingat selama tab terbuka: kembali dari menu lain (tanpa ?c=)
+  // langsung ke collection & tampilan yang sama. Filter & centang disimpan per collection.
+  const [storedColl, setColl] = useViewState("collection:coll", "");
+  const coll = props.locked ? props.initial : props.initial || storedColl;
+  useEffect(() => {
+    if (!props.locked && props.initial && props.initial !== storedColl) setColl(props.initial);
+  }, [props.locked, props.initial, storedColl, setColl]);
+  const [filters, setFilters] = useViewState<Filters>(`collection:${coll}:filters`, EMPTY_FILTERS);
+  const [columns, setColumns] = useViewState<ColumnKey[]>("collection:columns", DEFAULT_COLUMNS);
+  const [selection, setSelection] = useViewState<string[]>(`collection:${coll}:sel`, []);
 
   // Hitungan dibagi antar halaman (lib/local/derived): tidak diulang saat kembali ke menu ini.
   const ar = useMemo(() => (aging.data ? arOf(aging.data.lines, settings.data ?? null) : []), [aging.data, settings.data]);
@@ -105,9 +112,7 @@ export function CollectionView(props: {
   );
 
   function pick(name: string) {
-    // Ganti collection: kosongkan filter, pilihan, dan data (seperti showApp lama).
-    setFilters(EMPTY_FILTERS);
-    setSelection([]);
+    // Ganti collection: filter & centang tersimpan per collection (kembali ke collection lama = tampilan lama).
     setColl(name);
     router.replace(name ? `/collection?c=${encodeURIComponent(name)}` : "/collection");
   }
@@ -166,6 +171,8 @@ export function CollectionView(props: {
       />
 
       <RowsTable
+        key={coll}
+        scrollKey={`collection:${coll}:scroll`}
         rows={filtered}
         columns={columns}
         loading={loading}

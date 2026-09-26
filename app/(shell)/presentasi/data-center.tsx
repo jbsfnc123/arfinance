@@ -10,6 +10,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { useViewState } from "@/lib/ui/view-state";
 
 type MonthRow = { month: string; sheets_filled: number; sheets_total: number; complete: boolean; file_name: string | null; uploaded_at: string | null };
 
@@ -24,7 +25,7 @@ export function DataCenter({ open, onClose, onSaved, canDelete }: { open: boolea
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const current = todayJakarta().slice(0, 7);
-  const [month, setMonth] = useState(current);
+  const [month, setMonth] = useViewState("presentasi:dc:month", current);
   const [rows, setRows] = useState<MonthRow[] | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);

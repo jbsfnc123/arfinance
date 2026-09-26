@@ -7,6 +7,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { useToast } from "@/components/toast";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Row = {
   id: number; account: string; tx_date: string; amount: number; keterangan: string | null; catatan: string | null;
@@ -34,7 +35,7 @@ const COLS: LCol<Row>[] = [
 export function MutasiData() {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
-  const [month, setMonth] = useState(todayJakarta().slice(0, 7));
+  const [month, setMonth] = useViewState("mutasi:data:month", todayJakarta().slice(0, 7));
   const [note, setNote] = useState(NOTES[0]);
   const mutasi = useDataset("mutasi");
 
@@ -57,7 +58,7 @@ export function MutasiData() {
   }
 
   return (
-    <LocalTable title={`Mutasi ${month}`} rows={rows} cols={COLS} rowKey={(r) => r.id} loading={!mutasi.data}
+    <LocalTable title={`Mutasi ${month}`} stateKey="mutasi-data" rows={rows} cols={COLS} rowKey={(r) => r.id} loading={!mutasi.data}
       search={["keterangan", "catatan", "account"]}
       filters={[{ k: "account", l: "Rekening", options: accounts }, { k: "status", l: "Status", options: ["Dihitung", "Tidak dihitung"] }]}
       rowClass={(r) => (r.excluded ? "text-fg-2 [&>td:not(:last-child)]:line-through [&>td]:decoration-danger/60" : "")}

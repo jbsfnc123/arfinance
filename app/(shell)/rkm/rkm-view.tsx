@@ -14,6 +14,7 @@ import { setRemarks } from "@/lib/modules/remarks";
 import { M10Dashboard } from "../mitra10/m10-dashboard";
 import { RkmUpload } from "./rkm-upload";
 import { useRkm } from "./use-rkm";
+import { useViewState } from "@/lib/ui/view-state";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -71,7 +72,7 @@ type AddKind = { table: Table; fields: Field<RkmGr>[] | Field<RkmKw>[] } | null;
 export function RkmView() {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>("dash");
+  const [tab, setTab] = useViewState<Tab>("rkm:tab", "dash");
   const [ket, setKet] = useState("");
   const [add, setAdd] = useState<AddKind>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -91,9 +92,9 @@ export function RkmView() {
   }
 
   // Filter Kertas Kerja: rentang Invoice Date & Cabang.
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [cabang, setCabang] = useState("");
+  const [from, setFrom] = useViewState("rkm:kk:from", "");
+  const [to, setTo] = useViewState("rkm:kk:to", "");
+  const [cabang, setCabang] = useViewState("rkm:kk:cabang", "");
   const cabangs = useMemo(() => [...new Set((c?.worksheet ?? []).map((r) => r.cabang))].sort(), [c]);
   // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
   const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
@@ -140,7 +141,7 @@ export function RkmView() {
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
-        {tab === "dash" && <M10Dashboard m={m} showJadwal={false} />}
+        {tab === "dash" && <M10Dashboard stateKey="rkm" m={m} showJadwal={false} />}
         {tab === "kk" && (
           <LocalTable title="Kertas Kerja" hideKey="rkm-kk" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "keterangan", "no_faktur_pajak"]}

@@ -11,6 +11,7 @@ import { ImportLog } from "@/components/import-log";
 import { UploadChecklist } from "./upload-checklist";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Item = {
   file: File; sheets?: Sheet[]; kind?: FileKind | null; summary?: Summary; error?: string;
@@ -23,7 +24,7 @@ export function UploadCenter() {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [items, setItems] = useState<Item[]>([]);
-  const [month, setMonth] = useState(todayJakarta().slice(0, 7));
+  const [month, setMonth] = useViewState("upload:month", todayJakarta().slice(0, 7));
   const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState(0);
   const [over, setOver] = useState(false);

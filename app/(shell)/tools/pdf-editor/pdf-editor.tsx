@@ -13,6 +13,7 @@ import { TabOverlay } from "./tab-overlay";
 import { TabMerge, type MergeState } from "./tab-merge";
 import { TabImg2Pdf, type ImgState } from "./tab-img2pdf";
 import { TabCompress } from "./tab-compress";
+import { useViewState } from "@/lib/ui/view-state";
 
 const TABS = [
   { key: "move", label: "1 · Pindah Halaman Terakhir ke Depan", icon: "low_priority" },
@@ -42,7 +43,7 @@ function Editor() {
   const toast = useToast();
   const busy = useBusy();
   const d = useDocs();
-  const [tab, setTab] = useState<Tab>("move");
+  const [tab, setTab] = useViewState<Tab>("pdf:tab", "move");
   const [help, setHelp] = useState(false);
   const [merge, setMerge] = useState<MergeState>({ items: [], photoSize: "a4", initialized: false });
   const [img, setImg] = useState<ImgState>({ items: [], paper: "auto", orient: "auto", margin: "none" });
@@ -80,7 +81,7 @@ function Editor() {
       toast(`${images.length} foto dimasukkan ke "Gambar ke PDF".`, "info");
       if (!pdfs.length) setTab("img2pdf");
     }
-  }, [addPdfs, addImages, toast]);
+  }, [addPdfs, addImages, toast, setTab]);
 
   // Pintasan keyboard global & cegah browser membuka file yang dijatuhkan di luar area.
   useEffect(() => {
@@ -101,7 +102,7 @@ function Editor() {
     window.addEventListener("dragover", stop);
     window.addEventListener("drop", stop);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("dragover", stop); window.removeEventListener("drop", stop); };
-  }, [toast]);
+  }, [toast, setTab]);
 
   return (
     <div className="mx-auto max-w-[1600px]">

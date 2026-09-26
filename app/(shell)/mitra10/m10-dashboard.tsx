@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { fmtDate, fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { todayJakarta } from "@/lib/parsers/date";
 import { m10Dashboard, type DashInput, type Stat } from "@/lib/modules/m10/compute";
 import type { AgingLine, Schedule } from "@/lib/local/datasets";
 import { card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 const pct = (a: number, b: number) => (b ? `${(Math.floor((a / b) * 1000) / 10).toFixed(1)}%` : "0%");
 
@@ -19,9 +20,9 @@ export type DashSource = {
 
 // Port sheet Dashboard: dihitung di browser dari data lokal (dulu RPC SQL yang timeout).
 // Dipakai Mitra10 & RKM (tanpa jadwal bayar → kartu Jadwal disembunyikan).
-export function M10Dashboard({ m, showJadwal = true }: { m: DashSource; showJadwal?: boolean }) {
-  const [month, setMonth] = useState<string | null>(null);
-  const [key, setKey] = useState("");
+export function M10Dashboard({ m, showJadwal = true, stateKey }: { m: DashSource; showJadwal?: boolean; stateKey: string }) {
+  const [month, setMonth] = useViewState<string | null>(`${stateKey}:dash:month`, null);
+  const [key, setKey] = useViewState(`${stateKey}:dash:filter`, "");
   const src = useMemo<Scoped | null>(() => (key && m.filter ? m.filter.scope(key) : m.computed ? { computed: m.computed, agingLines: m.agingLines, schedule: m.schedule } : null),
     [key, m.filter, m.computed, m.agingLines, m.schedule]);
   const d = useMemo(() => (src ? m10Dashboard(src.computed, src.agingLines, src.schedule, { month, today: todayJakarta(), lastAging: m.lastAging }) : null),

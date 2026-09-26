@@ -10,6 +10,7 @@ import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { LtkpPreview } from "../ltkp-preview";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Req = {
   id: number; created_at: string; created_by_name: string | null; bp_value: string; invoice_date: string | null;
@@ -24,10 +25,10 @@ export function PengajuanList({ myName }: { myName: string }) {
   const remarks = useRemarks();
   const [rows, setRows] = useState<Req[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState<"all" | "open" | "done">("open");
+  const [q, setQ] = useViewState("faktur:list:q", "");
+  const [status, setStatus] = useViewState<"all" | "open" | "done">("faktur:list:status", "open");
   const [open, setOpen] = useState<number | null>(null);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useViewState<Set<number>>("faktur:list:sel", new Set(), { set: true });
   const [ltkpOpen, setLtkpOpen] = useState(false);
   const [noLtkp, setNoLtkp] = useState("");
   const [pdf, setPdf] = useState<File | null>(null);

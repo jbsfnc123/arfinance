@@ -9,6 +9,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel, rupiah } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnPrimary, card, inputCls } from "@/components/ui";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Parsed = ReturnType<typeof parseTarget>;
 
@@ -26,7 +27,7 @@ const FIELD_LABEL: Record<keyof TargetRow, string> = {
 export function UploadTarget() {
   const router = useRouter();
   const toast = useToast();
-  const [month, setMonth] = useState(todayJakarta().slice(0, 7));
+  const [month, setMonth] = useViewState("target:month", todayJakarta().slice(0, 7));
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<Parsed | null>(null);
   const [busy, setBusy] = useState(false);

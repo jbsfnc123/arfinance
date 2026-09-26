@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/database.types";
 import { btnGhost, card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 const PAGE = 50;
 
@@ -14,7 +15,7 @@ export function MasterView() {
   const [rows, setRows] = useState<Tables<"so_master">[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useViewState("cekharga:master:q", "");
   const [query, setQuery] = useState("");
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import { fmtDate } from "@/lib/format";
 import { parseNumber } from "@/lib/parsers/number";
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { useFillHeight } from "@/lib/ui/fill-height";
+import { useScrollMemory, useViewState } from "@/lib/ui/view-state";
 import { btnGhost, card, inputCls, th } from "@/components/ui";
 
 // Tabel data standar: semua baris sudah ada di browser, jadi filter/cari/sort/export instan.
@@ -73,6 +74,7 @@ export function LocalTable<T>(props: {
   onAdd?: () => void;
   onDelete?: (rows: T[]) => void;
   hideKey?: string; // aktifkan sembunyikan/tampilkan kolom dari header (disimpan per tabel)
+  stateKey?: string; // kunci state tampilan (cari/filter/urut/centang/scroll) yang diingat selama tab terbuka
   rowClass?: (r: T) => string;
   onRowClick?: (r: T) => void;
   emptyText?: string;
@@ -81,13 +83,16 @@ export function LocalTable<T>(props: {
   minHeight?: number;  // batas bawah tinggi saat fill (default 320)
   noExport?: boolean;
 }) {
-  const [q, setQ] = useState("");
-  const [f, setF] = useState<Record<string, string>>({});
-  const [sort, setSort] = useState<{ k: string; dir: 1 | -1 } | null>(null);
-  const [sel, setSel] = useState<Set<string | number>>(new Set());
+  // Cari, filter, urutan, centang, Teks penuh & posisi scroll diingat selama tab browser terbuka (pindah menu aman).
+  const vk = `table:${props.stateKey ?? props.hideKey ?? props.title}`;
+  const [q, setQ] = useViewState(`${vk}:q`, "");
+  const [f, setF] = useViewState<Record<string, string>>(`${vk}:f`, {});
+  const [sort, setSort] = useViewState<{ k: string; dir: 1 | -1 } | null>(`${vk}:sort`, null);
+  const [sel, setSel] = useViewState<Set<string | number>>(`${vk}:sel`, new Set(), { set: true });
   const [editing, setEditing] = useState<{ id: string | number; k: string; v: string } | null>(null);
-  const [wrapAll, setWrapAll] = useState(false);
+  const [wrapAll, setWrapAll] = useViewState(`${vk}:wrap`, false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  useScrollMemory(scrollRef, `${vk}:scroll`, !props.loading && props.rows.length > 0);
   const fill = props.fill ?? true;
   useFillHeight(scrollRef, { enabled: fill, min: props.minHeight ?? 320 });
   const [hidden, setHidden] = useHidden(props.hideKey);
@@ -200,6 +205,12 @@ export function LocalTable<T>(props: {
               </div>
             )}
           </span>
+        )}
+        {(q || Object.keys(activeF).length > 0 || sort) && (
+          <button type="button" className={`${btnGhost} text-accent`} title="Kosongkan pencarian, filter & urutan tabel ini"
+            onClick={() => { setQ(""); setF({}); setSort(null); }}>
+            <span className="material-symbols-outlined !text-base">filter_alt_off</span>Reset filter
+          </button>
         )}
         <span className="ml-auto flex flex-wrap items-center gap-2">
           <span className="whitespace-nowrap text-sm text-fg-2">

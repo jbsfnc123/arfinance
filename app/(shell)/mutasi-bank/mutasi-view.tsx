@@ -5,6 +5,7 @@ import { Tabs } from "@/components/tabs";
 import { MutasiDashboard } from "./mutasi-dashboard";
 import { MutasiUpload } from "./mutasi-upload";
 import { MutasiData } from "./mutasi-data";
+import { useViewState } from "@/lib/ui/view-state";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -15,7 +16,7 @@ type Tab = (typeof TABS)[number]["key"];
 
 // Port workbook "Report Mutasi.xlsm" (Mutasi Bank VS Realisasi).
 export function MutasiView() {
-  const [tab, setTab] = useState<Tab>("dash");
+  const [tab, setTab] = useViewState<Tab>("mutasi:tab", "dash");
   const [version, setVersion] = useState(0);
   return (
     <div className="w-full">

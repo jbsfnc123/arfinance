@@ -13,7 +13,7 @@ export default async function ShellLayout({ children }: LayoutProps<"/">) {
   return (
     <ShellChrome title={WORKSPACES.ar.label} icon={WORKSPACES.ar.icon} menu={menu}
       portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null} showHome={canAccess(HOME_ITEM, access)}
-      user={{ name: profile.display_name, role: role.name, collection: profile.collection_name }}>
+      user={{ id: profile.id, name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}
     </ShellChrome>
   );

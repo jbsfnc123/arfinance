@@ -12,6 +12,7 @@ import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 const EDIT_CATEGORIES = ["Case", "Administratif", "Reminder", "No Respon"];
 
@@ -27,7 +28,7 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
   const activity = useDataset("activity");
   const aging = useDataset("aging");
   const settings = useDataset("settings");
-  const [status, setStatus] = useState<StatusFilter>("open");
+  const [status, setStatus] = useViewState<StatusFilter>("case:notelog:status", "open");
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<NoteGroup | null>(null);
   const [draft, setDraft] = useState({ kategori: "", isi: "" });
