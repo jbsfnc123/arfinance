@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeM10, m10AgingLines, m10Dashboard, usernameOf } from "./compute";
+import { computeM10, m10AgingLines, m10Dashboard, m10Usernames, scopeM10, usernameOf } from "./compute";
 import type { AgingLine, Gr, Kwitansi, Worksheet } from "@/lib/local/datasets";
 
 const line = (p: Partial<AgingLine>): AgingLine => ({
@@ -70,5 +70,35 @@ describe("Mitra10 compute", () => {
     expect(d.monthly).toEqual([{ month: "2026-08", invoice: 1, done: 0, avgLama: null }, { month: "2026-09", invoice: 2, done: 1, avgLama: 7 }]);
     expect(d.daily.find((x) => x.date === "2026-09-25")?.jadwal).toBe(2000000);
     expect(d.scheduleAvgDays).toBe(15);
+  });
+});
+
+describe("Mitra10 filter dashboard per Username", () => {
+  const aging = [
+    line({ invoice_no: "A1", payment_group: "Grup Pengu111", no_sj: "SJ/1" }),
+    line({ invoice_no: "B1", payment_group: "Grup Pengu222", no_sj: "SJ/2" }),
+  ];
+  const c = computeM10({
+    worksheet: [ws({ id: 1, invoice_no: "A1", payment_group: "Grup Pengu111", no_sj: "SJ/1" }), ws({ id: 2, invoice_no: "B1", payment_group: "Grup Pengu222", no_sj: "SJ/2" })],
+    gr: [gr({ id: 1, sj_no: "SJ/1" }), gr({ id: 2, sj_no: "SJ/2" })],
+    kwitansi: [kw({ id: 1, invoice_no: "K1", vendor_invoice_no: "A1", kuitansi_no: "KW1" }), kw({ id: 2, invoice_no: "K2", username: "PENGU222", kuitansi_no: "KW2" })],
+    schedule: [], aging,
+  });
+  const schedule = [{ no_kw: "KW1", spp: null, nilai_kw: 1, tgl_tukar_faktur: null, jadwal_transfer: "2026-09-30", notes: null },
+    { no_kw: "KW2", spp: null, nilai_kw: 1, tgl_tukar_faktur: null, jadwal_transfer: "2026-09-30", notes: null }];
+
+  it("opsi username dari Kertas Kerja & aging", () => {
+    expect(m10Usernames(c, aging)).toEqual(["Pengu111", "Pengu222"]);
+  });
+
+  it("satu filter memengaruhi Kertas Kerja, aging, GR, kwitansi & jadwal", () => {
+    const s = scopeM10(c, aging, schedule, "Pengu111");
+    expect(s.computed.worksheet.map((r) => r.invoice_no)).toEqual(["A1"]);
+    expect(s.agingLines.map((l) => l.invoice_no)).toEqual(["A1"]);
+    expect(s.computed.gr.map((g) => g.sj_no)).toEqual(["SJ/1"]);
+    expect(s.computed.kwitansi.map((k) => k.kuitansi_no)).toEqual(["KW1"]);
+    expect(s.schedule.map((x) => x.no_kw)).toEqual(["KW1"]);
+    expect(scopeM10(c, aging, schedule, "Pengu222").computed.kwitansi.map((k) => k.kuitansi_no)).toEqual(["KW2"]); // lewat username kwitansi
+    expect(scopeM10(c, aging, schedule, "").computed).toBe(c);
   });
 });

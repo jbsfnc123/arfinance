@@ -70,8 +70,8 @@ export function RkmUpload({ taxName: initialTax }: { taxName: string }) {
       </div>
 
       <div className={`${card} space-y-3 p-4`}>
-        <h2 className="font-medium">2. Upload GR RKM</h2>
-        <p className="text-xs text-fg-2">Excel dari portal RKM dengan kolom No. GRPO, No. Pengiriman, Tanggal GRPO, Jumlah GRPO/GRN, No. Faktur Pajak, Cabang, dst. No. Pengiriman dicocokkan dengan No SJ aging. <b className="text-warning">Mengganti seluruh isi GR Update.</b></p>
+        <h2 className="font-medium">2. Upload GR RKM (Receiving)</h2>
+        <p className="text-xs text-fg-2">Excel dari portal RKM dengan kolom No. GRPO, No. Pengiriman, Tanggal GRPO, Jumlah GRPO/GRN, No. Faktur Pajak, Cabang, dst. No. Pengiriman dicocokkan dengan No SJ aging. <b className="text-warning">Mengganti seluruh isi Receiving.</b></p>
         {fileInput("gr", ".xlsx,.xls")}
       </div>
 

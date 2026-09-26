@@ -171,3 +171,24 @@ export function m10Dashboard(
     lastAging: opt.lastAging,
   };
 }
+
+// ── Filter dashboard per Username ────────────────────────────────
+// Satu filter memengaruhi semua data dashboard: Kertas Kerja, aging, GR (via SJ), kwitansi
+// (username / invoice) dan jadwal bayar (No KW kwitansi terfilter). "" = semua.
+export function m10Usernames(c: ReturnType<typeof computeM10>, aging: AgingLine[]) {
+  return [...new Set([...c.worksheet.map((r) => r.username), ...aging.map((l) => usernameOf(l.payment_group))])].sort();
+}
+
+export function scopeM10(c: ReturnType<typeof computeM10>, aging: AgingLine[], schedule: Schedule[], u: string) {
+  if (!u) return { computed: c, agingLines: aging, schedule };
+  const worksheet = c.worksheet.filter((r) => r.username === u);
+  const sj = new Set(worksheet.map((r) => up(r.no_sj)));
+  const inv = new Set(worksheet.map((r) => r.invoice_no).filter(Boolean) as string[]);
+  const kwitansi = c.kwitansi.filter((k) => up(k.username) === up(u) || (!!k.vendor_invoice_no && inv.has(k.vendor_invoice_no)));
+  const kw = new Set(kwitansi.map((k) => k.kuitansi_no).filter(Boolean) as string[]);
+  return {
+    computed: { worksheet, gr: c.gr.filter((g) => sj.has(up(g.sj_no))), kwitansi },
+    agingLines: aging.filter((l) => usernameOf(l.payment_group) === u),
+    schedule: schedule.filter((s) => kw.has(s.no_kw)),
+  };
+}
