@@ -154,10 +154,6 @@ button, input, select { font: inherit; color: inherit; }
 .kpi .label { font-size: 12.5px; color: var(--text-2); font-weight: 600; }
 .kpi .value { font-size: 30px; font-weight: 750; letter-spacing: -.02em; margin-top: 6px; }
 .kpi .value.lg { font-size: 40px; }
-.s-body.exec .kpi { padding: 14px 14px; }
-.s-body.exec .kpi .value { font-size: 25px; }
-.s-body.exec .kpi .row { gap: 4px; }
-.s-body.exec .kpi .sub { font-size: 11px; }
 .kpi .sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
 .delta.good { color: var(--good); background: var(--good-soft); }
