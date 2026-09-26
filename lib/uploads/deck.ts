@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/database.types";
+import { layersFrom, type ManualTables, type MetricRow, type Saved, type Series, type Texts } from "@/lib/modules/deck/assemble";
 
 // Presentasi (AR Management Deck) tidak menyimpan salinan data mentah lagi. Agregat per bulan
 // (seri + detail BP) dihitung ulang dari tabel inti dengan PARSER LAMA (public/presentasi-app/
@@ -83,48 +84,89 @@ export async function recompute(supabase: SupabaseClient<Database>, P: LegacyPar
 }
 
 // Proses semua bulan yang ditandai dirty oleh commit upload.
+// Bulan yang sudah DITUTUP (snapshot statis) tidak dihitung ulang — upload ulang tidak mengubahnya.
 export async function recomputeDirty(supabase: SupabaseClient<Database>, P: LegacyParser) {
-  const { data, error } = await supabase.from("deck_dirty").select("kind, month, at");
+  const [{ data, error }, { data: periods }] = await Promise.all([
+    supabase.from("deck_dirty").select("kind, month, at"),
+    supabase.from("deck_periods").select("month").eq("status", "closed"),
+  ]);
   if (error) throw error;
+  const closed = new Set((periods ?? []).map((x) => x.month));
   for (const d of data ?? []) {
-    await recompute(supabase, P, d.kind, d.month);
+    if (!closed.has(d.month)) await recompute(supabase, P, d.kind, d.month);
     await supabase.from("deck_dirty").delete().eq("kind", d.kind).eq("month", d.month).lte("at", d.at);
   }
   return (data ?? []).length;
 }
 
-type DeckState = Record<string, unknown> & { layers?: Record<string, unknown> };
-const DERIVED_KEYS = ["bpSales", "bpAging", "payments", "bpMaster"] as const;
+type DeckState = Record<string, unknown> & { layers?: Record<string, unknown>; config?: { month?: string; week?: number } };
 
-// Susun state deck: dokumen deck_state (manual, excel, teks, config) + agregat turunan.
-export async function assembleState(supabase: SupabaseClient<Database>, base: DeckState | null, emptyState: () => DeckState) {
-  const st: DeckState = base ? { ...base } : emptyState();
-  const layers = { ...(st.layers ?? {}) } as Record<string, unknown>;
-  const raw: Record<string, Record<string, unknown>> = {};
+async function selectAll<T>(q: () => { range: (a: number, b: number) => PromiseLike<{ data: T[] | null; error: unknown }> }) {
+  return fetchAll(q as never) as unknown as Promise<T[]>;
+}
+
+// Susun state deck dari tabel per bulan (Fase 23):
+//   bulan TERBUKA  → agregat mentah terkini (deck_derived) + Collection otomatis (autoFor)
+//   bulan TERTUTUP → snapshot beku (deck_metrics raw/auto + deck_bp_snapshot)
+//   manual / excel / tabel manual / teks → tabel masing-masing; config & label → deck_state
+export async function assembleState(
+  supabase: SupabaseClient<Database>, base: DeckState | null, emptyState: () => DeckState,
+  auto: Series, // Collection otomatis per bulan (dari Target & ERP); hanya dipakai untuk bulan terbuka
+) {
+  const st: DeckState = { ...emptyState(), ...(base ?? {}) };
+  const [periods, metrics, rows, texts, snaps, derived] = await Promise.all([
+    selectAll<{ month: string; status: string }>(() => supabase.from("deck_periods").select("month, status") as never),
+    selectAll<MetricRow>(() => supabase.from("deck_metrics").select("month, key, source, value").order("month") as never),
+    selectAll<{ month: string; table_name: string; row: Record<string, unknown> }>(() => supabase.from("deck_manual_rows").select("month, table_name, row").order("month").order("table_name").order("sort") as never),
+    selectAll<{ month: string; slide_key: string; text: string }>(() => supabase.from("deck_texts").select("month, slide_key, text") as never),
+    selectAll<{ month: string; kind: string; bp: unknown }>(() => supabase.from("deck_bp_snapshot").select("month, kind, bp") as never),
+    selectAll<{ kind: string; month: string; series: unknown; bp: unknown }>(() => supabase.from("deck_derived").select("kind, month, series, bp").order("month") as never),
+  ]);
+  const closed = new Set(periods.filter((x) => x.status === "closed").map((x) => x.month));
+
+  const derivedOpen: Series = {};
   const bags: Record<string, Record<string, unknown>> = { invoice: {}, payment: {}, aging: {} };
   let master: Record<string, unknown> = {};
-  const { data, error } = await supabase.from("deck_derived").select("kind, month, series, bp").order("month");
-  if (error) throw error;
-  for (const d of data ?? []) {
+  for (const d of derived) {
     if (d.kind === "bpmaster") { master = (d.bp ?? {}) as Record<string, unknown>; continue; }
-    for (const [k, byMonth] of Object.entries((d.series ?? {}) as Record<string, Record<string, unknown>>)) {
-      raw[k] = { ...(raw[k] ?? {}), ...byMonth };
+    if (closed.has(d.month)) continue;
+    for (const [k, byMonth] of Object.entries((d.series ?? {}) as Series)) {
+      for (const [m, v] of Object.entries(byMonth)) if (!closed.has(m)) (derivedOpen[k] ??= {})[m] = v;
     }
     bags[d.kind][d.month] = d.bp;
   }
-  layers.raw = raw;
-  st.layers = layers;
+  for (const sn of snaps) if (sn.kind !== "bpmaster") bags[sn.kind][sn.month] = sn.bp;
+
+  const autoOpen: Series = {};
+  for (const [k, byM] of Object.entries(auto)) for (const [m, v] of Object.entries(byM)) if (!closed.has(m)) (autoOpen[k] ??= {})[m] = v;
+  const layers = layersFrom(metrics.filter((m) => m.source !== "auto" || closed.has(m.month)), derivedOpen, autoOpen);
+  st.layers = { ...(st.layers ?? {}), ...layers };
   st.bpSales = bags.invoice;
   st.payments = bags.payment;
   st.bpAging = bags.aging;
   st.bpMaster = master;
   st.bpMasterInfo = Object.keys(master).length ? { file: "Database", at: null, count: Object.keys(master).length } : null;
+
+  const manual: ManualTables = {};
+  for (const r of rows) (manual[r.table_name] ??= []).push({ ...r.row, Bulan: r.month });
+  st.manual = manual;
+  const tx: Texts = {};
+  for (const t of texts) (tx[t.month] ??= {})[t.slide_key] = t.text;
+  st.texts = tx;
+  st.closedMonths = [...closed].sort();
   return st;
 }
 
-// Yang disimpan ke deck_state hanya bagian yang tidak bisa diturunkan dari tabel inti.
+// Bagian yang dibandingkan saat menyimpan (lihat diffSaved).
+export function savedPart(st: DeckState): Saved {
+  const layers = (st.layers ?? {}) as Record<string, Series>;
+  return {
+    manual: structuredClone(layers.manual ?? {}), excel: structuredClone(layers.excel ?? {}),
+    tables: structuredClone((st.manual ?? {}) as ManualTables), texts: structuredClone((st.texts ?? {}) as Texts),
+  };
+}
+
+// deck_state kini hanya konfigurasi, label seri, dan riwayat impor.
 export function persistable(st: DeckState) {
-  const out: DeckState = { ...st, layers: { ...(st.layers ?? {}), raw: {} } };
-  for (const k of DERIVED_KEYS) delete out[k];
-  return out;
+  return { version: st.version ?? 2, config: st.config ?? {}, labels: st.labels ?? {}, imports: st.imports ?? [] };
 }
