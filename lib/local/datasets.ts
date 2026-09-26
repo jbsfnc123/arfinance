@@ -3,6 +3,10 @@ import type { DatasetKey } from "@/lib/cache/versions";
 
 // Definisi dataset lokal: RPC paket, token versi penentu, dan bentuk hasil setelah di-unpack.
 
+export type ErpInvoice = {
+  invoice_no: string; invoice_date: string; amount: number; bp_key?: string | null;
+  due_date?: string | null; payment_term?: string | null; bp_name?: string | null; bp_location?: string | null;
+};
 export type AgingLine = {
   line_no: number; invoice_no: string | null; payment_group: string | null; marketing: string | null;
   collection_name: string | null; sales_name: string | null; bp_key: string | null; business_partner: string | null;
@@ -37,7 +41,7 @@ export type Datasets = {
   m10: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[] };
   rkm: { worksheet: RkmWorksheet[]; gr: RkmGr[]; kwitansi: RkmKw[] };
   mutasi: { accounts: Account[]; mutations: Mutation[] };
-  erp: { invoices: { invoice_no: string; invoice_date: string; amount: number; bp_key?: string | null }[]; payments: { invoice_no: string; payment_date: string; amount: number }[] };
+  erp: { invoices: ErpInvoice[]; payments: { invoice_no: string; payment_date: string; amount: number }[] };
   tukar: { done: { tanggal_tukar: string | null; kurir: string | null; business_partner: string | null; kode: string | null }[] };
   settings: Record<string, unknown>;
   remarks: { remarks: Remark[] };
