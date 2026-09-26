@@ -8,8 +8,13 @@ export type Texts = Record<string, Record<string, string>>; // bulan → { slide
 
 const put = (s: Series, key: string, month: string, v: number) => { (s[key] ??= {})[month] = v; };
 
+// Seri penjualan (sheet Input baris 6–42: Sales, Sales historis, Invoice Amount/Count per TOP·Ex DO·CBD untuk
+// All/Traditional/Reseller, BP Reseller aktif). Untuk bulan yang punya riwayat Excel, Excel-lah acuannya — data
+// ERP bulan lama belum lengkap (hanya invoice yang belum lunas), sehingga nilai raw bulan itu diabaikan.
+export const SALES_HISTORY_KEY = /^(sales|sales_hist|(amt|cnt)_(all|trad|res):\d|bp_res:\d)$/;
+
 // Layer app: manual > raw > excel. Seri 'auto' (Collection dari Target & ERP) masuk layer raw,
-// hanya bila bulan/kunci itu belum punya nilai raw.
+// hanya bila bulan/kunci itu belum punya nilai raw. Pengecualian: SALES_HISTORY_KEY (lihat di atas).
 export function layersFrom(metrics: MetricRow[], derivedOpen: Series, autoOpen: Series) {
   const manual: Series = {}, excel: Series = {}, raw: Series = {};
   for (const [k, byM] of Object.entries(derivedOpen)) for (const [m, v] of Object.entries(byM)) put(raw, k, m, v);
@@ -23,6 +28,11 @@ export function layersFrom(metrics: MetricRow[], derivedOpen: Series, autoOpen: 
     else put(auto, r.key, r.month, v);
   }
   for (const [k, byM] of Object.entries(auto)) for (const [m, v] of Object.entries(byM)) if (raw[k]?.[m] === undefined) put(raw, k, m, v);
+  for (const [k, byM] of Object.entries(excel)) {
+    if (!SALES_HISTORY_KEY.test(k) || !raw[k]) continue;
+    for (const m of Object.keys(byM)) delete raw[k][m];
+    if (!Object.keys(raw[k]).length) delete raw[k];
+  }
   return { manual, excel, raw };
 }
 

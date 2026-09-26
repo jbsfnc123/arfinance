@@ -61,62 +61,6 @@ SLIDES.push({
   },
 });
 
-// ================================================================ 2. Executive summary
-
-SLIDES.push({
-  id: 'exec', title: 'Executive Summary', desc: 'KPI utama & sorotan',
-  render(ctx, el) {
-    const D = ctx.D;
-    const m = ctx.m;
-    const ex = execSummary_(D, m);
-    const colors = { sales: Charts.C.CY, ytd: Charts.C.CY, coll: Charts.C.LINE2, open: '#8B5CF6', od: Charts.C.CBD, ardays: '#0EA5E9',
-      late: '#E11D48', pay: '#16A34A' };
-    el.innerHTML = sHead_(ctx, 2, 'Executive Summary', 'Ringkasan kinerja ' + idMonth_(m)) +
-      '<div class="s-body exec" style="grid-template-columns: 1fr 340px">' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;gap:12px">' +
-      ex.kpis.map(k => kpiCard_({ id: k.id, label: k.label, value: k.value, spark: true,
-        deltaHtml: delta_(k.delta, k.dKind, k.good, k.dLabel) })).join('') + '</div>' +
-      '<div style="display:grid;grid-template-rows:1fr 1fr;gap:14px">' +
-      '<div class="card"><h3>Highlights</h3><ul class="list">' + (ex.highlights.map(t => '<li><span class="ic good">✓</span><span>' + esc_(t) + '</span></li>').join('') ||
-        '<li class="empty-note">Belum ada sorotan positif.</li>') + '</ul></div>' +
-      '<div class="card"><h3>Perlu perhatian</h3><ul class="list">' + (ex.watchouts.map(t => '<li><span class="ic bad">!</span><span>' + esc_(t) + '</span></li>').join('') ||
-        '<li class="empty-note">Tidak ada catatan.</li>') + '</ul></div></div></div>' +
-      sFoot_(ctx, 'Klik kartu KPI untuk rincian. Sparkline = 12 bulan terakhir.');
-    ex.kpis.forEach(k => {
-      const sp = el.querySelector('[data-spark="' + k.id + '"]');
-      if (sp) setTimeout(() => Charts.spark(sp, k.spark, colors[k.id]), 0);
-    });
-    on_(el, '[data-kpi]', n => {
-      const id = n.dataset.kpi;
-      const k = ex.kpis.find(x => x.id === id);
-      let secs;
-      if (id === 'sales') secs = drillSalesMonth_(D, m);
-      else if (id === 'ytd') {
-        const months = monthRange_(yr_(m) + '-01', 0, mIdx_(m));
-        secs = [tb_('Sales per bulan', [{ h: 'Bulan' }, { h: yr_(m), align: 'right' }, { h: yr_(m) - 1, align: 'right' }, { h: 'Growth', align: 'right' }],
-          months.map(ym => [abbr_(ym).slice(0, 3), money_(sales_(D, ym)), money_(sales_(D, addM_(ym, -12))), sgn_(growth_(sales_(D, ym), sales_(D, addM_(ym, -12))), x => pc_(x))]))];
-      } else if (id === 'coll') secs = collectionSections_(D, m);
-      else if (id === 'open') secs = drillRoll_(D, m);
-      else if (id === 'od') secs = drillOverdueMonth_(D, m);
-      else if (id === 'late' || id === 'pay') secs = drillLate_(D, m);
-      else secs = drillArDays_(D, m);
-      ctx.drill({ key: 'exec|' + id, eyebrow: 'Executive Summary', title: k.label, hero: k.value, sections: secs });
-    });
-    return { notes: ex.highlights.concat(ex.watchouts) };
-  },
-});
-
-function collectionSections_(D, m) {
-  const rows = GROUPS.map((g, i) => {
-    const t = g_(D, 'coll_tgt:' + i, m);
-    const a = g_(D, 'coll_act:' + i, m);
-    return [g, money_(t), money_(a), t ? pc_(a / t, 1) : '-'];
-  });
-  const x = collNums_(D, m, 'all');
-  return [tb_('Per Marketing Group', [{ h: 'Group' }, { h: 'Target', align: 'right' }, { h: 'Actual', align: 'right' }, { h: '%', align: 'right' }],
-    rows, ['Total', money_(x.t), money_(x.a), x.t ? pc_(x.a / x.t, 1) : '-'])];
-}
-
 // ================================================================ 3. Sales performance
 
 SLIDES.push({
