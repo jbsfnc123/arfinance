@@ -62,6 +62,10 @@ export const MENU_REGISTRY: MenuGroup[] = [
     { id: "rek.cekharga",    label: "Cek Selisih Harga PO/SO", href: "/cek-harga" },
     { id: "rek.marketplace", label: "Marketplace",             href: "/marketplace" },
   ]},
+  { id: "tools", label: "Tools Support", icon: "construction", children: [
+    // Diproses sepenuhnya di browser — tidak ada file yang dikirim ke server.
+    { id: "tool.pdf", label: "PDF Editor", href: "/tools/pdf-editor" },
+  ]},
   { id: "set", label: "Pengaturan", icon: "settings", children: [
     { id: "set.update",   label: "Pusat Upload Data",      href: "/pengaturan/upload",         needs: "ctrl" },
     { id: "set.target",   label: "Upload Target Bulanan",  href: "/pengaturan/target",         needs: "ctrl" },
