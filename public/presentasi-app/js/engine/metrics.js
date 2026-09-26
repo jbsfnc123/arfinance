@@ -126,18 +126,19 @@ function availableMonths_(D) {
   });
 }
 
-/** Kelengkapan data per bulan (untuk cover & Data Center). */
+/** Kelengkapan data per bulan = 8 sheet template Presentasi AR (untuk cover & status header). */
 function coverage_(D, ym) {
   const has = k => g_(D, k, ym) !== null;
+  const rows = t => (D.manual[t] || []).some(r => r.Bulan === ym);
   return [
-    { id: 'sales', label: 'Sales', ok: sales_(D, ym) !== null, src: salesSrc_(D, ym) },
-    { id: 'aging', label: 'Aging', ok: has('open'), src: src_(D, 'open', ym) },
-    { id: 'coll', label: 'Collection', ok: has('coll_tgt:0'), src: src_(D, 'coll_tgt:0', ym) },
-    { id: 'bpsales', label: 'Detail BP Sales', ok: D.bpMonths.sales.indexOf(ym) >= 0, src: 'raw' },
-    { id: 'bpaging', label: 'Detail BP Aging', ok: D.bpMonths.aging.indexOf(ym) >= 0, src: 'raw' },
-    { id: 'pay', label: 'Late days (payment)', ok: (D.bpMonths.pay || []).indexOf(ym) >= 0, src: 'raw' },
-    { id: 'master', label: 'Master BP', ok: !!(D.bpMaster && Object.keys(D.bpMaster).length), src: 'raw' },
-    { id: 'manual', label: 'Tabel manual', ok: Object.keys(D.manual).some(t => (D.manual[t] || []).some(r => r.Bulan === ym)), src: 'manual' },
+    { id: 'sales', label: 'Sales Performance', ok: has('sales') || sales_(D, ym) !== null, src: 'manual' },
+    { id: 'mix', label: 'Sales Mix', ok: has('amt_all:0'), src: 'manual' },
+    { id: 'reseller', label: 'Reseller & Site', ok: has('bp_res:0'), src: 'manual' },
+    { id: 'coll', label: 'Collection', ok: has('coll_tgt:0'), src: 'manual' },
+    { id: 'watch', label: 'Uncollected', ok: rows('Uncollected'), src: 'manual' },
+    { id: 'aging', label: 'Aging & Overdue', ok: has('open'), src: 'manual' },
+    { id: 'ar', label: 'AR Summary', ok: has('pay_amt') || has('collpct:0'), src: 'manual' },
+    { id: 'risk', label: 'Risiko Piutang', ok: ['Due90 Summary', 'Due90 Cicil', 'Bad Debt Summary', 'Bad Debt Detail', 'Unallocated'].some(rows), src: 'manual' },
   ];
 }
 

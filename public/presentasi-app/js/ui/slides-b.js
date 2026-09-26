@@ -8,12 +8,12 @@ function lateChip_(v) {
 }
 /** Late days sel Watchlist: otomatis dari file payment bila ada, jika tidak pakai nilai manual. */
 function lateCell_(D, pg, ym, manual) {
-  const L = lateByName_(D, [pg], ym);
+  const L = STANDALONE_ ? null : lateByName_(D, [pg], ym);
   if (L && L.n) return { v: Math.round(L.avg * 10) / 10, src: 'auto', title: 'Otomatis dari file payment ' + abbr_(ym) + ': ' + L.n + ' transaksi' };
   if (manual !== '' && manual !== null && manual !== undefined && manual !== 'No Data') {
-    return { v: manual, src: 'manual', title: 'Nilai manual (tabel Uncollected)' + (L ? '; tidak ada transaksi di file payment' : '; file payment ' + abbr_(ym) + ' belum diimpor') };
+    return { v: manual, src: STANDALONE_ ? 'tpl' : 'manual', title: 'Late days ' + abbr_(ym) + ' (template, tabel Uncollected)' };
   }
-  return { v: null, src: L ? 'none' : 'na', title: L ? 'Tidak ada pembayaran di ' + abbr_(ym) : 'File payment ' + abbr_(ym) + ' belum diimpor' };
+  return { v: null, src: 'na', title: 'Late days ' + abbr_(ym) + ' belum diisi di template' };
 }
 function lateChipC_(c) {
   if (c.v === null) return '<span class="chip na" title="' + esc_(c.title) + '">–</span>';
@@ -28,6 +28,7 @@ function catBadge_(c) {
   return '<span class="badge ' + (/^behav/i.test(s) ? 'behav' : /^admin/i.test(s) ? 'admin' : 'muted') + '">' + esc_(s) + '</span>';
 }
 function topAgingBars_(D, m, colFn, title) {
+  if (STANDALONE_) return []; // tanpa data per BP
   const rows = (bp_(D).aging[m] || []).map(r => [r[BPA.name], colFn(r)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
   return rows.length ? [bars_(title, rows.map(x => [x[0], x[1], money_(x[1])]))] : [note_(NO_BP)];
 }
@@ -70,16 +71,15 @@ SLIDES.push({
           '<td>' + catBadge_(r.Category) + '</td><td><div class="clip" title="' + esc_(r.Keterangan) + '">' + esc_(r.Keterangan) + '</div></td></tr>').join('') +
         '</tbody><tfoot><tr><td></td><td>Total ' + esc_(seg) + '</td><td class="r num">' + money_(tot(seg)) + '</td><td colspan="4"></td></tr></tfoot></table>'
         : '<div class="empty-note">Belum ada data Uncollected untuk ' + esc_(idMonth_(m)) + '. Isi lewat template manual di Data Center.</div>') +
-      '</div></div>' + sFoot_(ctx, 'Late days = Payment Date − Due Date (rata-rata per bulan pembayaran; ' + autoN + ' sel otomatis dari file payment, sel bergaris = manual). ' +
-        'Hijau ≤ 3 hari, kuning ≤ 14, merah > 14.');
+      '</div></div>' + sFoot_(ctx, 'Late days dari template (sheet Uncollected Watchlist). Hijau ≤ 3 hari, kuning ≤ 14, merah > 14.' + (autoN ? '' : ''));
     on_(el, '[data-seg-btn]', b => ctx.set('seg', b.dataset.segBtn));
     on_(el, 'tr[data-row]', tr => {
       const r = rows[Number(tr.dataset.row)];
       ctx.drill({ key: 'watch|' + seg + '|' + tr.dataset.row, eyebrow: 'Uncollected · ' + seg, title: r['Payment Group'],
         hero: money_(Number(r['Unpaid This Month (Rp)'])), sub: r.Keterangan,
-        sections: [kv_('Late days (otomatis / manual)', [['T.O.P', r['T.O.P'] + ' hari']].concat(mmYm.map((ym, i) => {
+        sections: [kv_('Late days', [['T.O.P', r['T.O.P'] + ' hari']].concat(mmYm.map((ym, i) => {
           const c = cells[Number(tr.dataset.row)][i];
-          return ['Late days ' + abbr_(ym), c.v === null ? '-' : num_(Number(c.v), 1) + ' hari · ' + (c.src === 'auto' ? 'otomatis' : 'manual')];
+          return ['Late days ' + abbr_(ym), c.v === null ? '-' : num_(Number(c.v), 1) + ' hari'];
         })).concat([['Kategori', r.Category || '-']]))]
           .concat(profile_(D, [r['Payment Group']], m)) });
     });
@@ -111,9 +111,9 @@ SLIDES.push({
       kpiCard_({ id: 'd120', label: 'Invoice due > 120 hari', value: money_(d120), sub: open ? pc_(d120 / open, 2) + ' dari open' : '' }) +
       kpiCard_({ id: 'tgt', label: 'Target collection ' + abbr_(addM_(m, 1)), value: money_(tgt),
         sub: open && tgt ? 'Not due setelahnya ' + money_(open - tgt - (d120 || 0)) : 'Belum diinput (Data Center)' }) +
-      '<div class="card chart-card" style="grid-column: span 2"><h3>Overdue per bucket (5 bulan)<span class="hint">klik untuk Top 10 BP</span></h3><div class="chart" id="c-age"></div></div>' +
+      '<div class="card chart-card" style="grid-column: span 2"><h3>Overdue per bucket (5 bulan)<span class="hint">klik untuk rincian</span></h3><div class="chart" id="c-age"></div></div>' +
       '<div class="card chart-card" style="grid-column: span 2"><h3>Rasio overdue / open amount (13 bulan)</h3><div class="chart" id="c-ratio"></div></div>' +
-      '</div>' + sFoot_(ctx, 'Bucket = hari lewat jatuh tempo per akhir bulan (file Aging). Due >90 = total >90 − Bad Debt manual.');
+      '</div>' + sFoot_(ctx, 'Bucket = hari lewat jatuh tempo per akhir bulan (template, sheet Aging & Overdue). Due >90 = total >90 − Bad Debt.');
 
     Charts.make(el.querySelector('#c-age'), Charts.base({
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: v => money_(v) },
@@ -141,70 +141,13 @@ SLIDES.push({
 
     on_(el, '[data-kpi]', n => {
       const id = n.dataset.kpi;
-      const secs = id === 'open' ? topAgingBars_(D, m, r0 => Number(r0[BPA.open]), 'Top 10 BP open amount')
-        : id === 'od' ? drillOverdueMonth_(D, m).concat(topAgingBars_(D, m, BPA_OD_, 'Top 10 BP overdue'))
-          : id === 'd120' ? topAgingBars_(D, m, r0 => Number(r0[BPA.d120]), 'Top 10 BP > 120 hari')
+      const secs = id === 'open' || id === 'od' || id === 'd120' ? drillOverdueMonth_(D, m)
             : [tb_('Target ' + abbr_(addM_(m, 1)) + ' per group', [{ h: 'Group' }, { h: 'Target', align: 'right' }, { h: 'Bad debt', align: 'right' }],
               GROUPS.map((g, i) => [g, money_(g_(D, 'tgt_next:' + i, m)), money_(g_(D, 'baddebt:' + i, m))]),
               ['Total', money_(tgt), money_(sum_([0, 1, 2, 3, 4].map(i => g_(D, 'baddebt:' + i, m))))])];
       ctx.drill({ key: 'aging-kpi|' + id, eyebrow: 'Aging & Overdue', title: n.querySelector('.label').textContent, hero: n.querySelector('.value').textContent, sections: secs });
     });
     return { notes: [headline_(D, m, 'aging') + '.', 'Invoice > 120 hari ' + money_(d120) + '.'] };
-  },
-});
-
-// ================================================================ Kinerja PIC AR (baru, dari master Business Partner)
-
-SLIDES.push({
-  id: 'pic', title: 'Kinerja PIC AR', desc: 'Open, overdue & late days per PIC',
-  render(ctx, el) {
-    const D = ctx.D;
-    const m = ctx.m;
-    const t = Charts.theme();
-    const pp = picPerf_(D, m);
-    if (!pp) {
-      el.innerHTML = sHead_(ctx, 9, 'Kinerja PIC AR', 'Kinerja penagihan per PIC AR') +
-        '<div class="empty-note" style="margin:auto">' + esc_(NO_BP) + '</div>' + sFoot_(ctx, '');
-      return { notes: [] };
-    }
-    const list = pp.list.slice(0, 9);
-    const tot = sum_(pp.list.map(a => a.open));
-    const rev = list.slice().reverse();
-    el.innerHTML = sHead_(ctx, 9, 'Kinerja PIC AR', headline_(D, m, 'pic'), pp.hasMaster ? '' : '<span class="pill">PIC dari file Aging</span>') +
-      '<div class="s-body" style="grid-template-columns: 1.15fr 1fr">' +
-      '<div class="card chart-card"><h3>Open AR per PIC — belum jatuh tempo vs overdue<span class="hint">klik untuk Top BP</span></h3><div class="chart" id="c-pic"></div></div>' +
-      '<div class="card scroll" style="padding:6px 8px"><table class="t"><thead><tr><th>PIC AR</th><th class="r">BP</th><th class="r">Open</th>' +
-      '<th class="r">% Overdue</th><th class="r">&gt; 90 hari</th><th class="r">Late days</th></tr></thead><tbody>' +
-      list.map((a, i) => '<tr data-pic="' + i + '"><td><b>' + esc_(a.pic) + '</b><div style="font-size:11px;color:var(--text-3)">' +
-        pc_(a.open / tot, 1) + ' dari total open</div></td><td class="r num">' + grp_(a.bp, '.') + '</td><td class="r num">' + money_(a.open) +
-        '</td><td class="r num"><span class="chip ' + (a.odPct > 0.2 ? 'hi' : a.odPct > 0.1 ? 'mid' : 'ok') + '">' + pc_(a.odPct, 1) + '</span></td>' +
-        '<td class="r num">' + money_(a.o90) + '</td><td class="r num">' + (a.late && a.late.n ? days_(a.late.avg) : '–') + '</td></tr>').join('') +
-      '</tbody><tfoot><tr><td>Total</td><td class="r num">' + grp_(sum_(pp.list.map(a => a.bp)), '.') + '</td><td class="r num">' + money_(tot) +
-      '</td><td class="r num">' + pc_(sum_(pp.list.map(a => a.od)) / tot, 1) + '</td><td class="r num">' + money_(sum_(pp.list.map(a => a.o90))) +
-      '</td><td class="r num">' + days_(g_(D, 'late_all', m)) + '</td></tr></tfoot></table></div>' +
-      '</div>' + sFoot_(ctx, 'PIC AR dari master Business Partner (fallback: Collection Name di file Aging). Late days = pembayaran ' + abbr_(m) +
-        (pp.hasPay ? '' : ' (file payment belum diimpor)') + '.');
-    Charts.make(el.querySelector('#c-pic'), Charts.base({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: v => money_(v) },
-      grid: { left: 8, right: 60, top: 34, bottom: 8, containLabel: true },
-      yAxis: Charts.catAxis(rev.map(a => a.pic), { axisLabel: { color: t.text2, fontWeight: 600 } }),
-      xAxis: Charts.valAxis(),
-      series: [
-        { name: 'Belum jatuh tempo', type: 'bar', stack: 'p', barWidth: '58%', data: rev.map(a => a.notdue), itemStyle: { color: t.dark ? '#33445f' : '#CBD5E1' } },
-        { name: 'Overdue ≤ 30', type: 'bar', stack: 'p', data: rev.map(a => a.b[0] + a.b[1]), itemStyle: { color: Charts.C.AGING[2] } },
-        { name: 'Overdue 31–90', type: 'bar', stack: 'p', data: rev.map(a => a.b[2] + a.b[3]), itemStyle: { color: Charts.C.AGING[3] } },
-        { name: '> 90 hari', type: 'bar', stack: 'p', data: rev.map(a => a.b[4]), itemStyle: { color: Charts.C.AGING[4], borderRadius: [0, 4, 4, 0] },
-          label: { show: true, position: 'right', color: t.text2, fontWeight: 700, formatter: q => pc_(rev[q.dataIndex].odPct, 0) } },
-      ],
-    }), q => {
-      const a = rev[q.dataIndex];
-      ctx.drill({ key: 'pic|' + a.pic, eyebrow: 'Kinerja PIC AR', title: a.pic, hero: money_(a.open), sections: drillPic_(D, m, a) });
-    });
-    on_(el, 'tr[data-pic]', tr => {
-      const a = list[Number(tr.dataset.pic)];
-      ctx.drill({ key: 'pic|' + a.pic, eyebrow: 'Kinerja PIC AR', title: a.pic, hero: money_(a.open), sections: drillPic_(D, m, a) });
-    });
-    return { notes: [headline_(D, m, 'pic') + '.'] };
   },
 });
 
@@ -301,7 +244,7 @@ SLIDES.push({
         '<div style="display:grid;gap:14px;grid-template-rows:auto auto 1fr">' +
         kpiCard_({ id: 'o90', label: 'Total > 90 hari (Aging)', value: money_(o90), sub: 'Bad debt tercatat ' + money_(bd) }) +
         kpiCard_({ id: 'sum', label: 'Masih cicil: Internal / Eksternal', value: money_(tIn + tEx), sub: money_(tIn) + ' / ' + money_(tEx) }) +
-        '<div class="card"><h3>Top 5 BP > 90 hari</h3><div id="top90"></div></div></div>' +
+        '</div>' +
         '<div class="card scroll" style="padding:6px 8px">' + (cic.length ? tbl([{ h: 'Business Partner' }, { h: 'Group' }, { h: 'Region' },
           { h: 'Bulan lalu', r: 1 }, { h: 'Bayar', r: 1 }, { h: 'Sisa', r: 1 }, { h: 'Keterangan', html: 1 }],
         cic.map(r => [r['Business Partner'], r['Marketing Group'], r.Region, money_(n(r['Amount Bulan Lalu (Rp)'])), money_(n(r['Payment (Rp)'])),
@@ -320,23 +263,6 @@ SLIDES.push({
           { h: 'Informasi', html: 1 }], d.map(r => [r['Business Partner'], r['Marketing Group'], r.Region, money_(n(r['Amount (Rp)'])),
           '<div class="clip" style="max-width:280px" title="' + esc_(r.Information) + '">' + esc_(r.Information) + '</div>']),
         ['Total', '', '', money_(sum_(d.map(r => n(r['Amount (Rp)'])))), ''], 'bd') : '<div class="empty-note">Belum ada detail bad debt.</div>') + '</div></div>';
-    } else if (tab === 'dormant') {
-      const dm = dormant_(D, m);
-      if (!dm) {
-        head = 'Pelanggan tidak aktif dengan piutang';
-        body = '<div class="s-body"><div class="card"><div class="empty-note">Import file <b>Business Partner</b> (master) dan Aging bulan ini di Data Center.</div></div></div>';
-      } else {
-        head = dm.n + ' pelanggan tidak bertransaksi > 90 hari, piutang ' + money_(dm.open);
-        const L = dm.list.slice(0, 60);
-        body = '<div class="s-body" style="grid-template-columns: 300px 1fr">' +
-          '<div style="display:grid;gap:14px;grid-template-rows:auto auto 1fr">' +
-          kpiCard_({ id: 'dm', label: 'Piutang pelanggan tidak aktif', value: money_(dm.open), sub: dm.n + ' BP · ' + pc_(dm.open / (openAmt_(D, m) || 1), 1) + ' dari open AR' }) +
-          kpiCard_({ id: 'dm90', label: 'Di antaranya > 90 hari', value: money_(dm.o90), sub: 'Tidak aktif = Last Sale > 90 hari sebelum ' + lastDay_(m) + ' ' + abbr_(m) }) +
-          '<div class="card"><h3>Per PIC AR</h3><div id="dmPic"></div></div></div>' +
-          '<div class="card scroll" style="padding:6px 8px">' + tbl([{ h: 'Business Partner' }, { h: 'PIC AR' }, { h: 'Transaksi terakhir' },
-            { h: 'Tidak aktif', r: 1 }, { h: 'Open', r: 1 }, { h: '> 90 hari', r: 1 }],
-          L.map(x => [x.r[BPA.name], x.ms[BPM.pic] || x.r[BPA.coll] || '-', x.ms[BPM.last], grp_(x.days, '.') + ' hari', money_(x.open), money_(x.o90)]), null, 'dm') + '</div></div>';
-      }
     } else {
       const u = pick('Unallocated');
       const part = kind => {
@@ -350,76 +276,12 @@ SLIDES.push({
     }
     const staleT = { due90: 'Due90 Cicil', bad: 'Bad Debt Detail', unalloc: 'Unallocated' }[tab];
     el.innerHTML = sHead_(ctx, 10, 'Risiko Piutang', head, (staleT ? stalePill_(pickO(staleT)) : '') +
-      seg_('risk', [['due90', 'Due > 90'], ['bad', 'Bad Debt'], ['unalloc', 'Unallocated'], ['dormant', 'Tidak aktif']], tab)) + body +
-      sFoot_(ctx, tab === 'dormant' ? 'Sumber: master Business Partner (Last Sale, PIC AR) + file Aging.' : 'Sumber: tabel manual (Due90, Bad Debt, Unallocated) + file Aging untuk profil BP.');
-    const dmPic = el.querySelector('#dmPic');
-    if (dmPic) {
-      const dm = dormant_(D, m);
-      const byPic = {};
-      dm.list.forEach(x => { const p = x.ms[BPM.pic] || x.r[BPA.coll] || '-'; byPic[p] = (byPic[p] || 0) + x.open; });
-      dmPic.innerHTML = Drawer.sections([bars_('', Object.keys(byPic).map(k => [k, byPic[k], money_(byPic[k])]).sort((a, b) => b[1] - a[1]).slice(0, 6))]);
-    }
-    const top = el.querySelector('#top90');
-    if (top) top.innerHTML = Drawer.sections(topAgingBars_(D, m, r => Number(r[BPA.b5]), '').map(s => Object.assign(s, { title: '' })).map(s => {
-      if (s.t === 'bars') s.rows = s.rows.slice(0, 5);
-      return s;
-    }));
-    const prof = (names, title, hero, sub) => ctx.drill({ key: 'risk|' + title, eyebrow: 'Risiko · profil', title: title, hero: hero, sub: sub,
-      sections: profile_(D, names.filter(Boolean).map(String), m) });
-    on_(el, 'tr[data-cic]', tr => { const r = pick('Due90 Cicil')[Number(tr.dataset.cic)]; prof([r['Business Partner'], r['Key BP'], r['Payment Group']], r['Business Partner'], money_(n(r['Amount Bulan Ini (Rp)'])), r.Keterangan); });
-    on_(el, 'tr[data-dm]', tr => {
-      const x = dormant_(D, m).list[Number(tr.dataset.dm)];
-      prof([x.r[BPA.name], x.r[BPA.key]], x.r[BPA.name], money_(x.open), 'Transaksi terakhir ' + x.ms[BPM.last] + ' (' + grp_(x.days, '.') + ' hari)');
-    });
-    on_(el, 'tr[data-bd]', tr => { const r = pick('Bad Debt Detail')[Number(tr.dataset.bd)]; prof([r['Business Partner'], r['Key BP']], r['Business Partner'], money_(n(r['Amount (Rp)'])), r.Information); });
-    on_(el, '[data-kpi]', () => ctx.drill({ key: 'risk-kpi', eyebrow: 'Risiko', title: 'Top 10 BP > 90 hari', hero: money_(o90),
-      sections: topAgingBars_(D, m, r => Number(r[BPA.b5]), 'Top 10 BP > 90 hari') }));
+      seg_('risk', [['due90', 'Due > 90'], ['bad', 'Bad Debt'], ['unalloc', 'Unallocated']], tab)) + body +
+      sFoot_(ctx, 'Sumber: template (sheet Risiko Piutang & Aging & Overdue).');
+    on_(el, '[data-kpi]', () => ctx.drill({ key: 'risk-kpi', eyebrow: 'Risiko', title: 'Piutang > 90 hari', hero: money_(o90),
+      sections: drillAgingBucket_(D, 4, m) }));
     bindSeg_(el, ctx);
     return { notes: [head + '.'] };
-  },
-});
-
-// ================================================================ 11. BP Explorer (baru)
-
-SLIDES.push({
-  id: 'explorer', title: 'BP Explorer', desc: 'Cari BP / Payment Group saat tanya-jawab',
-  render(ctx, el) {
-    const D = ctx.D;
-    const m = ctx.m;
-    const dir = bpDirectory_(D, m);
-    el.innerHTML = sHead_(ctx, 11, 'BP Explorer', 'Cari Payment Group atau BP untuk profil lengkap') +
-      '<div class="s-body" style="grid-template-columns: 380px 1fr">' +
-      '<div class="card" style="display:flex;flex-direction:column;gap:10px"><input class="search" id="q" placeholder="Ketik nama BP / Payment Group / Key BP…" value="' + esc_(ctx.ui.q || '') + '">' +
-      '<div class="scroll" id="elist" style="flex:1"></div></div>' +
-      '<div class="card scroll" id="eprof" style="padding:18px 22px"></div></div>' +
-      sFoot_(ctx, dir.length ? grp_(dir.length, '.') + ' entitas dari file Invoice (3 bulan) & Aging ' + abbr_(m) + '.' : NO_BP);
-    const list = el.querySelector('#elist');
-    const prof = el.querySelector('#eprof');
-    const show = e => {
-      ctx.ui.sel = e ? e.type + '|' + e.name : null;
-      if (!e) { prof.innerHTML = '<div class="empty-note">' + esc_(dir.length ? 'Pilih entitas di kiri.' : NO_BP) + '</div>'; return; }
-      prof.innerHTML = '<div class="eyebrow" style="font-size:11px;color:var(--text-3);font-weight:700;letter-spacing:.08em;text-transform:uppercase">' + esc_(e.type) +
-        (e.key ? ' · ' + esc_(e.key) : '') + '</div><h2 style="margin:4px 0 0;font-size:24px">' + esc_(e.name) + '</h2>' +
-        '<div style="display:flex;gap:10px;margin-top:10px"><span class="pill">Open ' + money_(e.open) + '</span><span class="pill">Overdue ' + money_(e.od) +
-        '</span><span class="pill">Sales 3 bln ' + money_(e.sales) + '</span></div>' +
-        '<div style="columns:2;column-gap:26px">' + Drawer.sections(profile_(D, [e.name, e.key].filter(Boolean), m)) + '</div>';
-      list.querySelectorAll('.ent').forEach(n => n.classList.toggle('on', n.dataset.k === ctx.ui.sel));
-    };
-    const draw = () => {
-      const q = nm_(ctx.ui.q || '');
-      const hits = (q ? dir.filter(e => nm_(e.name).indexOf(q) >= 0 || String(e.key || '').indexOf(ctx.ui.q) >= 0) : dir).slice(0, 60);
-      list.innerHTML = hits.map(e => '<div class="ent" data-k="' + esc_(e.type + '|' + e.name) + '"><div style="min-width:0"><div class="nm">' + esc_(e.name) +
-        '</div><div class="ty">' + esc_(e.type) + '</div></div><div class="val">' + money_(e.open) + '<br><span style="color:var(--text-3)">sales ' + money_(e.sales) +
-        '</span></div></div>').join('') || '<div class="empty-note">Tidak ditemukan.</div>';
-      on_(list, '.ent', n => show(hits.find(e => e.type + '|' + e.name === n.dataset.k)));
-      const cur = hits.find(e => e.type + '|' + e.name === ctx.ui.sel) || hits[0];
-      show(cur);
-    };
-    const inp = el.querySelector('#q');
-    inp.addEventListener('input', () => { ctx.ui.q = inp.value; draw(); });
-    inp.addEventListener('keydown', e => e.stopPropagation());
-    draw();
-    return { notes: ['Gunakan saat tanya-jawab: ketik nama BP untuk melihat sales, late days, dan umur piutang.'] };
   },
 });
 
@@ -437,7 +299,7 @@ SLIDES.push({
       ex.highlights.map(t => '<li><span class="ic good">✓</span><span style="color:#E2E8F0">' + esc_(t) + '</span></li>').join('') + '</ul></div>' +
       '<div><h2 style="margin:0 0 12px;font-size:22px">Tindak lanjut</h2><ul class="list">' +
       ex.watchouts.map(t => '<li><span class="ic bad">!</span><span style="color:#E2E8F0">' + esc_(t) + '</span></li>').join('') + '</ul></div></div>' +
-      '<h1 style="margin-top:auto;font-size:72px">Terima kasih</h1><div class="period" style="font-size:20px">Tanya-jawab · gunakan BP Explorer untuk detail per pelanggan</div></div>';
-    return { notes: ['Tutup dengan tindak lanjut; buka BP Explorer untuk pertanyaan spesifik.'] };
+      '<h1 style="margin-top:auto;font-size:72px">Terima kasih</h1><div class="period" style="font-size:20px">Tanya-jawab</div></div>';
+    return { notes: ['Tutup dengan tindak lanjut dan buka sesi tanya-jawab.'] };
   },
 });
