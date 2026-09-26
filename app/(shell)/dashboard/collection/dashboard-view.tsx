@@ -12,11 +12,12 @@ import { AGING_BUCKETS } from "@/lib/modules/collection/aging";
 import { pctColor, round1, type GroupRow, type SpvSummary } from "@/lib/modules/collection/spv-summary";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { btnGhost, card, inputCls, td, th } from "@/components/ui";
+import { useViewState } from "@/lib/ui/view-state";
 
 const AGING_COLOR = ["#23ad7a", "#eebb3c", "#f08a3f", "#e25b5b"];
 
 export function DashboardView() {
-  const [picked, setMonth] = useState<string | null>(null);
+  const [picked, setMonth] = useViewState<string | null>("dash-coll:month", null);
   const aging = useDataset("aging");
   const targets = useDataset("targets");
   const activity = useDataset("activity");
@@ -202,7 +203,7 @@ function AgingCard({ d }: { d: SpvSummary }) {
 }
 
 function TopOverdue({ d }: { d: SpvSummary }) {
-  const [market, setMarket] = useState("");
+  const [market, setMarket] = useViewState("dash-coll:market", "");
   const rows = market ? d.topOverdueByMarket[market] ?? [] : d.topOverdue;
   return (
     <section className={`${card} overflow-hidden`}>
@@ -242,7 +243,7 @@ const TABS = [
 ] as const;
 
 function Breakdown({ d }: { d: SpvSummary }) {
-  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("byMarket");
+  const [tab, setTab] = useViewState<(typeof TABS)[number]["key"]>("dash-coll:tab", "byMarket");
   const rows: GroupRow[] = d[tab];
   return (
     <section className={`${card} mt-4 overflow-hidden`}>

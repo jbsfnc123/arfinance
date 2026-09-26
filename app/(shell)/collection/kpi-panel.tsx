@@ -12,6 +12,7 @@ import { useDataset } from "@/lib/local/store";
 import { todayJakarta } from "@/lib/parsers/date";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { card, inputCls, td, th } from "@/components/ui";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Props = { rows: CollectionRow[]; filters: Filters; setFilters: (f: Filters) => void };
 
@@ -138,7 +139,7 @@ function AllocationChart({ collection }: { collection: string }) {
   const targets = useDataset("targets").data;
   const agingAll = useDataset("aging").data?.lines;
   const current = todayJakarta().slice(0, 7);
-  const [month, setMonth] = useState(current);
+  const [month, setMonth] = useViewState("collection:allocMonth", current);
   const a = useMemo(
     () => (erp && targets && agingAll ? collectionAllocationOf(month, collection, erp, targets, agingAll) : null),
     [month, collection, erp, targets, agingAll],

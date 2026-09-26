@@ -14,7 +14,7 @@ export default async function ApLayout({ children }: LayoutProps<"/ap">) {
   return (
     <ShellChrome title={WORKSPACES.ap.label} icon={WORKSPACES.ap.icon} menu={menu} showHome
       portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null}
-      user={{ name: profile.display_name, role: role.name, collection: profile.collection_name }}>
+      user={{ id: profile.id, name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}
     </ShellChrome>
   );

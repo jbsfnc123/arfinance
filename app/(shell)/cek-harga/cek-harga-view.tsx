@@ -5,6 +5,7 @@ import { UploadSo } from "./upload-so";
 import { UploadPo } from "./upload-po";
 import { CasesView } from "./cases-view";
 import { MasterView } from "./master-view";
+import { useViewState } from "@/lib/ui/view-state";
 
 const TABS = [
   { key: "so", label: "Upload SO", icon: "upload_file" },
@@ -18,7 +19,7 @@ type Tab = (typeof TABS)[number]["key"];
 
 // Port Cek Selisih Harga (Data MO – Cek PO SO dan Case).
 export function CekHargaView() {
-  const [tab, setTab] = useState<Tab>("po");
+  const [tab, setTab] = useViewState<Tab>("cekharga:tab", "po");
   // Naik setiap kali arsip berubah, supaya tombol "Pindahkan ke Arsip" & tab Arsip ikut segar.
   const [casesVersion, setCasesVersion] = useState(0);
 

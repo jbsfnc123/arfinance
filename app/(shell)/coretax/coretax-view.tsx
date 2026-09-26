@@ -14,6 +14,7 @@ import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { DeleteListModal } from "./delete-list-modal";
 import { HistoryView } from "./history-view";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 function download(content: string, name: string, mime: string) {
   const a = document.createElement("a");
@@ -30,9 +31,9 @@ export function CoretaxView() {
   const [tin, setTin] = useState("");
   const [invoices, setInvoices] = useState<TaxInvoice[]>([]);
   const [activeTypes, setActiveTypes] = useState<Set<string> | null>(null); // null = semua jenis
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useViewState("coretax:search", "");
   const [open, setOpen] = useState<number | null>(null);
-  const [tab, setTab] = useState<"data" | "xml" | "riwayat">("data");
+  const [tab, setTab] = useViewState<"data" | "xml" | "riwayat">("coretax:tab", "data");
   const [pendingDel, setPendingDel] = useState<TaxInvoice | null>(null);
   const [autoOpen, setAutoOpen] = useState(false);
   const [saving, setSaving] = useState(false);

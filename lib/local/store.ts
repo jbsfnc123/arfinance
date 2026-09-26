@@ -29,7 +29,8 @@ const empty = <K extends DatasetName>(): Entry<K> => ({ data: null, token: null,
 const SERVER_EMPTY = empty();
 
 export function getEntry<K extends DatasetName>(name: K): Entry<K> {
-  return (entries.get(name) as Entry<K>) ?? (empty() as Entry<K>);
+  // Dataset yang belum dimuat → objek kosong yang SAMA (snapshot useSyncExternalStore harus stabil).
+  return (entries.get(name) as Entry<K>) ?? (SERVER_EMPTY as Entry<K>);
 }
 
 function set<K extends DatasetName>(name: K, patch: Partial<Entry<K>>) {

@@ -631,3 +631,14 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   Lama bayar = payment date − due date per transaksi (pembayaran parsial dihitung terpisah); rata-rata tertimbang nominal.
 - Sisa outstanding & overdue (due date < hari ini) dari Master Aging terbaru per `bp_key`.
 - Riwayat bulan lama cukup di-upload lewat laporan ERP Payment (upsert menumpuk); halaman menandai bulan tanpa data.
+
+## State tampilan diingat saat pindah menu (Fase 27, 2026-09-27)
+- `useViewState(key, initial, { set? })` (`lib/ui/view-state.ts`) = pengganti `useState` untuk state tampilan; disimpan di
+  `sessionStorage` (`view:<key>`) → bertahan saat pindah menu & refresh, hilang saat tab ditutup. Dibaca lewat
+  `useSyncExternalStore` (aman untuk hidrasi). `useScrollMemory(ref, key, ready)` untuk posisi scroll tabel.
+- Pemilik state = akun (`ensureViewOwner` di ShellChrome); akun lain di tab yang sama → dibersihkan; logout → `clearViewState`.
+- LocalTable otomatis mengingat cari/filter/urutan/centang/Teks penuh/scroll (`table:<stateKey ?? hideKey ?? title>`) + tombol
+  Reset filter. Daftar Tagihan mengingat collection terpilih (tanpa `?c=`), filter & centang per collection, kolom, scroll.
+  Tab/bulan/filter halaman lain memakai kunci `<rute>:<nama>`. Form input, modal, dan login sengaja tidak diingat.
+- Perbaikan: `getEntry` dataset yang belum dimuat kini mengembalikan objek kosong yang sama (sebelumnya objek baru tiap
+  panggilan → peringatan React "getSnapshot should be cached" saat navigasi pertama).

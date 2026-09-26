@@ -14,6 +14,7 @@ import { M10Dashboard } from "./m10-dashboard";
 import { M10Upload } from "./m10-upload";
 import { useM10 } from "./use-m10";
 import { setRemarks } from "@/lib/modules/remarks";
+import { useViewState } from "@/lib/ui/view-state";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -70,7 +71,7 @@ type AddKind = { table: "gr" | "kwitansi"; fields: { k: string; l: string; t?: "
 export function Mitra10View() {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>("dash");
+  const [tab, setTab] = useViewState<Tab>("mitra10:tab", "dash");
   const [ket, setKet] = useState("");
   const [add, setAdd] = useState<AddKind>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -90,9 +91,9 @@ export function Mitra10View() {
   }
 
   // Filter Kertas Kerja: rentang Invoice Date & Username.
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [user, setUser] = useState("");
+  const [from, setFrom] = useViewState("mitra10:kk:from", "");
+  const [to, setTo] = useViewState("mitra10:kk:to", "");
+  const [user, setUser] = useViewState("mitra10:kk:user", "");
   const users = useMemo(() => [...new Set((c?.worksheet ?? []).map((r) => r.username))].sort(), [c]);
   // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
   const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
@@ -141,7 +142,7 @@ export function Mitra10View() {
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
-        {tab === "dash" && <M10Dashboard m={m} />}
+        {tab === "dash" && <M10Dashboard stateKey="mitra10" m={m} />}
         {tab === "kk" && (
           <LocalTable title="Kertas Kerja" hideKey="m10-kk" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan"]}

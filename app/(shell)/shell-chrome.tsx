@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MenuGroup } from "@/lib/menu";
 import { idbClear } from "@/lib/cache/idb";
+import { clearViewState, ensureViewOwner } from "@/lib/ui/view-state";
 import { ToastProvider } from "@/components/toast";
 import { Sidebar } from "./sidebar";
 
@@ -15,11 +16,13 @@ export function ShellChrome({ title, icon, portalHref, menu, showHome, user, chi
   icon: string;
   menu: MenuGroup[];
   showHome: boolean;
-  user: { name: string; role: string; collection: string | null };
+  user: { id: string; name: string; role: string; collection: string | null };
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
+  // State tampilan (filter/cari/scroll) milik akun ini; akun lain di tab yang sama → dibersihkan dulu.
+  ensureViewOwner(user.id);
 
   // Prefetch semua menu yang boleh diakses saat browser sedang senggang, supaya klik menu
   // tidak menunggu server (sidebar auto-hide tidak merender link sebelum dibuka).
@@ -39,6 +42,7 @@ export function ShellChrome({ title, icon, portalHref, menu, showHome, user, chi
     e.preventDefault();
     const form = e.currentTarget;
     await idbClear(); // data tidak tertinggal di browser komputer bersama
+    clearViewState();
     form.submit();
   }
 

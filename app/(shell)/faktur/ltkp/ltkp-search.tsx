@@ -8,6 +8,7 @@ import { useToast } from "@/components/toast";
 import { card, inputCls, td, th } from "@/components/ui";
 import { LtkpPreview } from "../ltkp-preview";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Row = {
   invoice_no: string; bp_value: string; request: string;
@@ -19,7 +20,7 @@ export function LtkpSearch() {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [rows, setRows] = useState<Row[]>([]);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useViewState("faktur:ltkp:q", "");
   const [preview, setPreview] = useState<{ path: string; title: string } | null>(null);
 
   useEffect(() => {

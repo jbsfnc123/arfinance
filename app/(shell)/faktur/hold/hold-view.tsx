@@ -11,6 +11,7 @@ import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { InvoiceLookup } from "../invoice-lookup";
 import { setRemarks, useRemarks } from "@/lib/modules/remarks";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Hold = Tables<"tax_invoice_holds">;
 
@@ -23,7 +24,7 @@ export function HoldView() {
   const [editing, setEditing] = useState<number | null>(null);
   const [inv, setInv] = useState<InvoiceFields>(EMPTY_INVOICE);
   const [ket, setKet] = useState("");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useViewState("faktur:hold:q", "");
   const [busy, setBusy] = useState(false);
   // Keterangan = keterangan invoice bersama (sama dengan Collection & Mitra10).
   const remarks = useRemarks();

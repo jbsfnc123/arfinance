@@ -8,6 +8,7 @@ import { fmtTimestamp } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Case = Tables<"po_so_cases">;
 const AKSI = ["Litigasi", "LTKP", "Internal"];
@@ -22,7 +23,7 @@ export function CasesView({ status, version, onChange }: { status: "archived" | 
   const [open, setOpen] = useState<number | null>(null);
   const [draft, setDraft] = useState({ aksi: "Litigasi", tindakan: "", keterangan: "" });
   const [busy, setBusy] = useState(false);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useViewState(`cekharga:${status}:q`, "");
 
   useEffect(() => {
     fetchAll((a, b) => supabase.from("po_so_cases").select("*").eq("status", status)

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Tabs } from "@/components/tabs";
 import { NoteLog } from "./note-log";
+import { useViewState } from "@/lib/ui/view-state";
 
 const TABS = [
   { key: "Case", label: "Collection", icon: "assignment_late" },
@@ -11,7 +11,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]["key"];
 
 export function CaseView() {
-  const [tab, setTab] = useState<Tab>("Case");
+  const [tab, setTab] = useViewState<Tab>("case:tab", "Case");
   return (
     <div className="w-full">
       <h1 className="text-2xl font-medium">Case</h1>

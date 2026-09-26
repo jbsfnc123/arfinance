@@ -15,6 +15,7 @@ import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
 import { Dashboard } from "./dashboard";
 import { ErpView } from "./erp-view";
 import type { Json } from "@/lib/database.types";
+import { useViewState } from "@/lib/ui/view-state";
 
 export type ReportMeta = { report_id: string; platform: "shopee" | "tiktok"; username: string; dari: string; ke: string };
 
@@ -32,15 +33,15 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [list, setList] = useState(initialList);
-  const [selected, setSelected] = useState(initialList[0]?.report_id ?? "");
+  const [selected, setSelected] = useViewState("marketplace:report", initialList[0]?.report_id ?? "");
   const [R, setR] = useState<Report | null>(null);
   const [lookup, setLookup] = useState<OrderLookup>({});
-  const [view, setView] = useState<"dash" | "erp">("dash");
+  const [view, setView] = useViewState<"dash" | "erp">("marketplace:view", "dash");
   const [busy, setBusy] = useState<string | null>(null);
   const [table, setTable] = useState<TableSpec | null>(null);
   const [auditLimit, setAuditLimitState] = useState(0);
   const [erpLimit, setErpLimitState] = useState(0);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useViewState("marketplace:q", "");
 
   useEffect(() => {
     setAuditLimitState(readLimit(LS_AUDIT)); // eslint-disable-line react-hooks/set-state-in-effect -- nilai per-perangkat dari localStorage

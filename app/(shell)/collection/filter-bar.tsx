@@ -19,6 +19,9 @@ export function FilterBar(props: {
 }) {
   const { rows, filters, setFilters } = props;
   const [search, setSearch] = useState(filters.search);
+  // Filter bisa berubah dari luar (dipulihkan dari state tersimpan / tombol reset) → kotak cari ikut.
+  const [seen, setSeen] = useState(filters.search);
+  if (filters.search !== seen) { setSeen(filters.search); setSearch(filters.search); }
   const [colMenu, setColMenu] = useState(false);
 
   // Pencarian ditunda 250 ms seperti versi lama.

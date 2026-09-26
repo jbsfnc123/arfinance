@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { EChartsOption } from "echarts";
 import { useDataset } from "@/lib/local/store";
 import { mutasiRaw } from "@/lib/modules/mutasi/compute";
@@ -10,13 +10,14 @@ import { buildMutasi, type MutasiRaw } from "@/lib/modules/mutasi/dashboard";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 const juta = (n: number | null) => (n === null ? null : Math.round(n / 1e4) / 100);
 const num = (n: number) => Math.round(n).toLocaleString("id-ID");
 
 export function MutasiDashboard() {
   const today = todayJakarta();
-  const [month, setMonth] = useState(today.slice(0, 7));
+  const [month, setMonth] = useViewState("mutasi:dash:month", today.slice(0, 7));
   const mutasi = useDataset("mutasi");
   const erp = useDataset("erp");
   const targets = useDataset("targets");

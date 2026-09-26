@@ -7,12 +7,13 @@ import { fmtDate, monthLabel } from "@/lib/format";
 import { tukarDays, tukarKpi, type TukarDay } from "@/lib/modules/tukar/dashboard";
 import { card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Raw = { months: string[]; kurirs: string[]; days: TukarDay[] };
 
 
 export function TukarDashboard() {
-  const [month, setMonth] = useState(todayJakarta().slice(0, 7));
+  const [month, setMonth] = useViewState("dash-tukar:month", todayJakarta().slice(0, 7));
   const [kurir, setKurir] = useState("");
   const tukar = useDataset("tukar");
   // Dihitung di browser dari data lokal (port tukar_dashboard).

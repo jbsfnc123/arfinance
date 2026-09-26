@@ -10,6 +10,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { ImportLog } from "@/components/import-log";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls } from "@/components/ui";
+import { useViewState } from "@/lib/ui/view-state";
 
 type Box = "mutasi" | "erp" | "target";
 const EXPECT: Record<Box, FileKind> = { mutasi: "mutasi", erp: "erp", target: "target" };
@@ -21,7 +22,7 @@ export function MutasiUpload({ version, onDone }: { version: number; onDone: () 
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [busy, setBusy] = useState<Box | null>(null);
-  const [month, setMonth] = useState(todayJakarta().slice(0, 7));
+  const [month, setMonth] = useViewState("mutasi:upload:month", todayJakarta().slice(0, 7));
 
   async function run(box: Box, files: File[]) {
     if (!files.length) return;
