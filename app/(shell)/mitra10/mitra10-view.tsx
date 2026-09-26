@@ -30,14 +30,13 @@ const WAIT = "bg-warning/20 text-warning";
 const BAD = "bg-danger/20 text-danger";
 
 const KK_COLS: LCol<WorksheetRow>[] = [
-  { k: "username", l: "Username" }, { k: "business_partner", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
+  { k: "username", l: "Username" }, { k: "bp_short", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
   { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
   { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
   { k: "gr", l: "GR", badge: { Done: OK, Pending: WAIT } },
   { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
   { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 200 },
-  { k: "status", l: "Status", badge: { Outstanding: WAIT, Lunas: OK } },
-  { k: "jadwal_bayar", l: "Jadwal Bayar", d: true }, { k: "lama_tf", l: "Lama TF (hari)", n: true },
+  { k: "jadwal_bayar", l: "Jadwal Bayar", d: true },
 ];
 const GR_EDIT: { k: keyof Gr & string; l: string; t?: "number" }[] = [
   { k: "store_no", l: "Store No" }, { k: "delivery_to", l: "Delivery To" }, { k: "gr_no", l: "GR No" }, { k: "gr_date", l: "GR Date" },
@@ -95,7 +94,8 @@ export function Mitra10View() {
   const [to, setTo] = useState("");
   const [user, setUser] = useState("");
   const users = useMemo(() => [...new Set((c?.worksheet ?? []).map((r) => r.username))].sort(), [c]);
-  const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) =>
+  // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
+  const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
     (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user)), [c, from, to, user]);
 
   function editRow(table: "gr" | "kwitansi", id: number, key: string, value: unknown) {
@@ -143,10 +143,9 @@ export function Mitra10View() {
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard m={m} />}
         {tab === "kk" && (
-          <LocalTable title="Kertas Kerja" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
-            search={["invoice_no", "business_partner", "no_sj", "no_po", "username", "keterangan"]}
+          <LocalTable title="Kertas Kerja" hideKey="m10-kk" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
+            search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan"]}
             filters={[
-              { k: "status", l: "Status", options: ["Outstanding", "Lunas"] },
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
               { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },
             ]}
@@ -174,7 +173,7 @@ export function Mitra10View() {
             )} />
         )}
         {tab === "gr" && (
-          <LocalTable title="Receiving" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Receiving" hideKey="m10-gr" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["gr_no", "po_no", "sj_no", "item_name", "delivery_to", "vendor_ship_no", "item_code"]}
             filters={[{ k: "check_status", l: "Check", options: ["Done", "Check"] }]}
             onEdit={(r, k, v) => editRow("gr", r.id, k, v)}
@@ -182,7 +181,7 @@ export function Mitra10View() {
             selectable onDelete={(rows) => deleteRows("gr", rows.map((r) => r.id))} />
         )}
         {tab === "kw" && (
-          <LocalTable title="KW Update" rows={c?.kwitansi ?? []} cols={KW_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="KW Update" hideKey="m10-kw" rows={c?.kwitansi ?? []} cols={KW_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["invoice_no", "vendor_invoice_no", "kuitansi_no", "po_no", "username"]}
             onEdit={(r, k, v) => editRow("kwitansi", r.id, k, v)}
             onAdd={() => setAdd({ table: "kwitansi", fields: KW_EDIT })}

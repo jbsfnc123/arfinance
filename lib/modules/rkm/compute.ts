@@ -3,6 +3,7 @@ import { num } from "@/lib/local/pack";
 import type { AgingLine, RkmGr, RkmKw, RkmWorksheet } from "@/lib/local/datasets";
 import { remarkKey } from "@/lib/modules/remarks";
 import { splitSj } from "@/lib/modules/collection/revision";
+import { bpShort } from "@/lib/modules/bp";
 
 // RKM Tukar Faktur (Anyar Retail Indonesia), versi RKM dari rumus Mitra10 — dihitung di browser.
 // Kunci pencocokan: No SJ (aging) = "No. Pengiriman" (file GR/Kwitansi RKM). No SJ gabungan
@@ -12,10 +13,7 @@ export const RKM_TAX_DEFAULT = "Anyar Retail Indonesia";
 
 // Toko RKM dari Business Partner: "Anyar Retail Indonesia - RKM Cibabat" → "RKM Cibabat".
 export function cabangOf(bp: string | null | undefined) {
-  const s = (bp ?? "").trim();
-  if (!s) return "kosong";
-  const i = s.lastIndexOf(" - ");
-  return i >= 0 ? s.slice(i + 3).trim() || "kosong" : s;
+  return bpShort(bp) || "kosong";
 }
 
 export const rkmAgingLines = (lines: AgingLine[], taxName: string) => {
@@ -24,7 +22,7 @@ export const rkmAgingLines = (lines: AgingLine[], taxName: string) => {
 };
 
 export type RkmRow = RkmWorksheet & {
-  cabang: string; keterangan: string | null; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
+  cabang: string; bp_short: string; keterangan: string | null; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
   status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null; no_faktur_pajak: string | null;
 };
 export type RkmGrRow = RkmGr & { aging_open: number | null; check_status: "Done" | "Check" };
@@ -58,6 +56,7 @@ export function computeRkm(input: { worksheet: RkmWorksheet[]; gr: RkmGr[]; kwit
       ...w,
       open_amt: num(w.open_amt),
       cabang: cabangOf(w.business_partner),
+      bp_short: bpShort(w.business_partner),
       keterangan: input.remarks?.get(remarkKey(w.no_sj, w.invoice_no)) || null,
       gr: done || sjs.some((sj) => grSj.has(sj)) ? "Done" : "Pending",
       tukar_faktur: done ? "Done" : "Pending",

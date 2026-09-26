@@ -29,15 +29,13 @@ const WAIT = "bg-warning/20 text-warning";
 const BAD = "bg-danger/20 text-danger";
 
 const KK_COLS: LCol<RkmRow>[] = [
-  { k: "cabang", l: "Cabang" }, { k: "business_partner", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
+  { k: "bp_short", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
   { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
   { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
   { k: "gr", l: "GR", badge: { Done: OK, Pending: WAIT } },
   { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
   { k: "no_faktur_pajak", l: "No Faktur Pajak" },
   { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 200 },
-  { k: "status", l: "Status", badge: { Outstanding: WAIT, Lunas: OK } },
-  { k: "lama_tf", l: "Lama TF (hari)", n: true },
 ];
 
 type Field<T> = { k: keyof T & string; l: string; t?: "number" | "date" };
@@ -97,7 +95,8 @@ export function RkmView() {
   const [to, setTo] = useState("");
   const [cabang, setCabang] = useState("");
   const cabangs = useMemo(() => [...new Set((c?.worksheet ?? []).map((r) => r.cabang))].sort(), [c]);
-  const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) =>
+  // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
+  const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
     (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!cabang || r.cabang === cabang)), [c, from, to, cabang]);
 
   function editRow(table: Table, id: number, key: string, value: unknown) {
@@ -143,10 +142,9 @@ export function RkmView() {
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard m={m} showJadwal={false} />}
         {tab === "kk" && (
-          <LocalTable title="Kertas Kerja" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
-            search={["invoice_no", "business_partner", "no_sj", "no_po", "cabang", "keterangan", "no_faktur_pajak"]}
+          <LocalTable title="Kertas Kerja" hideKey="rkm-kk" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
+            search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "keterangan", "no_faktur_pajak"]}
             filters={[
-              { k: "status", l: "Status", options: ["Outstanding", "Lunas"] },
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
               { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },
             ]}
@@ -174,7 +172,7 @@ export function RkmView() {
             )} />
         )}
         {tab === "gr" && (
-          <LocalTable title="Receiving" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Receiving" hideKey="rkm-gr" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["grpo_no", "no_sj", "cabang", "no_po", "no_grn", "no_faktur_pajak"]}
             filters={[{ k: "check_status", l: "Check", options: ["Done", "Check"] }]}
             onEdit={(r, k, v) => editRow("gr", r.id, k, v)}
@@ -182,7 +180,7 @@ export function RkmView() {
             selectable onDelete={(rows) => deleteRows("gr", rows.map((r) => r.id))} />
         )}
         {tab === "kw" && (
-          <LocalTable title="Kwitansi" rows={c?.kwitansi ?? []} cols={KW_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Kwitansi" hideKey="rkm-kw" rows={c?.kwitansi ?? []} cols={KW_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["grpo_no", "no_sj", "cabang", "no_faktur_pajak", "pembuat", "no_po"]}
             onEdit={(r, k, v) => editRow("kwitansi", r.id, k, v)}
             onAdd={() => setAdd({ table: "kwitansi", fields: KW_EDIT })}
