@@ -621,3 +621,13 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
 - Halaman bertabel lebar penuh (`w-full`); dashboard `max-w-[1800px]`; form tetap sempit.
 - Query daftar dari tabel yang bisa >1.000 baris WAJIB lewat `fetchAll` (`lib/supabase/fetch-all.ts`).
 - `DataTableModal` tanpa batas baris (virtual) + Excel; `Modal` punya ukuran `xl` (96vw).
+
+## Collection › History Pembayaran BP (Fase 26, 2026-09-27)
+- Menu `coll.payhist` → `/collection/history-pembayaran` (migrasi 0032; role ber-`coll.tagihan` otomatis diberi akses).
+- Dihitung di browser (`lib/modules/collection/payment-history.ts`) dari dataset `erp` + `aging`; TIDAK ada tabel baru.
+  `pack_erp` kini ikut mengirim `due_date`, `payment_term`, `bp_name`, `bp_location` invoice.
+- Periode = 3 bulan kalender penuh sebelum bulan berjalan, berdasarkan payment date (Sep → Jun–Agu).
+  Hanya invoice ber-tempo (`/^Net N Days/`, termasuk Tolerance); CBD/Immediate diabaikan.
+  Lama bayar = payment date − due date per transaksi (pembayaran parsial dihitung terpisah); rata-rata tertimbang nominal.
+- Sisa outstanding & overdue (due date < hari ini) dari Master Aging terbaru per `bp_key`.
+- Riwayat bulan lama cukup di-upload lewat laporan ERP Payment (upsert menumpuk); halaman menandai bulan tanpa data.

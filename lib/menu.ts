@@ -36,6 +36,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
   { id: "collection", label: "Collection", icon: "groups", children: [
     { id: "coll.tagihan", label: "Daftar Tagihan", href: "/collection" },
     { id: "coll.case",    label: "Case",           href: "/collection/case", needs: "ctrl" },
+    { id: "coll.payhist", label: "History Pembayaran BP", href: "/collection/history-pembayaran" },
   ]},
   { id: "tukar", label: "Tukar Faktur", icon: "swap_horiz", children: [
     { id: "tukar.jadwal", label: "Jadwal Kolektor",      href: "/tukar-faktur/jadwal" },
