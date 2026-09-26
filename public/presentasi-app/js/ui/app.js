@@ -1,5 +1,11 @@
 /* Orkestrator aplikasi: state, render slide, skala, presentasi, keyboard, export. */
 
+/** Data Center: di AR Workspace dibuka di halaman induk (bridge); tanpa bridge memakai modal lama. */
+function openDataCenter_() {
+  try { const b = window.parent !== window ? window.parent.ARDeckBridge : null; if (b && b.openDataCenter) { b.openDataCenter(); return; } } catch (e) { /* lintas origin */ }
+  DataCenter.open();
+}
+
 const App = (() => {
   let state = null;
   let D = null;
@@ -66,7 +72,7 @@ const App = (() => {
     stage.appendChild(el);
     const s = SLIDES[cur];
     if (!m) {
-      el.innerHTML = '<div class="empty-note" style="margin:auto;font-size:18px">Belum ada data.<br><br><button class="btn primary" data-act="datacenter">Buka Data Center untuk import file</button></div>';
+      el.innerHTML = '<div class="empty-note" style="margin:auto;font-size:18px">Belum ada data.<br><br><button class="btn primary" data-act="datacenter">Buka Data Center: unduh &amp; upload template bulanan</button></div>';
       notes = [];
     } else {
       const ctx = {
@@ -302,7 +308,7 @@ const App = (() => {
       else $('notes').classList.toggle('show');
       setTimeout(fit, 30);
     },
-    datacenter: () => DataCenter.open(), 'dc-close': () => DataCenter.close(), 'drawer-close': () => Drawer.close(),
+    datacenter: () => openDataCenter_(), 'dc-close': () => DataCenter.close(), 'drawer-close': () => Drawer.close(),
     'export-menu': () => $('exportMenu').classList.toggle('open'),
     'export-pdf': () => { DataCenter.close(); exportPdf(); },
     'export-xlsx': () => Exporter.xlsx(state, D),
@@ -341,11 +347,11 @@ const App = (() => {
   });
 
   $('month').addEventListener('change', e => { m = e.target.value; ls.set('month', m); if (Drawer.isOpen()) Drawer.close(); rebuild(); render(); });
-  $('fileInput').addEventListener('change', e => { DataCenter.open('import'); DataCenter.importFiles(e.target.files); e.target.value = ''; });
+  $('fileInput').addEventListener('change', e => { e.target.value = ''; openDataCenter_(); });
   window.addEventListener('resize', () => { fit(); Charts.resizeAll(); });
   $('drawer').addEventListener('transitionend', e => { if (e.propertyName === 'width') fit(); });
   // seret file ke mana saja -> Data Center
-  window.addEventListener('dragover', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') >= 0) { e.preventDefault(); if (!DataCenter.isOpen()) DataCenter.open('import'); } });
+  window.addEventListener('dragover', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') >= 0) { e.preventDefault(); } });
   window.addEventListener('drop', e => e.preventDefault());
 
   function toast(msg) {
@@ -374,7 +380,7 @@ const App = (() => {
     if (q.get('notrans')) document.body.classList.add('notrans');
     render();
     if (q.get('present')) present();
-    if (q.get('dc')) DataCenter.open(q.get('dc'));
+    if (q.get('dc')) openDataCenter_();
     if (q.get('selftest')) selfTest();
     if (q.get('printall')) exportPdf(true);
     // parameter uji otomatis (screenshot): ?click=<selector>&chartclick=i,seri,index

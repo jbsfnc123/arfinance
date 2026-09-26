@@ -14,7 +14,7 @@
  * }
  */
 const LAYERS = ['manual', 'raw', 'excel'];
-const LAYER_LABEL = { manual: 'Input manual', raw: 'File mentah', excel: 'Excel (.xlsm)' };
+const LAYER_LABEL = { manual: 'Template Excel', raw: 'File mentah', excel: 'Excel (.xlsm)' };
 
 function newState_() {
   return { version: 2, savedAt: null, config: { month: '', week: 2 }, layers: { manual: {}, raw: {}, excel: {} },

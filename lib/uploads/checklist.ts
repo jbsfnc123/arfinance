@@ -6,7 +6,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 
 export type Period = "day" | "month";
 export type FileKey =
-  | "aging" | "erp_invoice" | "erp_payment" | "bpmaster" | "target" | "mutasi" | "jadwal_kolektor"
+  | "aging" | "erp_invoice" | "erp_payment" | "target" | "mutasi" | "jadwal_kolektor"
   | "m10_gr" | "m10_kw" | "m10_jadwal" | "rkm_gr" | "rkm_kw" | "so_master" | "marketplace";
 
 export type FileDef = {
@@ -22,7 +22,6 @@ export const FILES: Record<FileKey, FileDef> = {
   aging: { label: "Master Aging (Blank_A4)", match: { module: "data", kind: "aging" }, period: "day", where: PUSAT },
   erp_invoice: { label: "Invoice ERP (Invoice & Payment Date Comparison)", match: { module: "data", kind: "erp", detail: "invoice" }, period: "day", where: PUSAT },
   erp_payment: { label: "Payment ERP (Invoice & Payment Date Comparison)", match: { module: "data", kind: "erp", detail: "payment" }, period: "day", where: PUSAT },
-  bpmaster: { label: "Master Business Partner", match: { module: "data", kind: "bpmaster" }, period: "month", where: PUSAT },
   target: { label: "Target bulanan", match: { module: "collection", kind: "target" }, period: "month", where: PUSAT },
   mutasi: { label: "Mutasi rekening bank", match: { module: "mutasi", kind: "mutasi" }, period: "day", where: PUSAT },
   jadwal_kolektor: { label: "Jadwal Kolektor", match: { module: "tukar_faktur", kind: "jadwal" }, period: "day", where: { label: "Upload Jadwal", href: "/tukar-faktur/upload" } },
@@ -39,7 +38,6 @@ export const FILES: Record<FileKey, FileDef> = {
 export const CHECKLIST: { menu: string; files: FileKey[] }[] = [
   { menu: "Collection (Daftar Tagihan & Dashboard)", files: ["aging", "target"] },
   { menu: "Dashboard Mutasi Bank vs Realisasi", files: ["mutasi", "erp_invoice", "erp_payment", "target"] },
-  { menu: "Presentasi AR", files: ["aging", "erp_invoice", "erp_payment", "bpmaster"] },
   { menu: "Tukar Faktur – Jadwal Kolektor", files: ["jadwal_kolektor"] },
   { menu: "Mitra10 Tukar Faktur", files: ["aging", "m10_gr", "m10_kw", "m10_jadwal"] },
   { menu: "RKM Tukar Faktur", files: ["aging", "rkm_gr", "rkm_kw"] },

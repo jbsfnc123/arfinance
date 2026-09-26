@@ -47,14 +47,7 @@ const Exporter = (() => {
     });
     XLSX.utils.book_append_sheet(wb, sheet(ser, [16, 34]), 'Seri');
     XLSX.utils.book_append_sheet(wb, sheet(src, [16, 34]), 'Sumber angka');
-    XLSX.utils.book_append_sheet(wb, sheet([BPS_HEAD].concat(D.bpSales), [9, 14, 34, 30, 22, 14, 14, 8, 18, 10, 10, 10, 10, 10]), 'BP Sales');
-    XLSX.utils.book_append_sheet(wb, sheet([BPA_HEAD].concat(D.bpAging), [9, 30, 14, 34, 22, 20, 20, 14, 16, 16, 14, 14, 14, 14, 14, 14, 8, 40]), 'BP Aging');
-    if (D.payments.length) {
-      XLSX.utils.book_append_sheet(wb, sheet([BPP_HEAD.concat(['Avg Late Days'])].concat(D.payments.map(r => r.concat([r[BPP.n] ? r[BPP.sum] / r[BPP.n] : '']))),
-        [11, 14, 34, 30, 22, 8, 12, 12, 10, 18, 14, 10]), 'Payment (late days)');
-    }
-    const mk = Object.keys(D.bpMaster || {});
-    if (mk.length) XLSX.utils.book_append_sheet(wb, sheet([BPM_HEAD].concat(mk.map(k => D.bpMaster[k])), [16, 34, 30, 18, 20, 18, 20, 12, 16, 14, 16, 20, 50, 12, 12]), 'Master BP');
+    // Presentasi berdiri sendiri: tidak ada sheet data per BP.
     const tx = [];
     Object.keys(D.texts || {}).sort().forEach(ym => Object.keys(D.texts[ym]).forEach(k => tx.push([ym, k, D.texts[ym][k]])));
     if (tx.length) XLSX.utils.book_append_sheet(wb, sheet([['Bulan', 'Kunci', 'Teks']].concat(tx), [10, 40, 80]), 'Teks');

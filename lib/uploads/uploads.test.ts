@@ -1,19 +1,6 @@
 import { describe, expect, it } from "vitest";
-import fs from "node:fs";
-import path from "node:path";
-import vm from "node:vm";
-import { detectKind, parseAging, parseBpMaster, parseErp, type ErpRow } from "./parse";
-import { agingAoa, bpAoa, invoiceAoa, paymentAoa, type LegacyParser } from "./deck";
+import { detectKind, parseAging, parseBpMaster, parseErp } from "./parse";
 
-// Parser Presentasi lama dijalankan apa adanya (sama seperti di browser).
-function legacy(): LegacyParser {
-  const dir = path.resolve(__dirname, "../../public/presentasi-app/js");
-  const ctx = vm.createContext({ console, Date, Math, JSON });
-  for (const f of ["core/util.js", "data/parse.js"]) vm.runInContext(fs.readFileSync(path.join(dir, f), "utf8"), ctx);
-  return vm.runInContext("({ parseInvoice_, parsePayment_, parseAging_, parseBpMaster_ })", ctx) as LegacyParser;
-}
-const P = legacy();
-const plain = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 
 const d = (y: number, m: number, day: number) => (Date.UTC(y, m - 1, day) - Date.UTC(1899, 11, 30)) / 864e5;
 
@@ -29,19 +16,6 @@ const INVOICE_REPORT = report(d(2026, 9, 1), d(2026, 9, 30), [
 ]);
 
 // Simulasi isi database setelah erp_commit (invoice = baris pertama, payment per dokumen).
-function toDb(rows: ErpRow[]) {
-  const inv = new Map<string, Record<string, unknown>>();
-  const pays: Record<string, unknown>[] = [];
-  for (const r of rows) {
-    if (!inv.has(r.invoice_no!)) inv.set(r.invoice_no!, { ...r, last_payment_date: null });
-    if (r.payment_date) {
-      pays.push({ ...inv.get(r.invoice_no!), ...r, payment_amount: r.payment_amount });
-      const i = inv.get(r.invoice_no!)!;
-      if (!i.last_payment_date || r.payment_date > (i.last_payment_date as string)) i.last_payment_date = r.payment_date;
-    }
-  }
-  return { invoices: [...inv.values()], payments: pays };
-}
 
 describe("deteksi jenis file", () => {
   it("aging, erp, target, bp master, mutasi", () => {
@@ -82,47 +56,3 @@ describe("parser laporan bersama", () => {
   });
 });
 
-describe("paritas Presentasi: data database = import file langsung", () => {
-  const erp = parseErp([{ name: "S", rows: INVOICE_REPORT }]);
-  const db = toDb(erp.rows);
-
-  it("invoice (sales, kategori, BP, late days)", () => {
-    const direct = P.parseInvoice_(INVOICE_REPORT);
-    const fromDb = P.parseInvoice_(invoiceAoa(db.invoices));
-    expect(plain(fromDb.series)).toEqual(plain(direct.series));
-    expect(plain(fromDb.bp)).toEqual(plain(direct.bp));
-    expect(direct.series!["amt_all:0"]["2026-09"]).toBe(1000000);
-  });
-
-  it("payment (late days per bulan pembayaran)", () => {
-    const payFile = report(d(2026, 10, 1), d(2026, 10, 31), INVOICE_REPORT.slice(5, 7));
-    const direct = P.parsePayment_(payFile);
-    const fromDb = P.parsePayment_(paymentAoa(db.payments.filter((p) => String(p.payment_date).startsWith("2026-10"))));
-    expect(plain(fromDb.series)).toEqual(plain(direct.series));
-    expect(plain(fromDb.bp)).toEqual(plain(direct.bp));
-  });
-
-  it("aging (open, bucket, bad debt, detail BP)", () => {
-    const file = [["Payment Group", "Limit Group", "Marketing", "Collection Name", "Column5", "Sales Name", "Value", "Business Partner",
-      "Limit", "Tax Name", "Invoice No", "Invoice Date", "Due Date", "Open Amt", "Branch", "Follow Up"],
-      ["PG", "", "01-Traditional", "Andi", "", "Sales", "1000258", "Toko A", "", "", "SI1", d(2026, 8, 1), d(2026, 8, 10), 1000, "Jakarta", "telp"],
-      ["PG", "", "01-Traditional", "Andi", "", "Sales", "1000258", "Toko A", "", "", "SI1", d(2026, 8, 1), d(2026, 8, 10), 1000, "Jakarta", ""],
-      ["PG", "", "03-Reseller", "Budi", "", "Sales", "2000", "B", "", "", "SI2", d(2026, 3, 1), d(2026, 3, 2), 5000, "Medan", ""],
-      ["PG", "", "03-Reseller", "Budi", "", "Sales", "2000", "B", "", "", "SI3", d(2026, 8, 20), d(2026, 9, 20), 700, "Medan", ""]];
-    const direct = P.parseAging_(file);
-    const lines = parseAging([{ name: "Blank_A4", rows: file }]).rows;
-    const fromDb = P.parseAging_(agingAoa(lines));
-    expect(plain(fromDb.series)).toEqual(plain(direct.series));
-    expect(plain(fromDb.bp)).toEqual(plain(direct.bp));
-  });
-
-  it("bp master", () => {
-    const file = [["Search Key", "Name", "Payment Group", "PIC AR", "Sales / Agent", "Payment Term", "Marketing Groups", "TypeOfCustomer",
-      "Credit Limit", "Credit Status", "Sales Region", "Branch", "Description", "First Sale", "LastSale", "Customer"],
-      ["1000258-PKP", "Toko A", "PG", "Rina", "Sales", "Net 30 Days", "Traditional", "Toko", 5000000, "OK", "Jawa", "Jakarta", "x  y", d(2025, 1, 2), d(2026, 9, 1), "Yes"],
-      ["2000", "Shop", "PG", "", "", "", "E Commerce", "", 0, "", "", "", "", "", "", "Yes"]];
-    const direct = P.parseBpMaster_(file);
-    const fromDb = P.parseBpMaster_(bpAoa(parseBpMaster([{ name: "S", rows: file }]).rows));
-    expect(plain(fromDb.master)).toEqual(plain(direct.master));
-  });
-});

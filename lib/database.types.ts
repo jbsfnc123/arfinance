@@ -500,18 +500,6 @@ export type Database = {
         Update: never
         Relationships: []
       }
-      deck_derived: {
-        Row: { kind: string; month: string; series: Json; bp: Json; stats: Json; updated_at: string }
-        Insert: { kind: string; month: string; series?: Json; bp?: Json; stats?: Json; updated_at?: string }
-        Update: { kind?: string; month?: string; series?: Json; bp?: Json; stats?: Json; updated_at?: string }
-        Relationships: []
-      }
-      deck_dirty: {
-        Row: { kind: string; month: string; at: string }
-        Insert: { kind: string; month: string; at?: string }
-        Update: { kind?: string; month?: string; at?: string }
-        Relationships: []
-      }
       so_master: {
         Row: {
           id: number
@@ -759,139 +747,40 @@ export type Database = {
         }
         Relationships: []
       }
-      deck_periods: {
+      deck_months: {
         Row: {
           month: string
-          status: string
-          closed_at: string | null
-          closed_by: string | null
-          reopened_at: string | null
-          reopened_by: string | null
-          note: string | null
-        }
-        Insert: {
-          month: string
-          status?: string
-          closed_at?: string | null
-          closed_by?: string | null
-          reopened_at?: string | null
-          reopened_by?: string | null
-          note?: string | null
-        }
-        Update: {
-          month?: string
-          status?: string
-          closed_at?: string | null
-          closed_by?: string | null
-          reopened_at?: string | null
-          reopened_by?: string | null
-          note?: string | null
-        }
-        Relationships: []
-      }
-      deck_metrics: {
-        Row: {
-          month: string
-          key: string
-          source: string
-          value: number
-          label: string | null
+          data: string
+          sheets_filled: number
+          sheets_total: number
+          complete: boolean
+          file_name: string | null
+          uploaded_at: string | null
+          uploaded_by: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           month: string
-          key: string
-          source: string
-          value: number
-          label?: string | null
+          data: string
+          sheets_filled?: number
+          sheets_total?: number
+          complete?: boolean
+          file_name?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           month?: string
-          key?: string
-          source?: string
-          value?: number
-          label?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      deck_bp_snapshot: {
-        Row: {
-          month: string
-          kind: string
-          bp: Json
-          stats: Json
-          captured_at: string
-        }
-        Insert: {
-          month: string
-          kind: string
-          bp?: Json
-          stats?: Json
-          captured_at?: string
-        }
-        Update: {
-          month?: string
-          kind?: string
-          bp?: Json
-          stats?: Json
-          captured_at?: string
-        }
-        Relationships: []
-      }
-      deck_manual_rows: {
-        Row: {
-          id: number
-          month: string
-          table_name: string
-          sort: number
-          row: Json
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          id?: never
-          month: string
-          table_name: string
-          sort?: number
-          row: Json
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          id?: never
-          month?: string
-          table_name?: string
-          sort?: number
-          row?: Json
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      deck_texts: {
-        Row: {
-          month: string
-          slide_key: string
-          text: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          month: string
-          slide_key: string
-          text: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          month?: string
-          slide_key?: string
-          text?: string
+          data?: string
+          sheets_filled?: number
+          sheets_total?: number
+          complete?: boolean
+          file_name?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1127,14 +1016,6 @@ export type Database = {
         }
         Relationships: []
       }
-      v_deck_invoices: {
-        Row: Database["public"]["Tables"]["erp_invoices"]["Row"] & { last_payment_date: string | null }
-        Relationships: []
-      }
-      v_deck_payments: {
-        Row: { invoice_no: string; payment_doc: string; payment_date: string; payment_amount: number; bp_key: string | null; bp_name: string | null; bp_group: string | null; marketing_group: string | null; payment_term: string | null; invoice_date: string | null; due_date: string | null }
-        Relationships: []
-      }
       v_bank_mutations: {
         Row: Database["public"]["Tables"]["bank_mutations"]["Row"] & { excluded: boolean; excluded_note: string | null }
         Relationships: []
@@ -1159,10 +1040,8 @@ export type Database = {
       pack_erp: { Args: Record<string, never>; Returns: Json }
       pack_tukar: { Args: Record<string, never>; Returns: Json }
       usage_report: { Args: Record<string, never>; Returns: Json }
-      deck_save: { Args: { p_metrics: Json; p_metric_deletes: Json; p_rows: Json; p_texts: Json }; Returns: number }
-      deck_close_month: { Args: { p_month: string; p_auto?: Json }; Returns: Json }
-      deck_close_until: { Args: { p_until: string }; Returns: number }
-      deck_reopen_month: { Args: { p_month: string }; Returns: undefined }
+      deck_month_save: { Args: { p_month: string; p_data: string; p_filled: number; p_total: number; p_file?: string | null; p_upload?: boolean }; Returns: undefined }
+      deck_month_delete: { Args: { p_month: string }; Returns: undefined }
       upload_status: { Args: Record<string, never>; Returns: Json }
       pack_rkm: { Args: Record<string, never>; Returns: Json }
       rkm_sync: { Args: Record<string, never>; Returns: number }

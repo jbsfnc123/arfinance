@@ -3,6 +3,8 @@
  *
  * Panel = daftar seksi: {t:'kv'|'table'|'bars'|'note', ...}; lihat ui/drawer.js untuk render.
  */
+/** Presentasi AR berdiri sendiri (data dari template per bulan, tanpa data per BP). */
+const STANDALONE_ = true;
 const NO_BP = 'Detail per BP belum tersedia untuk bulan ini. Import file Invoice/Aging/Payment mentah di Data Center.';
 
 function kv_(title, rows) { return { t: 'kv', title: title, rows: rows.filter(r => r) }; }
@@ -98,11 +100,13 @@ function lateAgg_(rows) {
 function lateTxt_(a) { return a && a.n ? days_(a.avg) + ' (' + grp_(a.n, '.') + ' trx)' : '-'; }
 /** Late days bulan payment ym untuk baris yang lolos filter; null bila file payment bulan itu belum diimpor. */
 function lateFor_(D, ym, filter) {
+  if (STANDALONE_) return null; // Presentasi berdiri sendiri: tidak ada data per BP
   const rows = bp_(D).pay[ym];
   return rows ? lateAgg_(filter ? rows.filter(filter) : rows) : null;
 }
 /** Late days untuk nama payment group / BP; null = belum ada file payment bulan itu, {n:0} = tidak ada transaksi. */
 function lateByName_(D, names, ym) {
+  if (STANDALONE_) return null; // Presentasi berdiri sendiri: tidak ada data per BP
   if (!bp_(D).pay[ym]) return null;
   const idx = nameIdx_(D, 'pay', ym);
   for (let i = 0; i < names.length; i++) {
@@ -153,6 +157,7 @@ function lookup_(idx, name) {
 // ---------------------------------------------------------------- profil Payment Group / BP
 
 function masterSection_(D, keys, open) {
+  if (STANDALONE_) return []; // Presentasi berdiri sendiri: tidak ada data per BP
   const list = keys.map(k => master_(D, k)).filter(Boolean);
   if (!list.length) return hasMaster_(D) ? [note_('BP tidak ada di master Business Partner.')] : [];
   const m0 = list[0];
@@ -177,6 +182,7 @@ function masterSection_(D, keys, open) {
 }
 
 function profile_(D, names, ym) {
+  if (STANDALONE_) return []; // Presentasi berdiri sendiri: tidak ada data per BP
   const B = bp_(D);
   const months = [-2, -1, 0].map(k => addM_(ym, k));
   const find = (kind, m) => {
@@ -265,6 +271,7 @@ function profile_(D, names, ym) {
 // ---------------------------------------------------------------- per marketing group
 
 function groupInfo_(D, idx, ym) {
+  if (STANDALONE_) return []; // Presentasi berdiri sendiri: tidak ada data per BP
   const code = GRP_OF_IDX[idx];
   const B = bp_(D);
   const out = [];
@@ -301,6 +308,7 @@ function picOf_(D, r) {
 }
 
 function picPerf_(D, m) {
+  if (STANDALONE_) return null; // Presentasi berdiri sendiri: tidak ada data per BP
   const rows = bp_(D).aging[m] || [];
   if (!rows.length) return null;
   const by = {};
@@ -332,6 +340,7 @@ function picPerf_(D, m) {
 }
 
 function drillPic_(D, m, a) {
+  if (STANDALONE_) return []; // Presentasi berdiri sendiri: tidak ada data per BP
   const out = [kv_('Ringkasan ' + abbr_(m), [['Jumlah BP dengan saldo', grp_(a.bp, '.')], ['Open amount', money_(a.open)],
     ['Overdue', money_(a.od) + ' (' + pc_(a.odPct) + ')'], ['> 90 hari', money_(a.o90)],
     ['Avg late days (pembayaran ' + abbr_(m) + ')', a.late ? lateTxt_(a.late) : '-']]),
@@ -356,6 +365,7 @@ function drillPic_(D, m, a) {
  * dengan Key BP atau nama yang sama (Last Sale di master tidak selalu mutakhir per key).
  */
 function dormant_(D, m, minDays) {
+  if (STANDALONE_) return null; // Presentasi berdiri sendiri: tidak ada data per BP
   const rows = bp_(D).aging[m] || [];
   if (!rows.length || !hasMaster_(D)) return null;
   const cache = bp_(D).dorm || (bp_(D).dorm = {});
@@ -410,6 +420,7 @@ function monthSales_(D, ym) {
 }
 
 function groupSales_(D, ym) {
+  if (STANDALONE_) return []; // Presentasi berdiri sendiri: tidak ada data per BP
   const rows = (bp_(D).sales[ym] || []).filter(r => inScope_(r, 'all'));
   if (!rows.length) return [];
   const agg = sumBy_(rows, r => r[BPS.grp]);
@@ -421,6 +432,7 @@ function groupSales_(D, ym) {
 }
 
 function topBlock_(D, ym, filter, title) {
+  if (STANDALONE_) return []; // Presentasi berdiri sendiri: tidak ada data per BP
   const rows = (bp_(D).sales[ym] || []).filter(filter);
   if (!bp_(D).sales[ym]) return [note_(NO_BP)];
   if (!rows.length) return [];
@@ -528,7 +540,8 @@ function drillAgingBucket_(D, si, ym) {
     ['Nilai', money_(v)], ['% dari open amount', open ? pc_(v / open, 2) : '-'],
     ['vs bulan lalu', chg_(v, agingVal_(D, si, addM_(ym, -1)))],
   ])];
-  if (si === 5) return out.concat([note_('Bad Debt = input manual. Rincian per BP di slide Risiko.')]);
+  if (si === 5) return out.concat([note_('Bad Debt = input template (sheet Aging & Overdue). Rincian di slide Risiko.')]);
+  if (STANDALONE_) return out;
   const rows = bp_(D).aging[ym];
   if (!rows) return out.concat([note_(NO_BP)]);
   const col = [BPA.b1, BPA.b2, BPA.b3, BPA.b4, BPA.b5][si];
@@ -575,6 +588,7 @@ function drillRoll_(D, ym) {
 
 /** Late days bulan payment m: per marketing group, kategori, dan payment group paling lambat. */
 function drillLate_(D, m) {
+  if (STANDALONE_) return []; // Presentasi berdiri sendiri: tidak ada data per BP
   const rows = bp_(D).pay[m];
   if (!rows) return [note_('Belum ada file Invoice Payment Date untuk ' + idMonth_(m) + '. Import di Data Center.')];
   const all = lateAgg_(rows);
@@ -606,6 +620,7 @@ function drillLate_(D, m) {
 
 /** Daftar entitas (Payment Group & BP) untuk pencarian, dengan open & sales bulan m. */
 function bpDirectory_(D, m) {
+  if (STANDALONE_) return []; // Presentasi berdiri sendiri: tidak ada data per BP
   const B = bp_(D);
   const dir = {};
   const add = (name, type, f) => {

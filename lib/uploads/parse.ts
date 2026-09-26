@@ -2,9 +2,9 @@ import { parseDate } from "@/lib/parsers/date";
 import { parseNumber } from "@/lib/parsers/number";
 
 // Parser laporan ERP BERSAMA (Fase 7). Setiap laporan di-upload sekali lalu dipakai semua menu:
-//   aging    (Blank_A4 = MASTER AGING)          → Collection, Mitra10, Tukar Faktur, Presentasi
-//   erp      (Invoice and Payment Date Comparison) → Mutasi Bank, Presentasi, Marketplace
-//   bpmaster (Business Partner)                 → Presentasi
+//   aging    (Blank_A4 = MASTER AGING)          → Collection, Mitra10, RKM, Tukar Faktur
+//   erp      (Invoice and Payment Date Comparison) → Mutasi Bank, Dashboard Collection, Marketplace
+//   bpmaster (Business Partner)                 → master BP (Presentasi AR kini berdiri sendiri)
 // Kolom dicari berdasarkan nama header (tidak peka huruf besar/kecil & tanda baca).
 
 export type Sheet = { name: string; rows: unknown[][] };
@@ -192,9 +192,9 @@ export function parseBpMaster(sheets: Sheet[]) {
 
 // Menu yang ikut terisi dari tiap jenis laporan (ditampilkan di pratinjau Pusat Upload).
 export const KIND_INFO: Record<FileKind, { label: string; feeds: string }> = {
-  aging: { label: "Aging (Blank_A4 / MASTER AGING)", feeds: "Collection, Dashboard Controller, Tukar Faktur, Mitra10, Presentasi" },
-  erp: { label: "Invoice & Payment Date Comparison", feeds: "Mutasi Bank vs Realisasi, Presentasi, Marketplace (ERP)" },
-  bpmaster: { label: "Master Business Partner", feeds: "Presentasi" },
+  aging: { label: "Aging (Blank_A4 / MASTER AGING)", feeds: "Collection, Dashboard Controller, Tukar Faktur, Mitra10, RKM" },
+  erp: { label: "Invoice & Payment Date Comparison", feeds: "Mutasi Bank vs Realisasi, Dashboard Collection, Marketplace (ERP)" },
+  bpmaster: { label: "Master Business Partner", feeds: "(disimpan sebagai master BP; tidak dipakai Presentasi AR lagi)" },
   target: { label: "Target bulanan", feeds: "Dashboard Controller, Mutasi Bank vs Realisasi" },
   mutasi: { label: "Mutasi rekening bank", feeds: "Mutasi Bank vs Realisasi" },
 };

@@ -592,17 +592,20 @@ di `lib/supabase/proxy.ts` + `lib/workspace.ts`.
 - **Nama di login:** RPC `login_names` (≥ 2 huruf, maks. 5 nama akun aktif, 30 permintaan/menit/IP) dan
   `pin_login_named` (nama + PIN, batas gagal sama seperti `pin_login`). Keduanya hanya untuk service role.
 
-## Presentasi AR — data per bulan & snapshot (Fase 23, 2026-09-26)
-- Tabel (migrasi 0030): `deck_periods` (open/closed), `deck_metrics` (month, key, source excel|raw|auto|manual,
-  value — prioritas manual > raw/auto > excel), `deck_bp_snapshot` (rincian BP & master beku per bulan tertutup),
-  `deck_manual_rows` (8 tabel manual per bulan), `deck_texts` (teks slide per bulan). `deck_state` hanya config/label/impor.
-- **Tutup Bulan** (Controller/SA, toolbar di atas deck): `deck_close_month` menyalin agregat `deck_derived` + master BP
-  menjadi snapshot, menyimpan Collection otomatis, dan mengunci bulan. Upload ulang tidak mengubah bulan tertutup
-  (`recomputeDirty` melewatinya; `deck_save` menolak). **Buka Kembali** hanya SA (`deck_reopen_month`).
-- **Collection otomatis** (`lib/modules/deck/collection.ts`): target per marketing group dari Upload Target Bulanan,
-  realisasi = Alloc in Target (ERP payment), s/d minggu W, target bulan berikut, Collection %. Input manual tetap menimpa.
-- **Riwayat** dari `Data Finance Presentation.xlsm` (sheet `Input`) diimpor sekali 2026-09-26 memakai parser app
-  (`parseExcel_`): 303 nilai, 85 seri, Jan 2025 – Agu 2026 (sumber "Manual" → manual, lainnya → excel). Jan 2025 –
-  Agu 2026 sudah ditutup; Sep 2026 terbuka. File workbook tidak disimpan di repo.
-- Data yang tetap manual (tidak ada sumber sistem): TOP 5 / tanpa TOP 5, Top Unpaid W, Uncollected, Due90 Cicil,
-  Bad Debt (manual, `aging:5` — berbeda dari `baddebt:*` = aging >90 hari per group), Unallocated.
+## Presentasi AR — berdiri sendiri, template Excel per bulan (Fase 24, 2026-09-27)
+Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya dihapus di migrasi 0031).
+- **Tidak terhubung dengan menu lain.** `aging_commit`/`erp_commit`/`bp_commit` tidak lagi menulis `deck_dirty`; tabel
+  `deck_metrics`, `deck_periods`, `deck_bp_snapshot`, `deck_manual_rows`, `deck_texts`, `deck_derived`, `deck_dirty`,
+  view `v_deck_*` dan RPC `deck_save`/`deck_close_*`/`deck_reopen_month` di-drop. Data lama dikosongkan (mulai dari nol).
+- **Penyimpanan:** `deck_months` (1 baris per bulan `YYYY-MM`): `data` = JSON `{v, series, tables, texts}` di-gzip lalu
+  base64 (dikompres di browser, `lib/modules/deck/store.ts`), plus kolom `sheets_filled/sheets_total/complete`,
+  `file_name`, `uploaded_at/by`. RPC `deck_month_save` (menu `lap.presentasi`, maks 5 MB; `p_upload=false` untuk simpan
+  teks slide tanpa mengubah status upload) dan `deck_month_delete` (ctrl/SA). `deck_state` hanya config (bulan, minggu W).
+- **Template** (`lib/modules/deck/template.ts`, definisi tunggal `DECK_SHEETS`): Petunjuk + 8 sheet = 1 slide 1 sheet
+  (Sales Performance, Sales Mix, Reseller & Site, Collection, Uncollected Watchlist, Aging & Overdue, AR Summary,
+  Risiko Piutang). Blok `Kunci | Keterangan | Nilai` + blok `#TABEL <nama>`. Dibaca per nama sheet & kunci; angka
+  format Rupiah teks dikenali. Template yang diunduh sudah terisi data tersimpan bulan itu.
+- **Data Center** (`app/(shell)/presentasi/data-center.tsx`, modal di halaman induk): pilih bulan → unduh template →
+  upload. Daftar cut-off 12 bulan terakhir: ✔ lengkap (semua sheet wajib terisi), `x/8 sheet` sebagian, ✖ belum ada.
+- **App deck** (`public/presentasi-app`): fitur per-BP dihapus (slide Kinerja PIC & BP Explorer, top BP di drill,
+  pelanggan tidak aktif); `STANDALONE_` di `engine/insights.js`. Tren antar bulan dibaca dari bulan-bulan tersimpan.

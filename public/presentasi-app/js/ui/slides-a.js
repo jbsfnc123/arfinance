@@ -141,7 +141,7 @@ SLIDES.push({
     el.innerHTML = sHead_(ctx, 4, 'Sales Mix · ' + scopeLbl, headline_(D, m, 'mix'),
       seg_('scope', [['all', 'ALL'], ['trad', 'Traditional'], ['res', 'Reseller']], scope) + seg_('metric', [['amt', 'Amount'], ['cnt', 'Invoice']], metric)) +
       '<div class="s-body" style="grid-template-columns: 1fr 360px">' +
-      '<div class="card chart-card"><h3>' + (metric === 'amt' ? 'Invoice Amount' : 'Invoice Count') + ' — komposisi 5 bulan<span class="hint">klik segmen untuk detail & Top BP</span></h3><div class="chart" id="c-mix"></div></div>' +
+      '<div class="card chart-card"><h3>' + (metric === 'amt' ? 'Invoice Amount' : 'Invoice Count') + ' — komposisi 5 bulan<span class="hint">klik segmen untuk detail</span></h3><div class="chart" id="c-mix"></div></div>' +
       '<div class="card" style="display:flex;flex-direction:column"><h3>' + esc_(idMonth_(m)) + ' · ' + scopeLbl + '</h3>' +
       '<table class="t" style="margin-top:6px"><thead><tr><th>Kategori</th><th class="r">Amount</th><th class="r">Share</th><th class="r">Avg/inv</th></tr></thead><tbody>' +
       CATS.map((c, i) => '<tr data-si="' + i + '"><td><span class="dot" style="background:' + Charts.CAT_COLORS[i] + '"></span>' + c + '</td>' +
@@ -280,7 +280,7 @@ SLIDES.push({
       ' <span style="font-size:20px;color:var(--brand)">' + pc_(p(x.a, x.t), 2) + '</span></div>' + bar(x.a, x.t) +
       '<div class="sub">Belum tertagih ' + money_(x.t !== null && x.a !== null ? x.t - x.a : null) + '</div></div>' +
       '<div class="card kpi click" data-k="w"><div class="label">Collected s/d ' + esc_(wTxt) + '</div>' + (x.w === null
-        ? '<div class="value" style="font-size:20px;color:var(--text-3);margin-top:14px">Belum diinput</div><div class="sub">Isi di Data Center › Input manual</div></div>'
+        ? '<div class="value" style="font-size:20px;color:var(--text-3);margin-top:14px">Belum diinput</div><div class="sub">Isi di template (Data Center)</div></div>'
         : '<div class="value num">' + money_(x.w) + ' <span style="font-size:20px;color:var(--accent)">' + pc_(p(x.w, x.t), 2) + '</span></div>' + bar(x.w, x.t) +
           '<div class="sub">Belum tertagih ' + money_(x.t !== null ? x.t - x.w : null) + '</div></div>') +
       '<div class="card chart-card" style="grid-column: span 2"><h3>' + (scope === 'all' ? 'Per Marketing Group — target vs actual vs ' + esc_(wTxt) : 'All vs TOP 5 vs w/o TOP 5') +
@@ -290,8 +290,8 @@ SLIDES.push({
         unpaid.map((r, i) => '<tr data-pg="' + i + '"><td>' + esc_(r['Payment Group']) + '</td><td class="r num bar-in" style="width:130px">' +
           '<i style="width:' + ((Number(r['Unpaid (Rp)']) || 0) / maxU * 100).toFixed(0) + '%"></i><span>' + money_(Number(r['Unpaid (Rp)'])) + '</span></td></tr>').join('') +
         '</tbody><tfoot><tr><td>Total</td><td class="r num">' + money_(sum_(unpaid.map(r => Number(r['Unpaid (Rp)'])))) + '</td></tr></tfoot></table></div>'
-        : '<div class="empty-note">Belum ada data Top Unpaid untuk ' + esc_(abbr_(m)) + '. Isi lewat Data Center › template manual.</div>') + '</div>' +
-      '</div>' + sFoot_(ctx, 'Target, actual, dan collection s/d minggu W = input manual (Data Center). Top Unpaid = tabel manual.');
+        : '<div class="empty-note">Belum ada data Top Unpaid untuk ' + esc_(abbr_(m)) + '. Isi lewat template di Data Center.</div>') + '</div>' +
+      '</div>' + sFoot_(ctx, 'Sumber: template bulan ini (sheet Collection) — target, actual, s/d minggu W, Top Unpaid.');
 
     const el2 = el.querySelector('#c-coll');
     if (scope === 'all') {
@@ -326,7 +326,7 @@ SLIDES.push({
         sections: [kv_('Angka', [['Target', money_(vals[q.dataIndex].t)], ['Actual', money_(vals[q.dataIndex].a)], ['s/d ' + wTxt, money_(vals[q.dataIndex].w)]])] }));
     }
     on_(el, '[data-k]', () => ctx.drill({ key: 'coll-kpi|' + scope, eyebrow: 'Collection', title: 'Ringkasan ' + abbr_(m),
-      hero: pc_(p(x.a, x.t), 2), sections: collectionSections_(D, m).concat([kv_('AR', [['Open amount', money_(g_(D, 'open', m))], ['AR Days TOP', days_(arDays_(D, m))]])]) }));
+      hero: pc_(p(x.a, x.t), 2), sections: [kv_('AR', [['Open amount', money_(g_(D, 'open', m))], ['AR Days TOP', days_(arDays_(D, m))]])] }));
     on_(el, 'tr[data-pg]', tr => {
       const r = unpaid[Number(tr.dataset.pg)];
       ctx.drill({ key: 'unpaid|' + tr.dataset.pg, eyebrow: 'Top Unpaid · profil', title: r['Payment Group'], hero: money_(Number(r['Unpaid (Rp)'])),
