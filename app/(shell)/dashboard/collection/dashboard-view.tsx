@@ -44,7 +44,7 @@ export function DashboardView() {
   const reload = () => { void aging.reload(); void targets.reload(); void activity.reload(); };
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-[1800px]">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-medium">Dashboard Collection</h1>
         <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} !w-auto`}>
@@ -178,7 +178,7 @@ function AgingCard({ d }: { d: SpvSummary }) {
       type: "bar",
       barMaxWidth: 70,
       data: buckets.map((b, i) => ({ value: Number(b.nominal), itemStyle: { color: AGING_COLOR[i], borderRadius: [6, 6, 0, 0] } })),
-      label: { show: true, position: "top", formatter: (p) => `${pct(Number((p as { value: number }).value))}%` },
+      label: { show: true, position: "top", distance: 4, color: "#e8eaed", fontSize: 11, textBorderWidth: 0, formatter: (p) => `${pct(Number((p as { value: number }).value))}%` },
     }],
   };
 
@@ -300,9 +300,9 @@ function AllocationCard({ a }: { a: ReturnType<typeof allocationSeries> | null }
   const option: EChartsOption = {
     grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
     tooltip: { trigger: "axis", valueFormatter: (x) => (x == null ? "-" : `${Number(x).toLocaleString("id-ID")} jt`) },
-    legend: { top: 0, textStyle: { color: "#9aa0a6" } },
+    legend: { type: "scroll", top: 0, textStyle: { color: "#9aa0a6" } },
     xAxis: { type: "category", data: a.days.map((d) => String(Number(d.date.slice(8)))) },
-    yAxis: { type: "value", name: "Juta", splitLine: { lineStyle: { color: CHART_GRID } } },
+    yAxis: { type: "value", splitLine: { lineStyle: { color: CHART_GRID } }, axisLabel: { formatter: (v: number) => `${v.toLocaleString("id-ID")} jt` } },
     series: [
       { name: "Alloc in Target / hari", type: "bar", data: a.days.map((d) => juta(d.allocT)), itemStyle: { color: "#5f8fd8" }, barMaxWidth: 14 },
       { name: "Kumulatif Alloc in Target", type: "line", symbolSize: 4, data: a.days.map((d) => juta(d.cumAllocT)), itemStyle: { color: "#81c995" }, lineStyle: { width: 3 } },

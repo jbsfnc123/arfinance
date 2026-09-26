@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/database.types";
 import { btnGhost, card, inputCls, td, th } from "@/components/ui";
+import { TableBox } from "@/components/table-box";
 
 const PAGE = 50;
 
@@ -48,29 +49,31 @@ export function MasterView() {
           <span className="material-symbols-outlined">chevron_right</span>
         </button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr>
-              {["Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status"].map((h) => <th key={h} className={th}>{h}</th>)}
-              <th className={`${th} text-right`}>Grand Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t border-line">
-                <td className={td}>{r.document_no}</td>
-                <td className={td}>{r.date_po}</td>
-                <td className={td}>{r.no_po_customer}</td>
-                <td className={`${td} max-w-64 truncate`}>{r.business_partner}</td>
-                <td className={td}>{r.price_list}</td>
-                <td className={td}>{r.document_status}</td>
-                <td className={`${td} text-right`}>{Number(r.grand_total).toLocaleString("id-ID")}</td>
+      <div>
+        <TableBox bare>
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                {["Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status"].map((h) => <th key={h} className={th}>{h}</th>)}
+                <th className={`${th} text-right`}>Grand Total</th>
               </tr>
-            ))}
-            {rows.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Belum ada data MASTER. Upload SO terlebih dahulu.</td></tr>}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-t border-line">
+                  <td className={td}>{r.document_no}</td>
+                  <td className={td}>{r.date_po}</td>
+                  <td className={td}>{r.no_po_customer}</td>
+                  <td className={`${td} max-w-64 truncate`} title={r.business_partner ?? ""}>{r.business_partner}</td>
+                  <td className={td}>{r.price_list}</td>
+                  <td className={td}>{r.document_status}</td>
+                  <td className={`${td} text-right`}>{Number(r.grand_total).toLocaleString("id-ID")}</td>
+                </tr>
+              ))}
+              {rows.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Belum ada data MASTER. Upload SO terlebih dahulu.</td></tr>}
+            </tbody>
+          </table>
+        </TableBox>
       </div>
     </section>
   );

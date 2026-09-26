@@ -18,7 +18,7 @@ export function MutasiView() {
   const [tab, setTab] = useState<Tab>("dash");
   const [version, setVersion] = useState(0);
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="w-full">
       <h1 className="text-2xl font-medium">Mutasi Bank vs Realisasi</h1>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fmtTimestamp } from "@/lib/format";
 import { card, td, th } from "@/components/ui";
 import { fmtBytes, QUOTA, quotaState, SUPABASE_PLAN, SUPABASE_USAGE_URL, type UsageReport } from "@/lib/modules/usage";
+import { TableBox } from "@/components/table-box";
 
 // Pengganti modal "Database" (peta arsitektur) di aplikasi lama: isi tabel & riwayat import.
 // Fase 7: laporan ERP disimpan sekali di tabel inti; menu lain membaca lewat view.
@@ -66,21 +67,23 @@ export default async function DatabasePage() {
 
       <section className={`${card} overflow-hidden`}>
         <h2 className="px-4 pt-4 font-medium">Riwayat import</h2>
-        <table className="mt-2 w-full text-sm">
-          <thead><tr><th className={th}>Waktu</th><th className={th}>Modul</th><th className={th}>Jenis</th><th className={th}>File</th><th className={`${th} text-right`}>Baris</th></tr></thead>
-          <tbody>
-            {(log ?? []).map((l) => (
-              <tr key={l.id} className="border-t border-line">
-                <td className={td}>{fmtTimestamp(l.at)}</td>
-                <td className={td}>{l.module}</td>
-                <td className={td}>{l.kind}{l.months?.length ? ` (${l.months.join(", ")})` : ""}</td>
-                <td className={`${td} max-w-64 truncate`}>{l.file_name}</td>
-                <td className={`${td} text-right`}>{l.rows?.toLocaleString("id-ID")}</td>
-              </tr>
-            ))}
-            {!log?.length && <tr><td className={`${td} text-fg-2`} colSpan={5}>Belum ada import.</td></tr>}
-          </tbody>
-        </table>
+        <TableBox bare fill={false} maxHeight="max-h-[50vh]" className="mt-2">
+          <table className="mt-2 w-full text-sm">
+            <thead><tr><th className={th}>Waktu</th><th className={th}>Modul</th><th className={th}>Jenis</th><th className={th}>File</th><th className={`${th} text-right`}>Baris</th></tr></thead>
+            <tbody>
+              {(log ?? []).map((l) => (
+                <tr key={l.id} className="border-t border-line">
+                  <td className={td}>{fmtTimestamp(l.at)}</td>
+                  <td className={td}>{l.module}</td>
+                  <td className={td}>{l.kind}{l.months?.length ? ` (${l.months.join(", ")})` : ""}</td>
+                  <td className={`${td} max-w-64 truncate`} title={l.file_name ?? ""}>{l.file_name}</td>
+                  <td className={`${td} text-right`}>{l.rows?.toLocaleString("id-ID")}</td>
+                </tr>
+              ))}
+              {!log?.length && <tr><td className={`${td} text-fg-2`} colSpan={5}>Belum ada import.</td></tr>}
+            </tbody>
+          </table>
+        </TableBox>
       </section>
     </div>
   );

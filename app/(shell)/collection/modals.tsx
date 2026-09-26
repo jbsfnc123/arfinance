@@ -137,6 +137,7 @@ export function ContactsModal(props: {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<Contact>({ business_partner: "", nama: "", no_wa: "" });
   const [batch, setBatch] = useState<Contact[] | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const list = useMemo(() => {
     const needle = q.toLowerCase();
@@ -186,7 +187,7 @@ export function ContactsModal(props: {
       )}
 
       <ul className="mt-3 divide-y divide-line">
-        {list.slice(0, 200).map((c) => (
+        {(showAll ? list : list.slice(0, 200)).map((c) => (
           <li key={c.business_partner} className="py-2">
             {editing === c.business_partner ? (
               <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2">
@@ -217,6 +218,11 @@ export function ContactsModal(props: {
         ))}
         {list.length === 0 && <li className="py-4 text-sm text-fg-2">Tidak ada kontak.</li>}
       </ul>
+      {!showAll && list.length > 200 && (
+        <button type="button" className="mt-2 text-sm text-accent hover:underline" onClick={() => setShowAll(true)}>
+          Tampilkan semua {list.length.toLocaleString("id-ID")} kontak (saat ini 200 teratas; gunakan pencarian untuk mempersempit)
+        </button>
+      )}
     </Modal>
   );
 }
@@ -364,7 +370,7 @@ export function ResiModal(props: { open: boolean; onClose: () => void; rows: Col
           <li key={resi} className="flex items-center gap-3 rounded-xl bg-surface-2 p-3 text-sm">
             <div className="min-w-0 flex-1">
               <div className="font-medium">{resi}</div>
-              <div className="truncate text-xs text-fg-2">{invs.join(", ")}</div>
+              <div className="truncate text-xs text-fg-2" title={invs.join(", ")}>{invs.join(", ")}</div>
             </div>
             <a href={`https://tiki.id/id/track?awb=${encodeURIComponent(resi)}`} target="_blank" rel="noreferrer" className={btnGhost}>
               Lacak

@@ -134,7 +134,7 @@ export function Mitra10View() {
       () => rpc("m10_schedule_delete", { p_no_kw: rows.map((r) => r.no_kw) })).catch(fail);
 
   return (
-    <div className="mx-auto max-w-[1600px]">
+    <div className="w-full">
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-medium">Mitra10 Tukar Faktur</h1>
         {m.error && <span className="text-sm text-danger">Gagal memuat: {m.error.message}</span>}

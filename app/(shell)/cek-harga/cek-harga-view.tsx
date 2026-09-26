@@ -23,7 +23,7 @@ export function CekHargaView() {
   const [casesVersion, setCasesVersion] = useState(0);
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="w-full">
       <h1 className="text-2xl font-medium">Cek Selisih Harga PO vs SO</h1>
       <div className="mt-4 flex flex-wrap gap-1 border-b border-line">
         {TABS.map((t) => (

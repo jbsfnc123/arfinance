@@ -11,6 +11,7 @@ import { arOf } from "@/lib/local/derived";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { TableBox } from "@/components/table-box";
 
 const EDIT_CATEGORIES = ["Case", "Administratif", "Reminder", "No Respon"];
 
@@ -89,68 +90,70 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
         </div>
       </div>
 
-      <div className="mt-2 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr>
-              <th className={th}>Collection</th><th className={th}>Business Partner</th>
-              <th className={`${th} text-right`}>Nominal</th><th className={th}>Catatan</th><th className={`${th} text-right`}>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.map((g) => {
-              const late = g.lateCount > 0;
-              return (
-                <Fragment key={g.key}>
-                  <tr
-                    onClick={() => setOpen(open === g.key ? null : g.key)}
-                    className={`cursor-pointer border-t border-line hover:bg-surface-2 ${late ? "bg-danger/5 shadow-[inset_3px_0_0_var(--danger)]" : ""}`}
-                  >
-                    <td className={`${td} max-w-40 truncate`}>
-                      <span className="material-symbols-outlined !text-base align-middle">{open === g.key ? "expand_less" : "expand_more"}</span>{" "}
-                      {g.collections.join(", ")}
-                    </td>
-                    <td className={`${td} max-w-72 truncate`}>
-                      {g.bp}
-                      <span className="ml-2 rounded-full bg-surface-2 px-2 py-0.5 text-[11px]">{g.items.length} inv</span>
-                      {late && <span className="ml-1 rounded-full border border-danger/60 px-2 py-0.5 text-[11px] text-danger">{g.lateCount} lewat bulan</span>}
-                      {g.done && <span className="ml-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] text-success">Done</span>}
-                    </td>
-                    <td className={`${td} text-right`}>{rupiah(g.nomTotal)}</td>
-                    <td className={`${td} max-w-96 whitespace-normal`}>
-                      {g.isi || <span className="text-fg-2">—</span>}
-                      {g.done && g.closedAt && (
-                        <div className="text-[11px] text-success">✓ {g.closedBy ?? ""} · {fmtTimestamp(g.closedAt)}</div>
-                      )}
-                    </td>
-                    <td className={`${td} text-right`} onClick={(e) => e.stopPropagation()}>
-                      <button type="button" title={g.done ? "Batalkan selesai" : "Tandai selesai"} onClick={() => toggleDone(g)} className="px-1 text-fg-2 hover:text-success">
-                        <span className="material-symbols-outlined">{g.done ? "undo" : "check_circle"}</span>
-                      </button>
-                      <button type="button" title="Ubah" onClick={() => { setEditing(g); setDraft({ kategori: g.kategori, isi: g.isi }); }} className="px-1 text-fg-2 hover:text-fg">
-                        <span className="material-symbols-outlined">edit</span>
-                      </button>
-                      <button type="button" title="Hapus" onClick={() => remove(g)} className="px-1 text-fg-2 hover:text-danger">
-                        <span className="material-symbols-outlined">delete</span>
-                      </button>
-                    </td>
-                  </tr>
-                  {open === g.key && g.items.map((n) => (
-                    <tr key={n.invoice_no} className={`text-xs text-fg-2 ${n.invoice_date && n.invoice_date.slice(0, 7) < todayJakarta().slice(0, 7) ? "bg-danger/5" : ""}`}>
-                      <td className={`${td} pl-10`} colSpan={2}>🧾 {n.invoice_no} · 📅 {fmtDate(n.invoice_date)}</td>
-                      <td className={`${td} text-right`}>{rupiah(n.nominal)}</td>
-                      <td className={td} colSpan={2}>{n.no_po || n.no_sj ? `PO: ${n.no_po ?? "—"} · SJ: ${n.no_sj ?? "—"}` : "—"}</td>
+      <div className="mt-2 overflow-hidden">
+        <TableBox bare className="mt-2">
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th className={th}>Collection</th><th className={th}>Business Partner</th>
+                <th className={`${th} text-right`}>Nominal</th><th className={th}>Catatan</th><th className={`${th} text-right`}>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((g) => {
+                const late = g.lateCount > 0;
+                return (
+                  <Fragment key={g.key}>
+                    <tr
+                      onClick={() => setOpen(open === g.key ? null : g.key)}
+                      className={`cursor-pointer border-t border-line hover:bg-surface-2 ${late ? "bg-danger/5 shadow-[inset_3px_0_0_var(--danger)]" : ""}`}
+                    >
+                      <td className={`${td} max-w-40 truncate`} title={g.collections.join(", ")}>
+                        <span className="material-symbols-outlined !text-base align-middle">{open === g.key ? "expand_less" : "expand_more"}</span>{" "}
+                        {g.collections.join(", ")}
+                      </td>
+                      <td className={`${td} max-w-96 truncate`} title={g.bp}>
+                        {g.bp}
+                        <span className="ml-2 rounded-full bg-surface-2 px-2 py-0.5 text-[11px]">{g.items.length} inv</span>
+                        {late && <span className="ml-1 rounded-full border border-danger/60 px-2 py-0.5 text-[11px] text-danger">{g.lateCount} lewat bulan</span>}
+                        {g.done && <span className="ml-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] text-success">Done</span>}
+                      </td>
+                      <td className={`${td} text-right`}>{rupiah(g.nomTotal)}</td>
+                      <td className={`${td} max-w-96 whitespace-normal`}>
+                        {g.isi || <span className="text-fg-2">—</span>}
+                        {g.done && g.closedAt && (
+                          <div className="text-[11px] text-success">✓ {g.closedBy ?? ""} · {fmtTimestamp(g.closedAt)}</div>
+                        )}
+                      </td>
+                      <td className={`${td} text-right`} onClick={(e) => e.stopPropagation()}>
+                        <button type="button" title={g.done ? "Batalkan selesai" : "Tandai selesai"} onClick={() => toggleDone(g)} className="px-1 text-fg-2 hover:text-success">
+                          <span className="material-symbols-outlined">{g.done ? "undo" : "check_circle"}</span>
+                        </button>
+                        <button type="button" title="Ubah" onClick={() => { setEditing(g); setDraft({ kategori: g.kategori, isi: g.isi }); }} className="px-1 text-fg-2 hover:text-fg">
+                          <span className="material-symbols-outlined">edit</span>
+                        </button>
+                        <button type="button" title="Hapus" onClick={() => remove(g)} className="px-1 text-fg-2 hover:text-danger">
+                          <span className="material-symbols-outlined">delete</span>
+                        </button>
+                      </td>
                     </tr>
-                  ))}
-                </Fragment>
-              );
-            })}
-            {!loading && groups.length === 0 && (
-              <tr><td className={`${td} text-fg-2`} colSpan={5}>Tidak ada catatan.</td></tr>
-            )}
-            {loading && <tr><td className={`${td} text-fg-2`} colSpan={5}>Memuat…</td></tr>}
-          </tbody>
-        </table>
+                    {open === g.key && g.items.map((n) => (
+                      <tr key={n.invoice_no} className={`text-xs text-fg-2 ${n.invoice_date && n.invoice_date.slice(0, 7) < todayJakarta().slice(0, 7) ? "bg-danger/5" : ""}`}>
+                        <td className={`${td} pl-10`} colSpan={2}>🧾 {n.invoice_no} · 📅 {fmtDate(n.invoice_date)}</td>
+                        <td className={`${td} text-right`}>{rupiah(n.nominal)}</td>
+                        <td className={td} colSpan={2}>{n.no_po || n.no_sj ? `PO: ${n.no_po ?? "—"} · SJ: ${n.no_sj ?? "—"}` : "—"}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                );
+              })}
+              {!loading && groups.length === 0 && (
+                <tr><td className={`${td} text-fg-2`} colSpan={5}>Tidak ada catatan.</td></tr>
+              )}
+              {loading && <tr><td className={`${td} text-fg-2`} colSpan={5}>Memuat…</td></tr>}
+            </tbody>
+          </table>
+        </TableBox>
       </div>
 
       <Modal

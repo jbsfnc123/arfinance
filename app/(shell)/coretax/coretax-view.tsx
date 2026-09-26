@@ -13,6 +13,7 @@ import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { DeleteListModal } from "./delete-list-modal";
 import { HistoryView } from "./history-view";
+import { TableBox } from "@/components/table-box";
 
 function download(content: string, name: string, mime: string) {
   const a = document.createElement("a");
@@ -137,7 +138,7 @@ export function CoretaxView() {
   const loaded = invoices.length > 0;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <div className="w-full space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
           <h1 className="text-2xl font-medium">XML CoreTax</h1>
@@ -199,67 +200,69 @@ export function CoretaxView() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari referensi, pembeli, NPWP, kode barang…" className={`${inputCls} ml-auto !w-80`} />
             <span className="text-xs text-fg-2">{visible.length} tampil</span>
           </div>
-          <div className="max-h-[65vh] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-surface">
-                <tr>
-                  {["#", "Tanggal", "Referensi", "Pembeli", "NPWP Pembeli", "Kode Barang"].map((h) => <th key={h} className={th}>{h}</th>)}
-                  {["Item", "DPP", "PPN"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
-                  <th className={th} />
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((inv) => {
-                  const t = invTotals(inv);
-                  return (
-                    <Fragment key={inv.id}>
-                      <tr onClick={() => setOpen(open === inv.id ? null : inv.id)}
-                        className={`cursor-pointer border-t border-line hover:bg-surface-2 ${inv.deleted ? "text-fg-disabled line-through" : ""}`}>
-                        <td className={td}>{inv.id + 1}</td>
-                        <td className={td}>{fmtDate(inv.TaxInvoiceDate.trim())}</td>
-                        <td className={`${td} font-mono text-xs`}>{inv.RefDesc}</td>
-                        <td className={`${td} max-w-64 truncate`} title={inv.BuyerName}>{inv.BuyerName}</td>
-                        <td className={`${td} font-mono text-xs`}>{inv.BuyerTin}</td>
-                        <td className={`${td} max-w-40 truncate`} title={inv.codes.join(", ")}>{inv.codes.join(", ")}</td>
-                        <td className={`${td} text-right`}>{inv.goods.length}</td>
-                        <td className={`${td} text-right`}>{Math.round(t.dpp).toLocaleString("id-ID")}</td>
-                        <td className={`${td} text-right`}>{Math.round(t.ppn).toLocaleString("id-ID")}</td>
-                        <td className={td} onClick={(e) => e.stopPropagation()}>
-                          {!inv.deleted && (
-                            <button type="button" className="text-fg-2 hover:text-danger" title="Hapus faktur" onClick={() => setPendingDel(inv)}>
-                              <span className="material-symbols-outlined">delete</span>
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                      {open === inv.id && (
-                        <tr className="bg-surface-2/50 text-xs">
-                          <td />
-                          <td colSpan={9} className="px-3 py-2">
-                            <div className="mb-2 text-fg-2">
-                              {inv.BuyerAdress} · ID TKU pembeli {inv.BuyerIDTKU} · Kode transaksi {inv.TrxCode} · {inv.TaxInvoiceOpt}
-                            </div>
-                            <table className="w-full">
-                              <thead><tr>{["Kode", "Nama", "Satuan", "Harga", "Qty", "Diskon", "DPP", "DPP Lain", "PPN"].map((h) => <th key={h} className="px-2 py-1 text-left font-medium text-fg-2">{h}</th>)}</tr></thead>
-                              <tbody>
-                                {inv.goods.map((g, i) => (
-                                  <tr key={i}>
-                                    <td className="px-2 py-1 font-mono">{g.Code}</td><td className="px-2 py-1">{g.Name}</td><td className="px-2 py-1">{g.Unit}</td>
-                                    {[g.Price, g.Qty, g.TotalDiscount, g.TaxBase, g.OtherTaxBase, g.VAT].map((v, j) => (
-                                      <td key={j} className="px-2 py-1 text-right">{n(v).toLocaleString("id-ID")}</td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+          <div>
+            <TableBox bare>
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-surface">
+                  <tr>
+                    {["#", "Tanggal", "Referensi", "Pembeli", "NPWP Pembeli", "Kode Barang"].map((h) => <th key={h} className={th}>{h}</th>)}
+                    {["Item", "DPP", "PPN"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
+                    <th className={th} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((inv) => {
+                    const t = invTotals(inv);
+                    return (
+                      <Fragment key={inv.id}>
+                        <tr onClick={() => setOpen(open === inv.id ? null : inv.id)}
+                          className={`cursor-pointer border-t border-line hover:bg-surface-2 ${inv.deleted ? "text-fg-disabled line-through" : ""}`}>
+                          <td className={td}>{inv.id + 1}</td>
+                          <td className={td}>{fmtDate(inv.TaxInvoiceDate.trim())}</td>
+                          <td className={`${td} font-mono text-xs`}>{inv.RefDesc}</td>
+                          <td className={`${td} max-w-64 truncate`} title={inv.BuyerName}>{inv.BuyerName}</td>
+                          <td className={`${td} font-mono text-xs`}>{inv.BuyerTin}</td>
+                          <td className={`${td} max-w-40 truncate`} title={inv.codes.join(", ")}>{inv.codes.join(", ")}</td>
+                          <td className={`${td} text-right`}>{inv.goods.length}</td>
+                          <td className={`${td} text-right`}>{Math.round(t.dpp).toLocaleString("id-ID")}</td>
+                          <td className={`${td} text-right`}>{Math.round(t.ppn).toLocaleString("id-ID")}</td>
+                          <td className={td} onClick={(e) => e.stopPropagation()}>
+                            {!inv.deleted && (
+                              <button type="button" className="text-fg-2 hover:text-danger" title="Hapus faktur" onClick={() => setPendingDel(inv)}>
+                                <span className="material-symbols-outlined">delete</span>
+                              </button>
+                            )}
                           </td>
                         </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                        {open === inv.id && (
+                          <tr className="bg-surface-2/50 text-xs">
+                            <td />
+                            <td colSpan={9} className="px-3 py-2">
+                              <div className="mb-2 text-fg-2">
+                                {inv.BuyerAdress} · ID TKU pembeli {inv.BuyerIDTKU} · Kode transaksi {inv.TrxCode} · {inv.TaxInvoiceOpt}
+                              </div>
+                              <table className="w-full">
+                                <thead><tr>{["Kode", "Nama", "Satuan", "Harga", "Qty", "Diskon", "DPP", "DPP Lain", "PPN"].map((h) => <th key={h} className="px-2 py-1 text-left font-medium text-fg-2">{h}</th>)}</tr></thead>
+                                <tbody>
+                                  {inv.goods.map((g, i) => (
+                                    <tr key={i}>
+                                      <td className="px-2 py-1 font-mono">{g.Code}</td><td className="px-2 py-1">{g.Name}</td><td className="px-2 py-1">{g.Unit}</td>
+                                      {[g.Price, g.Qty, g.TotalDiscount, g.TaxBase, g.OtherTaxBase, g.VAT].map((v, j) => (
+                                        <td key={j} className="px-2 py-1 text-right">{n(v).toLocaleString("id-ID")}</td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TableBox>
           </div>
         </section>
       )}

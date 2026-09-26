@@ -6,6 +6,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { m10Dashboard, type DashInput, type Stat } from "@/lib/modules/m10/compute";
 import type { AgingLine, Schedule } from "@/lib/local/datasets";
 import { card, inputCls, td, th } from "@/components/ui";
+import { TableBox } from "@/components/table-box";
 
 const pct = (a: number, b: number) => (b ? `${(Math.floor((a / b) * 1000) / 10).toFixed(1)}%` : "0%");
 
@@ -123,30 +124,32 @@ function Lines({ rows }: { rows: [string, string | number][] }) {
 
 function StatTable({ first, rows, jadwal, colorDone }: { first: string; jadwal?: boolean; colorDone?: boolean; rows: (Stat & { key: string; label: string; jadwal?: number })[] }) {
   return (
-    <div className="mt-3 overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-line">
-            <th className={th}>{first}</th><th className={`${th} text-right`}>Invoice</th><th className={`${th} text-right`}>Done</th>
-            <th className={`${th} text-right`}>Pending</th><th className={`${th} text-right`}>% Done</th><th className={`${th} text-right`}>Rata2 hari</th>
-            {jadwal && <th className={`${th} text-right`}>Jadwal Bayar</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            // Detail harian: hijau bila semua invoice sudah tukar faktur (100%), merah bila belum.
-            <tr key={r.key} className={`border-b border-line/50 ${colorDone && r.invoice > 0 ? (r.done >= r.invoice ? "text-success" : "text-danger") : ""}`}>
-              <td className={td}>{r.label}</td>
-              <td className={`${td} text-right`}>{r.invoice}</td>
-              <td className={`${td} text-right`}>{r.done}</td>
-              <td className={`${td} text-right`}>{r.invoice - r.done}</td>
-              <td className={`${td} text-right`}>{pct(r.done, r.invoice)}</td>
-              <td className={`${td} text-right`}>{r.avgLama ?? "-"}</td>
-              {jadwal && <td className={`${td} text-right`}>{r.jadwal ? Number(r.jadwal).toLocaleString("id-ID") : ""}</td>}
+    <div className="mt-3 overflow-hidden">
+      <TableBox bare fill={false} maxHeight="max-h-[60vh]" className="mt-3">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line">
+              <th className={th}>{first}</th><th className={`${th} text-right`}>Invoice</th><th className={`${th} text-right`}>Done</th>
+              <th className={`${th} text-right`}>Pending</th><th className={`${th} text-right`}>% Done</th><th className={`${th} text-right`}>Rata2 hari</th>
+              {jadwal && <th className={`${th} text-right`}>Jadwal Bayar</th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              // Detail harian: hijau bila semua invoice sudah tukar faktur (100%), merah bila belum.
+              <tr key={r.key} className={`border-b border-line/50 ${colorDone && r.invoice > 0 ? (r.done >= r.invoice ? "text-success" : "text-danger") : ""}`}>
+                <td className={td}>{r.label}</td>
+                <td className={`${td} text-right`}>{r.invoice}</td>
+                <td className={`${td} text-right`}>{r.done}</td>
+                <td className={`${td} text-right`}>{r.invoice - r.done}</td>
+                <td className={`${td} text-right`}>{pct(r.done, r.invoice)}</td>
+                <td className={`${td} text-right`}>{r.avgLama ?? "-"}</td>
+                {jadwal && <td className={`${td} text-right`}>{r.jadwal ? Number(r.jadwal).toLocaleString("id-ID") : ""}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableBox>
     </div>
   );
 }

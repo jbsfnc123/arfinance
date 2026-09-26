@@ -9,6 +9,7 @@ export function Modal(props: {
   children: React.ReactNode;
   footer?: React.ReactNode;
   wide?: boolean;
+  xl?: boolean; // tabel lebar: hingga 96% layar
 }) {
   const { open, onClose } = props;
 
@@ -27,7 +28,7 @@ export function Modal(props: {
         aria-modal="true"
         aria-label={props.title}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`flex max-h-[90vh] w-full flex-col rounded-2xl border border-line bg-surface ${props.wide ? "max-w-3xl" : "max-w-lg"}`}
+        className={`flex max-h-[90vh] w-full flex-col rounded-2xl border border-line bg-surface ${props.xl ? "max-w-[min(96vw,1600px)]" : props.wide ? "max-w-3xl" : "max-w-lg"}`}
       >
         <div className="flex items-center gap-2 border-b border-line px-5 py-3">
           <h2 className="font-medium">{props.title}</h2>
@@ -35,7 +36,7 @@ export function Modal(props: {
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{props.children}</div>
+        <div className="min-h-0 overflow-y-auto px-5 py-4">{props.children}</div>
         {props.footer && <div className="flex justify-end gap-2 border-t border-line px-5 py-3">{props.footer}</div>}
       </div>
     </div>

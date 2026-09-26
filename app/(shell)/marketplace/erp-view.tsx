@@ -73,21 +73,23 @@ export function ErpView({ R, limit, setLimit, show }: { R: Report; limit: number
           ) : "Tidak ada invoice subsidi di file ERP ini."}
         </p>
         {masalah.length > 0 && (
-          <table className="w-full text-xs">
-            <thead><tr>{["No. Pesanan", "Invoice", "Payment", "Selisih ERP", "Tidak Terjelaskan", "Status"].map((h, i) => <th key={h} className={`px-2 py-1 font-medium text-fg-2 ${i && i < 5 ? "text-right" : "text-left"}`}>{h}</th>)}</tr></thead>
-            <tbody>
-              {masalah.slice(0, 8).map((r, i) => (
-                <tr key={i} className="border-t border-line">
-                  <td className="px-2 py-1">{r.no}</td>
-                  <td className="px-2 py-1 text-right">{Math.round(r.invoice).toLocaleString("id-ID")}</td>
-                  <td className="px-2 py-1 text-right">{Math.round(r.payment).toLocaleString("id-ID")}</td>
-                  <td className="px-2 py-1 text-right">{Math.round(r.selisihErp).toLocaleString("id-ID")}</td>
-                  <td className={`px-2 py-1 text-right ${r.takTerjelaskan ? "text-danger" : ""}`}>{Math.round(r.takTerjelaskan).toLocaleString("id-ID")}</td>
-                  <td className="px-2 py-1">{r.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr>{["No. Pesanan", "Invoice", "Payment", "Selisih ERP", "Tidak Terjelaskan", "Status"].map((h, i) => <th key={h} className={`px-2 py-1 font-medium text-fg-2 ${i && i < 5 ? "text-right" : "text-left"}`}>{h}</th>)}</tr></thead>
+              <tbody>
+                {masalah.slice(0, 8).map((r, i) => (
+                  <tr key={i} className="border-t border-line">
+                    <td className="px-2 py-1">{r.no}</td>
+                    <td className="px-2 py-1 text-right">{Math.round(r.invoice).toLocaleString("id-ID")}</td>
+                    <td className="px-2 py-1 text-right">{Math.round(r.payment).toLocaleString("id-ID")}</td>
+                    <td className="px-2 py-1 text-right">{Math.round(r.selisihErp).toLocaleString("id-ID")}</td>
+                    <td className={`px-2 py-1 text-right ${r.takTerjelaskan ? "text-danger" : ""}`}>{Math.round(r.takTerjelaskan).toLocaleString("id-ID")}</td>
+                    <td className="px-2 py-1">{r.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
       {sumBy(R.Erp, "invoiceAmount") === 0 && <p className="text-xs text-fg-2">File ERP tidak berisi nilai invoice.</p>}

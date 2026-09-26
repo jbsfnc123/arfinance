@@ -195,7 +195,7 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
   const hasErp = !!R?.Erp?.length;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <div className="mx-auto max-w-[1800px] space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
           <h1 className="text-2xl font-medium">Dashboard Penghasilan Marketplace</h1>

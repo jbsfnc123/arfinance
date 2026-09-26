@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { rupiah } from "@/lib/format";
 import { cellText, COLUMN_DEFS, type CollectionRow, type ColumnKey } from "@/lib/modules/collection/view-model";
-import { card } from "@/components/ui";
+import { useFillHeight } from "@/lib/ui/fill-height";
+import { btnGhost, card } from "@/components/ui";
 
 const ROW_HEIGHT = 40;
 
@@ -32,12 +33,15 @@ export function RowsTable(props: {
   const scrollRef = useRef<HTMLDivElement>(null);
   const selected = useMemo(() => new Set(selection), [selection]);
   const drag = useRef<boolean | null>(null); // mode seret: true = centang, false = hapus centang
+  const [wrap, setWrap] = useState(false);
+  useFillHeight(scrollRef, { reserve: 48, min: 280 }); // 48 = baris status di bawah tabel + tepi kartu
 
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 15,
+    getItemKey: (i) => rows[i].invoice_no,
   });
 
   useEffect(() => {
@@ -73,7 +77,7 @@ export function RowsTable(props: {
 
   return (
     <div className={`${card} mt-3 overflow-hidden`}>
-      <div ref={scrollRef} className="max-h-[65vh] overflow-auto">
+      <div ref={scrollRef} className="overflow-auto">
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-[1] bg-surface">
             <tr>
@@ -92,13 +96,15 @@ export function RowsTable(props: {
             </tr>
           </thead>
           <tbody>
-            {padTop > 0 && <tr style={{ height: padTop }} />}
+            {padTop > 0 && <tr aria-hidden><td colSpan={cols.length + 1} style={{ height: padTop, padding: 0 }} /></tr>}
             {items.map((v) => {
               const r = rows[v.index];
               const isSel = selected.has(r.invoice_no);
               return (
                 <tr
-                  key={r.invoice_no}
+                  key={v.key}
+                  data-index={v.index}
+                  ref={virtualizer.measureElement}
                   style={{ height: ROW_HEIGHT }}
                   className={`select-none ${isSel ? "bg-pill/40" : "hover:bg-surface-2"}`}
                   onMouseDown={(e) => {
@@ -116,8 +122,8 @@ export function RowsTable(props: {
                   {cols.map((c) => (
                     <td
                       key={c.key}
-                      className={`max-w-80 truncate border-b border-line px-3 ${c.money ? "text-right tabular-nums" : ""}`}
-                      title={c.key === "keterangan" ? `${cellText(r, c.key)}${props.onEditKeterangan ? " — klik dua kali untuk mengubah" : ""}` : c.key === "business_partner" ? cellText(r, c.key) : undefined}
+                      className={`border-b border-line px-3 ${wrap ? "max-w-md whitespace-normal break-words py-1.5" : "max-w-80 truncate"} ${c.money ? "text-right tabular-nums" : ""}`}
+                      title={c.key === "keterangan" ? `${cellText(r, c.key)}${props.onEditKeterangan ? " — klik dua kali untuk mengubah" : ""}` : wrap || c.money ? undefined : cellText(r, c.key) || undefined}
                       onDoubleClick={c.key === "keterangan" && props.onEditKeterangan ? () => props.onEditKeterangan!(r) : undefined}
                     >
                       {c.key === "aging" ? (
@@ -128,7 +134,7 @@ export function RowsTable(props: {
                 </tr>
               );
             })}
-            {padBottom > 0 && <tr style={{ height: padBottom }} />}
+            {padBottom > 0 && <tr aria-hidden><td colSpan={cols.length + 1} style={{ height: padBottom, padding: 0 }} /></tr>}
           </tbody>
         </table>
         {!props.loading && rows.length === 0 && (
@@ -138,6 +144,10 @@ export function RowsTable(props: {
       </div>
       <div className="flex items-center gap-3 border-t border-line px-4 py-2 text-xs text-fg-2">
         Menampilkan {rows.length.toLocaleString("id-ID")} baris (sesuai filter)
+        <button type="button" className={`${btnGhost} !py-0.5 ${wrap ? "border-accent text-accent" : ""}`} aria-pressed={wrap}
+          title="Tampilkan teks panjang secara utuh" onClick={() => setWrap(!wrap)}>
+          <span className="material-symbols-outlined !text-base">wrap_text</span>Teks penuh
+        </button>
         {selection.length > 0 && (
           <button type="button" className="text-danger hover:underline" onClick={() => setSelection(() => [])}>
             Hapus semua pilihan ({selection.length})
