@@ -677,3 +677,6 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
 - Tabel harian kolektor lama → menu `tukar.jadwal` kini "Laporan & Jadwal Kolektor" (tab Jadwal / Laporan Harian, tanpa KPI).
 - Migrasi 0034: `pack_m10`/`pack_rkm`/`pack_activity`/`pack_remarks`/`pack_aging` terbuka untuk `dash.tukar`
   (aging & remarks semua collection hanya untuk akun non-collection); `pack_tukar` juga untuk `tukar.jadwal`.
+- Fase 30b: klik baris Dashboard Tukar Faktur → rincian (`TfRow`, LocalTable) di bawahnya: kolom default BP, Invoice,
+  Invoice Date, Tgl Tukar Faktur, Nominal, Keterangan; No SJ / Due Date / Status TF / Lama TF / Collection tersembunyi
+  bawaan (`LocalTable` `defaultHidden`; pilihan kolom kini disimpan termasuk `[]`). Kertas Kerja Mitra10/RKM punya `tf_date`.
