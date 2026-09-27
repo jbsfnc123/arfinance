@@ -19,8 +19,12 @@ export type HistoryRow = {
   count: number; paid: number; avgLama: number; maxLama: number;
   top3: HistoryTx[]; top3Text: string; outstanding: number; overdue: number;
   tx: HistoryTx[]; months: MonthStat[]; members: HistoryRow[];
+  hasOld: boolean; // ada transaksi telat > OLD_DAYS (mis. piutang lama yang di-clear) → tidak ikut 20 teratas
 };
 export type Period = { from: string; to: string; months: string[] };
+
+/** Batas telat (hari) — transaksi di atas ini membuat BP/Group dikeluarkan dari daftar default 20 teratas. */
+export const OLD_DAYS = 365;
 
 export const hasTempo = (term: string | null | undefined) => /^\s*net\s+\d+\s+days?/i.test(term ?? "");
 
@@ -101,7 +105,7 @@ function build(key: string, jenis: "BP" | "Group", name: string, tx: HistoryTx[]
   return {
     key, jenis, name, bpCount: 1, group: null, payment_group: "", marketing: "", collection: "", term: topTerm(sorted),
     count: sorted.length, paid: sorted.reduce((s, t) => s + t.amount, 0), avgLama: avgOf(sorted) ?? 0, maxLama: sorted[0]?.lama ?? 0,
-    top3, top3Text: top3.map(fmtTop).join(" · "), outstanding: 0, overdue: 0, tx: sorted, months: monthsOf(sorted, period.months), members: [],
+    top3, top3Text: top3.map(fmtTop).join(" · "), outstanding: 0, overdue: 0, tx: sorted, months: monthsOf(sorted, period.months), members: [], hasOld: sorted.some((t) => t.lama > OLD_DAYS),
     ...extra,
   };
 }

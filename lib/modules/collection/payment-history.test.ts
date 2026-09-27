@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgingLine, Datasets } from "@/lib/local/datasets";
 import { coverage, findTarget, groupHistory, groupOf, hasTempo, historyPeriod, isMarketplace, paymentHistory } from "./payment-history";
+import { topRows } from "@/lib/local/table";
 
 const line = (o: Partial<AgingLine>): AgingLine => ({
   line_no: 1, invoice_no: null, payment_group: "PG", marketing: "01-Traditional", collection_name: "Ani", sales_name: null, bp_key: null,
@@ -94,5 +95,24 @@ describe("History Pembayaran BP", () => {
     expect(findTarget("Budi", aging)?.marketplace).toBe(true);
     expect(findTarget("Tidak Ada", aging)).toBeNull();
     expect(coverage(erp, P).map((c) => c.payments)).toEqual([1, 6, 3]);
+  });
+
+  it("hasOld: transaksi telat > 365 hari (tepat 365 belum); group mewarisi anggota; dikeluarkan dari N teratas", () => {
+    const old: Datasets["erp"] = {
+      invoices: [inv("O1", "M1", "2025-07-01"), inv("O2", "M2", "2025-06-30"), inv("N1", "B1", "2026-06-01")],
+      payments: [
+        { invoice_no: "O1", payment_date: "2026-07-01", amount: 10 },  // tepat 365 hari
+        { invoice_no: "O2", payment_date: "2026-07-01", amount: 10 },  // 366 hari
+        { invoice_no: "N1", payment_date: "2026-06-11", amount: 10 },  // +10
+      ],
+    };
+    const bp = paymentHistory(old, aging, P, T);
+    const by = Object.fromEntries(bp.map((r) => [r.name, r.hasOld]));
+    expect(by).toEqual({ "Gias 1": false, "Gias 2": true, "Toko A - Bogor": false });
+    const g = groupHistory(bp, aging, P, T).find((r) => r.jenis === "Group")!;
+    expect(g.hasOld).toBe(true);
+    // urutan rata-rata terlama: Gias 2 (366), Gias 1 (365), Toko A (10) → N teratas tanpa hasOld
+    expect(topRows(bp, 2, (r) => !r.hasOld).map((r) => r.name)).toEqual(["Gias 1", "Toko A - Bogor"]);
+    expect(topRows(bp, 2).map((r) => r.name)).toEqual(["Gias 2", "Gias 1"]);
   });
 });

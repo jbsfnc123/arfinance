@@ -1,17 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { LocalTable, type LCol } from "@/lib/local/table";
-import type { HistoryRow } from "@/lib/modules/collection/payment-history";
+import { OLD_DAYS, type HistoryRow } from "@/lib/modules/collection/payment-history";
 import { useViewState } from "@/lib/ui/view-state";
 import { fmtDate, monthLabel, rupiah } from "@/lib/format";
 import { lamaCls, lamaTxt, PaymentHistoryModal, usePaymentHistory, type PayHistTarget } from "@/components/payment-history-modal";
 
+const notOld = (r: HistoryRow) => !r.hasOld;
 const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
 const num = (n: number) => Math.round(n).toLocaleString("id-ID");
 
 const lamaCol = (k: "avgLama" | "maxLama", l: string, bold = false): LCol<HistoryRow> => ({
-  k, l, n: true, w: 100, render: (r) => <span className={`${bold ? "font-medium " : ""}${lamaCls(r[k])}`}>{lamaTxt(r[k])}</span>,
+  k, l, n: true, w: 100, render: (r) => (
+    <span className="inline-flex items-center justify-end gap-1">
+      {k === "maxLama" && r.hasOld && (
+        <span className="rounded-full bg-danger/15 px-1.5 text-[10px] text-danger"
+          title={`Ada invoice telat > ${OLD_DAYS} hari (mis. piutang lama yang di-clear) — tidak ikut daftar 20 teratas`}>&gt; {OLD_DAYS} hr</span>
+      )}
+      <span className={`${bold ? "font-medium " : ""}${lamaCls(r[k])}`}>{lamaTxt(r[k])}</span>
+    </span>
+  ),
 });
 const top3Col = (withBp: boolean): LCol<HistoryRow> => ({
   k: "top3Text", l: "3 Transaksi Terlama", w: 380,
@@ -35,7 +44,6 @@ const moneyCols: LCol<HistoryRow>[] = [
 
 const BP_COLS: LCol<HistoryRow>[] = [
   { k: "name", l: "Business Partner", w: 240 },
-  { k: "group", l: "Group", w: 160, text: (r) => r.group ?? "", render: (r) => r.group ?? <span className="text-fg-2">–</span> },
   { k: "collection", l: "Collection", w: 120 },
   { k: "term", l: "Term", w: 150 },
   lamaCol("avgLama", "Rata-rata Lama (hari)", true),
@@ -46,11 +54,8 @@ const BP_COLS: LCol<HistoryRow>[] = [
   { k: "paid", l: "Total Dibayar", n: true, sum: true, w: 130 },
 ];
 const GROUP_COLS: LCol<HistoryRow>[] = [
-  { k: "jenis", l: "Jenis", w: 80, render: (r) => (
-    <span className={`rounded-full px-2 py-0.5 text-xs ${r.jenis === "Group" ? "bg-accent/15 text-accent" : "bg-surface-2 text-fg-2"}`}>{r.jenis}</span>
-  ) },
-  { k: "name", l: "Payment Group / BP", w: 260 },
-  { k: "bpCount", l: "BP", n: true, w: 60 },
+  { k: "name", l: "Payment Group", w: 260 },
+  { k: "bpCount", l: "Jumlah BP", n: true, w: 90 },
   { k: "collection", l: "Collection", w: 160 },
   lamaCol("avgLama", "Rata-rata Lama (hari)", true),
   lamaCol("maxLama", "Terlama (hari)"),
@@ -66,7 +71,9 @@ export function HistoryView() {
   const h = usePaymentHistory();
   const [mode, setMode] = useViewState<"bp" | "group">("payhist:mode", "bp");
   const [target, setTarget] = useState<PayHistTarget | null>(null);
-  const rows = mode === "bp" ? h.bpRows : h.groupRows;
+  // Per BP = hanya BP tanpa group; Per Group = hanya payment group (BP ber-group ada di dalamnya).
+  const rows = useMemo(() => (mode === "bp" ? h.bpRows.filter((r) => !r.group) : h.groupRows.filter((r) => r.jenis === "Group")),
+    [mode, h.bpRows, h.groupRows]);
   const missing = h.cov.filter((c) => c.payments === 0).map((c) => monthLabel(c.month));
   const periodTxt = `${monthLabel(h.period.months[0])} – ${monthLabel(h.period.months[2])}`;
 
@@ -95,8 +102,8 @@ export function HistoryView() {
           ))}
         </span>
         <span className="ml-auto inline-flex overflow-hidden rounded-full border border-line" role="group" aria-label="Mode hitungan">
-          {seg("bp", "Per BP", "person")}
-          {seg("group", "Per Group", "groups")}
+          {seg("bp", "BP tanpa group", "person")}
+          {seg("group", "Payment Group", "groups")}
         </span>
       </div>
 
@@ -110,18 +117,13 @@ export function HistoryView() {
       <LocalTable key={mode} title={mode === "bp" ? "History Pembayaran per BP" : "History Pembayaran per Group"}
         stateKey={`payhist-${mode}`} hideKey={`payhist-${mode}`}
         rows={rows} cols={mode === "bp" ? BP_COLS : GROUP_COLS} rowKey={(r) => r.key} loading={h.loading}
-        search={["name", "collection", "top3Text", ...(mode === "bp" ? (["group"] as const) : [])]}
-        filters={mode === "bp" ? [
-          { k: "collection", l: "Collection", options: uniq(rows.map((r) => r.collection)) },
-          { k: "group", l: "Group", options: uniq(rows.map((r) => r.group ?? "")) },
-          { k: "term", l: "Term", options: uniq(rows.map((r) => r.term)) },
-        ] : [
-          { k: "jenis", l: "Jenis", options: ["Group", "BP"] },
+        search={["name", "collection", "top3Text"]}
+        filters={[
           { k: "collection", l: "Collection", options: uniq(rows.map((r) => r.collection)) },
           { k: "term", l: "Term", options: uniq(rows.map((r) => r.term)) },
         ]}
-        defaultSort={{ k: "avgLama", dir: -1 }} defaultLimit={20}
-        limitNote={`20 ${mode === "bp" ? "BP" : "BP/Group"} dengan rata-rata lama bayar terlama`}
+        defaultSort={{ k: "avgLama", dir: -1 }} defaultLimit={20} limitWhere={notOld}
+        limitNote={`20 ${mode === "bp" ? "BP" : "Group"} dengan rata-rata lama bayar terlama (tanpa invoice telat > ${OLD_DAYS} hari)`}
         onRowClick={open}
         emptyText={`Tidak ada pembayaran BP ber-tempo pada ${periodTxt}.`} />
 
