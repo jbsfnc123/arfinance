@@ -1,99 +1,104 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useDataset } from "@/lib/local/store";
 import { todayJakarta } from "@/lib/parsers/date";
-import { fmtDate, monthLabel } from "@/lib/format";
-import { tukarDays, tukarKpi, type TukarDay } from "@/lib/modules/tukar/dashboard";
-import { card, inputCls, td, th } from "@/components/ui";
-import { TableBox } from "@/components/table-box";
+import { monthLabel } from "@/lib/format";
+import { tukarMonths, tukarSummary, type TfStat } from "@/lib/modules/tukar/summary";
 import { useViewState } from "@/lib/ui/view-state";
+import { card, inputCls, td, th } from "@/components/ui";
+import { useM10 } from "../../mitra10/use-m10";
+import { useRkm } from "../../rkm/use-rkm";
 
-type Raw = { months: string[]; kurirs: string[]; days: TukarDay[] };
+const n = (v: number) => v.toLocaleString("id-ID");
+const hari = (v: number | null) => (v === null ? "–" : `${v.toLocaleString("id-ID")} hari`);
+// Sama dengan dashboard Mitra10/RKM: dibulatkan ke bawah 1 desimal.
+const pctTxt = (v: number | null) => (v === null ? "–" : `${(Math.floor(v * 1000) / 10).toFixed(1)}%`);
 
-
+// Dashboard Tukar Faktur: per bulan invoice date — jumlah invoice, sudah tukar faktur, rata-rata hari invoice → TF.
+// Urutan: Mitra10, RKM, Modern Market, Proyek. Laporan harian kolektor ada di menu Laporan & Jadwal Kolektor.
 export function TukarDashboard() {
-  const [month, setMonth] = useViewState("dash-tukar:month", todayJakarta().slice(0, 7));
-  const [kurir, setKurir] = useState("");
-  const tukar = useDataset("tukar");
-  // Dihitung di browser dari data lokal (port tukar_dashboard).
-  const data: Raw | null = useMemo(() => (tukar.data ? tukarDays(tukar.data.done, month, kurir) : null), [tukar.data, month, kurir]);
+  const current = todayJakarta().slice(0, 7);
+  const [month, setMonth] = useViewState("dash-tukar:month", current);
+  const m10 = useM10();
+  const rkm = useRkm();
+  const aging = useDataset("aging");
+  const activity = useDataset("activity");
+  const loading = m10.loading || rkm.loading || !aging.data || !activity.data;
 
-  const kpi = data ? tukarKpi(data.days) : null;
-  const months = data ? (data.months.includes(month) ? data.months : [month, ...data.months]) : [month];
+  const input = useMemo(() => ({
+    m10: m10.computed?.worksheet ?? null,
+    rkm: rkm.computed?.worksheet ?? null,
+    aging: aging.data?.lines ?? [],
+  }), [m10.computed, rkm.computed, aging.data]);
+  const months = useMemo(() => tukarMonths({ ...input, current }), [input, current]);
+  const rows: TfStat[] = useMemo(() => tukarSummary({
+    ...input, month, exchanges: activity.data?.exchanges ?? [], m10Tax: m10.taxName, rkmTax: rkm.taxName,
+  }), [input, month, activity.data, m10.taxName, rkm.taxName]);
+
+  const tot = rows.reduce((s, r) => ({ invoice: s.invoice + r.invoice, done: s.done + r.done }), { invoice: 0, done: 0 });
+  const withAvg = rows.filter((r) => r.avgHari !== null && r.done > 0);
+  const totAvg = withAvg.length
+    ? Math.round((withAvg.reduce((s, r) => s + r.avgHari! * r.done, 0) / withAvg.reduce((s, r) => s + r.done, 0)) * 10) / 10 : null;
+  const err = m10.error ?? rkm.error ?? aging.error ?? activity.error;
 
   return (
     <div className="mx-auto max-w-[1800px] space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-medium">Dashboard Tukar Faktur</h1>
-        <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} ml-auto !w-auto`}>
-          {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
-        </select>
-        <select value={kurir} onChange={(e) => setKurir(e.target.value)} className={`${inputCls} !w-auto`}>
-          <option value="">Semua Kolektor</option>
-          {data?.kurirs.map((k) => <option key={k}>{k}</option>)}
+        <span className="text-sm text-fg-2">Periode bulan invoice date · rata-rata hari = tanggal tukar faktur − invoice date</span>
+        <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} ml-auto !w-auto`} aria-label="Bulan">
+          {(months.includes(month) ? months : [month, ...months]).map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
       </div>
 
-      {kpi && (
-        <div className="grid gap-3 sm:grid-cols-4">
-          <Kpi label="Total Invoice" value={kpi.totalInvoice} sub={`rata-rata ${kpi.avgInvoice}/hari`} />
-          <Kpi label="Total Business Partner" value={kpi.totalBP} sub={`rata-rata ${kpi.avgBP}/hari`} />
-          <Kpi label="Total Titik Lokasi" value={kpi.totalLokasi} sub={`rata-rata ${kpi.avgLokasi}/hari`} />
-          <Kpi label="Hari Aktif" value={kpi.activeDays} sub={monthLabel(month)} />
-        </div>
-      )}
-
-      {data && kpi && (
-        <section className={`${card} overflow-hidden`}>
-          <h2 className="px-4 pt-4 text-sm font-medium">Tukar Faktur per Hari · {monthLabel(month)}</h2>
-          <div className="mt-2 overflow-hidden">
-            <TableBox bare className="mt-2">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-surface">
-                  <tr className="border-b border-line">
-                    <th className={th}>Tanggal</th>
-                    <th className={`${th} text-right`}>Jumlah Invoice</th>
-                    <th className={`${th} text-right`}>Jumlah Business Partner</th>
-                    <th className={`${th} text-right`}>Titik Lokasi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.days.map((d) => {
-                    const idle = !d.inv && !d.bp && !d.lok;
-                    return (
-                      <tr key={d.day} className={`border-b border-line/50 ${idle ? "text-fg-2 opacity-60" : ""}`}>
-                        <td className={td}>{fmtDate(`${month}-${String(d.day).padStart(2, "0")}`)}</td>
-                        <td className={`${td} text-right`}>{d.inv.toLocaleString("id-ID")}</td>
-                        <td className={`${td} text-right`}>{d.bp.toLocaleString("id-ID")}</td>
-                        <td className={`${td} text-right`}>{d.lok.toLocaleString("id-ID")}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="sticky bottom-0 bg-surface font-medium">
-                  <tr className="border-t border-line">
-                    <td className={td}>Total ({kpi.activeDays} hari aktif)</td>
-                    <td className={`${td} text-right`}>{kpi.totalInvoice.toLocaleString("id-ID")}</td>
-                    <td className={`${td} text-right`}>{kpi.totalBP.toLocaleString("id-ID")}</td>
-                    <td className={`${td} text-right`}>{kpi.totalLokasi.toLocaleString("id-ID")}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </TableBox>
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function Kpi({ label, value, sub }: { label: string; value: number; sub: string }) {
-  return (
-    <div className={`${card} p-4`}>
-      <div className="text-xs text-fg-2">{label}</div>
-      <div className="mt-1 text-2xl font-medium">{value.toLocaleString("id-ID")}</div>
-      <div className="text-xs text-fg-2">{sub}</div>
+      <section className={`${card} overflow-x-auto`}>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line">
+              <th className={th}>Kelompok</th>
+              <th className={`${th} text-right`}>Jumlah Invoice</th>
+              <th className={`${th} text-right`}>Tukar Faktur</th>
+              <th className={`${th} text-right`}>Belum TF</th>
+              <th className={`${th} w-64`}>% Tukar Faktur</th>
+              <th className={`${th} text-right`}>Rata-rata Hari</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.key} className="border-b border-line/50">
+                <td className={td}>
+                  <div className="font-medium">{r.label}</div>
+                  <div className="text-xs text-fg-2">{r.source}</div>
+                </td>
+                <td className={`${td} text-right tabular-nums`}>{loading ? "…" : n(r.invoice)}</td>
+                <td className={`${td} text-right tabular-nums text-success`}>{loading ? "…" : n(r.done)}</td>
+                <td className={`${td} text-right tabular-nums ${r.pending ? "text-warning" : ""}`}>{loading ? "…" : n(r.pending)}</td>
+                <td className={td}>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
+                      <div className="h-full rounded-full bg-success" style={{ width: `${Math.round((r.pct ?? 0) * 100)}%` }} />
+                    </div>
+                    <span className="w-14 text-right tabular-nums">{loading ? "…" : pctTxt(r.pct)}</span>
+                  </div>
+                </td>
+                <td className={`${td} text-right font-medium tabular-nums`}>{loading ? "…" : hari(r.avgHari)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="font-medium">
+              <td className={td}>Total · {monthLabel(month)}</td>
+              <td className={`${td} text-right tabular-nums`}>{n(tot.invoice)}</td>
+              <td className={`${td} text-right tabular-nums`}>{n(tot.done)}</td>
+              <td className={`${td} text-right tabular-nums`}>{n(tot.invoice - tot.done)}</td>
+              <td className={td}>{pctTxt(tot.invoice ? tot.done / tot.invoice : null)}</td>
+              <td className={`${td} text-right tabular-nums`}>{hari(totAvg)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+      {err && <p className="text-sm text-danger">Sebagian data gagal dimuat: {err.message}</p>}
     </div>
   );
 }
