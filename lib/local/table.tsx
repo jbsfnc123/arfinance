@@ -78,6 +78,13 @@ export function filterOptions<T>(rows: T[], filters: LFilter<T>[], active: Recor
   });
 }
 
+/** N teratas (urutan sudah benar); `where` menyaring baris yang boleh masuk daftar N teratas. */
+export function topRows<T>(rows: T[], limit: number, where?: (r: T) => boolean) {
+  const out: T[] = [];
+  for (const r of rows) { if (!where || where(r)) out.push(r); if (out.length >= limit) break; }
+  return out;
+}
+
 export function LocalTable<T>(props: {
   title: string;
   rows: T[];
@@ -104,6 +111,7 @@ export function LocalTable<T>(props: {
   defaultSort?: { k: string; dir: 1 | -1 }; // urutan bila user belum mengklik header
   defaultLimit?: number;  // tampilkan N teratas selama cari/filter belum aktif (mis. 20 terlama)
   limitNote?: string;     // keterangan N teratas
+  limitWhere?: (r: T) => boolean; // baris yang boleh masuk N teratas (mis. tanpa invoice telat > 365 hari)
 }) {
   // Cari, filter, urutan, centang, Teks penuh & posisi scroll diingat selama tab browser terbuka (pindah menu aman).
   const vk = `table:${props.stateKey ?? props.hideKey ?? props.title}`;
@@ -153,8 +161,10 @@ export function LocalTable<T>(props: {
     return out;
   }, [props.rows, props.cols, props.defaultSort, activeF, matchSearch, sort]);
   // N teratas hanya selama cari/filter belum aktif (dan "Tampilkan semua" belum diklik).
-  const limited = !!props.defaultLimit && !showAll && !q.trim() && Object.keys(activeF).length === 0 && allRows.length > props.defaultLimit;
-  const rows = useMemo(() => (limited ? allRows.slice(0, props.defaultLimit) : allRows), [limited, allRows, props.defaultLimit]);
+  const limited = !!props.defaultLimit && !showAll && !q.trim() && Object.keys(activeF).length === 0 &&
+    (allRows.length > props.defaultLimit || (!!props.limitWhere && allRows.some((r) => !props.limitWhere!(r))));
+  const { limitWhere, defaultLimit } = props;
+  const rows = useMemo(() => (limited ? topRows(allRows, defaultLimit!, limitWhere) : allRows), [limited, allRows, defaultLimit, limitWhere]);
 
   if (process.env.NODE_ENV !== "production" && props.rows.length) {
     const seen = new Set<string | number>();

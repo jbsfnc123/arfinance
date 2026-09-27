@@ -655,3 +655,6 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
 - Modal ringkasan `components/payment-history-modal.tsx` (per bulan, 3 terlama, per BP dalam group, semua transaksi +
   Excel); juga dari Daftar Tagihan → tombol "Lihat History Pembayaran" (centang dari satu BP; bila ber-group pilih BP/Group;
   hanya untuk akun berakses `coll.payhist`).
+- Fase 28b: mode dipisah — "BP tanpa group" (hanya BP tanpa group) dan "Payment Group" (hanya group). BP/Group dengan
+  transaksi telat > 365 hari (`hasOld`, `OLD_DAYS`) tidak ikut daftar default 20 teratas (`LocalTable` `limitWhere`,
+  `topRows`); angka tetap memuat transaksi tsb dan barisnya diberi penanda "> 365 hr" saat dicari / Tampilkan semua.
