@@ -681,3 +681,15 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
 - Fase 30b: klik baris Dashboard Tukar Faktur → rincian (`TfRow`, LocalTable) di bawahnya: kolom default BP, Invoice,
   Invoice Date, Tgl Tukar Faktur, Nominal, Keterangan; No SJ / Due Date / Status TF / Lama TF / Collection tersembunyi
   bawaan (`LocalTable` `defaultHidden`; pilihan kolom kini disimpan termasuk `[]`). Kertas Kerja Mitra10/RKM punya `tf_date`.
+
+## Aplikasi Kolektor & login tanpa PIN (Fase 31, 2026-09-28)
+- Workspace `kolektor` (host `kolektor.tangki.space` / `kolektor.localhost`) → `app/kolektor` (KurirApp tanpa sidebar,
+  kerangka HP `kolektor-chrome.tsx`). Punya halaman `/login` sendiri (tidak dipindah ke tangki.space). Akses =
+  Super Admin atau menu `tukar.detail`; role Kurir diarahkan ke sini setelah login (`homeWorkspace`). Role Kurir diberi
+  menu `tukar.detail` (sebelumnya hanya Beranda).
+- Login: Nama → Masuk. PIN kosong → RPC `name_login` (service role; batas percobaan sama `pin_login_named`): akun
+  `profiles.pin_optional` (dicentang Super Admin di Akun & PIN) langsung masuk, lainnya `need_pin` → keypad PIN.
+  Role Super Admin tidak bisa tanpa PIN (trigger `guard_pin_optional` + validasi aksi). Perangkat mengingat nama yang
+  wajib PIN. Tujuan login di host yang sama dimuat penuh oleh browser (`go`), karena redirect server action merender
+  rute tanpa rewrite workspace.
+- Migrasi 0036.

@@ -1,3 +1,4 @@
+import type { Workspace } from "@/lib/workspace";
 // Registry menu tunggal, di-port dari MENU_REGISTRY di
 // Halaman Utama/Aplikasi Utama/AppShellScript.html.
 // ID submenu lama dipertahankan karena menjadi kunci ACL (tabel menu_acl).
@@ -149,17 +150,21 @@ export function firstAllowedHref(access: Access): string | null {
 }
 
 // Boleh masuk workspace? Super Admin semua. Finance (tangki.space) = portal pemilih untuk akun AR + AP
-// (halaman admin di dalamnya tetap khusus Super Admin). AR/AP mengikuti divisi akun.
-export function canEnterWorkspace(ws: "finance" | "ar" | "ap", access: Access) {
+// (halaman admin di dalamnya tetap khusus Super Admin). AR/AP mengikuti divisi akun. Aplikasi Kolektor
+// (kolektor.tangki.space) = akun yang punya menu Aplikasi Kolektor (tukar.detail), apa pun divisinya.
+export function canEnterWorkspace(ws: Workspace, access: Access) {
   if (access.kind === "sa") return true;
+  if (ws === "kolektor") return access.allowed.has("tukar.detail");
   const d = access.division ?? "ar";
   if (ws === "finance") return d === "both";
   return d === "both" || d === ws;
 }
 
-// Tujuan setelah login: SA & AR + AP → tangki.space (pilih workspace), selain itu workspace divisinya.
-export function homeWorkspace(access: Access): "finance" | "ar" | "ap" {
+// Tujuan setelah login: SA & AR + AP → tangki.space (pilih workspace), role Kurir → Aplikasi Kolektor,
+// selain itu workspace divisinya.
+export function homeWorkspace(access: Access): Workspace {
   if (access.kind === "sa") return "finance";
+  if (access.kind === "kurir" && canEnterWorkspace("kolektor", access)) return "kolektor";
   const d = access.division ?? "ar";
   return d === "both" ? "finance" : d;
 }

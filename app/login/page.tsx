@@ -11,14 +11,15 @@ const ERRORS: Record<string, string> = {
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const [{ error, next }, host] = await Promise.all([searchParams, currentHost()]);
   const initialError = typeof error === "string" ? ERRORS[error] ?? null : null;
-  const w = WORKSPACES[isSharedHost(host) ? "finance" : workspaceFromHost(host)];
+  const here = workspaceFromHost(host);
+  const w = WORKSPACES[isSharedHost(host) && here !== "kolektor" ? "finance" : here];
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-xs rounded-2xl border border-line bg-surface p-6 text-center">
         <span className="material-symbols-outlined !text-5xl text-accent">{w.icon}</span>
         <h1 className="mt-3 text-2xl font-medium">{w.label}</h1>
-        <p className="mt-1 text-sm text-fg-2">Masuk dengan nama &amp; PIN 6 digit</p>
+        <p className="mt-1 text-sm text-fg-2">Masuk dengan nama (dan PIN 6 digit bila diminta)</p>
         <LoginFlow initialError={initialError} next={typeof next === "string" ? next : ""} />
       </div>
     </main>

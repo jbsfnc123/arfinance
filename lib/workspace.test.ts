@@ -74,3 +74,17 @@ describe("satu pintu login (produksi)", () => {
     expect(parseNext("http://ap.localhost:3000/", "finance.localhost:3000")).toEqual({ ws: "ap", url: "http://ap.localhost:3000/" });
   });
 });
+
+describe("Aplikasi Kolektor (kolektor.tangki.space)", () => {
+  it("host, URL, rewrite & login sendiri", () => {
+    expect(workspaceFromHost("kolektor.tangki.space")).toBe("kolektor");
+    expect(workspaceFromHost("kolektor.localhost:3100")).toBe("kolektor");
+    expect(workspaceUrl("kolektor", "tangki.space")).toBe("https://kolektor.tangki.space/");
+    expect(workspaceUrl("kolektor", "localhost:3100")).toBe("http://kolektor.localhost:3100/");
+    expect(routeFor("kolektor", "/", true)).toEqual({ kind: "rewrite", path: "/kolektor" });
+    expect(routeFor("kolektor", "/login", true)).toEqual({ kind: "next" }); // tidak dipindah ke tangki.space
+    expect(routeFor("ar", "/kolektor", true)).toEqual({ kind: "notfound" });
+    expect(loginUrl("kolektor.tangki.space", "https://kolektor.tangki.space/")).toBe("/login?next=https%3A%2F%2Fkolektor.tangki.space%2F");
+    expect(parseNext("https://kolektor.tangki.space/", "kolektor.tangki.space")).toEqual({ ws: "kolektor", url: "https://kolektor.tangki.space/" });
+  });
+});
