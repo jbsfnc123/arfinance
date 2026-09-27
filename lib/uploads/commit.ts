@@ -3,7 +3,7 @@ import type { Database, Json } from "@/lib/database.types";
 import type { SharedKind } from "./parse";
 
 const CHUNK = 2000;
-const COMMIT = { aging: "aging_commit", erp: "erp_commit", bpmaster: "bp_commit" } as const;
+const COMMIT = { aging: "aging_commit", erp: "erp_commit" } as const;
 
 export async function sha256(file: File) {
   const buf = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());

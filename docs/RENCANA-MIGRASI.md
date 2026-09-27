@@ -665,9 +665,10 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   yang menduplikasi doc tunggal; `pack_erp` kirim `terms` & `labels` (kamus) + indeks `t`/`l` per invoice (invoice
   7,5 → 5,2 MB; `decodeErp` membaca format lama & baru); RLS `bank_accounts` satu policy SELECT.
 - m10_worksheet / rkm_worksheet BUKAN duplikat: buku SJ append-only (SJ yang keluar dari aging = Lunas di dashboard).
-- Menunggu persetujuan user (penghapusan data): snapshot aging palsu dari file Target (id 6, 6.415 baris), retensi
-  snapshot terbaru + 1, 1 duplikat erp_payments (SI/083054/VI/XXVI/TRA 12/08 Rp1.554.000), Master BP
-  (business_partners, bp_commit, kind bpmaster), fungsi mati pin_login / m10_set_keterangan, view v_target_months.
+- Fase 29b (migrasi 0035, disetujui user): snapshot aging palsu dari file Target dihapus (6.415 baris); `aging_commit`
+  menyimpan snapshot terbaru + 1 sebelumnya; Master BP dihapus (tabel business_partners, bp_commit, jenis upload bpmaster);
+  pin_login, m10_set_keterangan, v_target_months di-drop; index private.upload_rows dibangun ulang (2,8 MB → 32 kB).
+  Duplikat erp_payments sudah hilang lewat upload ERP berikutnya (erp_commit mencegahnya).
 
 ## Dashboard Tukar Faktur & Laporan & Jadwal Kolektor (Fase 30, 2026-09-27)
 - Dashboard Tukar Faktur (`lib/modules/tukar/summary.ts`): per bulan invoice date → jumlah invoice, TF Done, belum TF,

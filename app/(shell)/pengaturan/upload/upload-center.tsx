@@ -37,7 +37,7 @@ export function UploadCenter() {
       try {
         const sheets = await readAllSheets(f);
         const kind = detectKind(sheets);
-        if (!kind) throw new Error("jenis file tidak dikenali (bukan Aging, Invoice & Payment, Master BP, Target, atau Mutasi Bank)");
+        if (!kind) throw new Error("jenis file tidak dikenali (bukan Aging, Invoice & Payment, Target, atau Mutasi Bank)");
         patch(f, { sheets, kind, summary: summarize(kind, sheets) });
       } catch (e) {
         patch(f, { status: "gagal", error: (e as Error).message });
@@ -83,7 +83,7 @@ export function UploadCenter() {
         className={`${card} flex cursor-pointer flex-col items-center gap-2 border-dashed p-8 text-center ${over ? "border-accent bg-surface-2" : ""}`}>
         <span className="material-symbols-outlined !text-4xl text-accent">upload_file</span>
         <span className="font-medium">Seret file ke sini atau klik untuk memilih (boleh banyak sekaligus)</span>
-        <span className="text-xs text-fg-2">Aging (Blank_A4) · Invoice & Payment Date Comparison · Master Business Partner · Target bulanan · Mutasi rekening</span>
+        <span className="text-xs text-fg-2">Aging (Blank_A4) · Invoice & Payment Date Comparison · Target bulanan · Mutasi rekening</span>
         <input type="file" multiple accept=".xls,.xlsx,.xlsm,.csv" className="hidden" disabled={busy}
           onChange={(e) => { add([...(e.target.files ?? [])]); e.target.value = ""; }} />
       </label>

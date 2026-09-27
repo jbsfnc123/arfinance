@@ -13,7 +13,6 @@ const TABLES = [
   { table: "ar_aging_lines", desc: "Baris aging semua snapshot → view ar_invoices (Collection) & m10_aging (Mitra10)" },
   { table: "erp_invoices", desc: "Invoice ERP (laporan Invoice & Payment) → Mutasi, Presentasi, Marketplace" },
   { table: "erp_payments", desc: "Pembayaran ERP per dokumen → Mutasi, Presentasi (late days), Marketplace" },
-  { table: "business_partners", desc: "Master Business Partner → Presentasi" },
   { table: "ar_targets", desc: "Target bulanan → Dashboard Controller & Mutasi" },
   { table: "notes", desc: "Catatan collection (Reminder, No Respon, Case, Administratif)" },
   { table: "payment_promises", desc: "Janji bayar" },
