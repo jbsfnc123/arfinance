@@ -60,7 +60,10 @@ export function detectKind(sheets: Sheet[]): FileKind | null {
   if (sheets.some((s) => headerRow(s.rows, ["Tanggal Transaksi", "Jumlah"]))) return "mutasi";
   const first = sheets[0]?.rows ?? [];
   if (headerRow(first, ["Search Key", "Name"])) return "bpmaster";
-  if (headerRow(first, ["Open Amt", "Invoice No", "Due Date"]) && (headerRow(first, ["Open Amt", "Tax Name"]) || headerRow(first, ["Open Amt", "Collection Name"]))) return "aging";
+  // Aging (Blank_A4) wajib punya kolom khas aging: Tax Name atau kolom umur piutang. File Target juga punya
+  // Open Amt / Invoice No / Due Date / Collection Name — dulu ikut terbaca sebagai Aging dan bisa menimpa snapshot.
+  const agingCols = ["Tax Name", "Current 0 - 30", "Due + > 90", "Due + 1 - 7"].some((c) => headerRow(first, ["Open Amt", c]));
+  if (headerRow(first, ["Open Amt", "Invoice No", "Due Date"]) && agingCols) return "aging";
   if (headerRow(first, ["Invoice No", "Open Amt"]) || headerRow(first, ["Invoice No", "Target"])) return "target";
   if (sheets.some((s) => headerRow(s.rows, ["Invoice No", "Invoice Date"]) || headerRow(s.rows, ["Invoice No", "Payment Date"]))) return "erp";
   return null;
