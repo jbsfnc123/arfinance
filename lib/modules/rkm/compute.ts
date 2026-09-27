@@ -23,7 +23,7 @@ export const rkmAgingLines = (lines: AgingLine[], taxName: string) => {
 
 export type RkmRow = RkmWorksheet & {
   cabang: string; bp_short: string; keterangan: string | null; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
-  status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null; no_faktur_pajak: string | null;
+  status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null; tf_date: string | null; no_faktur_pajak: string | null;
 };
 export type RkmGrRow = RkmGr & { aging_open: number | null; check_status: "Done" | "Check" };
 export type RkmKwRow = RkmKw & { aging: number; selisih_aging: number };
@@ -64,6 +64,7 @@ export function computeRkm(input: { worksheet: RkmWorksheet[]; gr: RkmGr[]; kwit
       status: w.invoice_no && agingInv.has(w.invoice_no) ? "Outstanding" : "Lunas",
       jadwal_bayar: null,
       lama_tf: inputDates[0] && w.invoice_date ? daysBetween(inputDates[0], w.invoice_date) : null,
+      tf_date: inputDates[0] ?? null,
       no_faktur_pajak: kws.map((k) => k.no_faktur_pajak).filter(Boolean).join(", ") || null,
     };
   });

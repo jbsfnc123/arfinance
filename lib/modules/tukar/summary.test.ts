@@ -51,4 +51,25 @@ describe("Dashboard Tukar Faktur", () => {
     expect(s.map((x) => [x.invoice, x.pct, x.avgHari])).toEqual([[0, null, null], [0, null, null], [0, null, null], [0, null, null]]);
     expect(tukarMonths({ m10, rkm, aging, current: "2026-10" })).toEqual(["2026-10", "2026-09", "2026-08"]);
   });
+
+  it("rincian per kelompok: jumlah baris = invoice, status/tanggal TF, nominal dijumlah per invoice, keterangan", () => {
+    const withAmt = [
+      line({ invoice_no: "MM1", no_sj: "SJ/1", marketing: "02-Modern Market", tax_name: "Toko X", invoice_date: "2026-09-02", open_amt: 100, business_partner: "Toko X - A", collection_name: "Ani" }),
+      line({ invoice_no: "MM1", no_sj: "SJ/2", marketing: "02-Modern Market", tax_name: "Toko X", invoice_date: "2026-09-02", open_amt: 50, business_partner: "Toko X - A", collection_name: "Ani" }),
+    ];
+    const kk = [
+      { invoice_date: "2026-09-01", tukar_faktur: "Done" as const, lama_tf: 10, tf_date: "2026-09-11", business_partner: "M10 A", invoice_no: "SI/1", no_sj: "SJ/9", open_amt: 70, keterangan: "LTKP" },
+      { invoice_date: "2026-09-02", tukar_faktur: "Pending" as const, lama_tf: 4, tf_date: "2026-09-06", business_partner: "M10 B", invoice_no: "SI/2", no_sj: "SJ/8", open_amt: 30 },
+    ];
+    const s = tukarSummary({ month: "2026-09", m10: kk, rkm: [], aging: withAmt, exchanges: [ex("MM1", "2026-09-04")], m10Tax: M10, rkmTax: RKM,
+      remarks: new Map([["SJ/1", "Janji bayar"]]) });
+    const [a, , mm] = s;
+    expect(a.rows.length).toBe(a.invoice);
+    expect(a.rows.map((r) => [r.bp, r.status, r.tf_date, r.hari, r.nominal, r.keterangan])).toEqual([
+      ["M10 A", "Sudah TF", "2026-09-11", 10, 70, "LTKP"],
+      ["M10 B", "Belum TF", null, null, 30, null], // TF belum Done → tanggal & hari tidak ditampilkan
+    ]);
+    expect(mm.rows).toHaveLength(1);
+    expect(mm.rows[0]).toMatchObject({ invoice_no: "MM1", nominal: 150, tf_date: "2026-09-04", hari: 2, status: "Sudah TF", collection: "Ani", keterangan: "Janji bayar" });
+  });
 });

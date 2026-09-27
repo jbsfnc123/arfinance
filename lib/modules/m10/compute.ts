@@ -19,7 +19,7 @@ export const usernameOf = (paymentGroup: string | null | undefined) => {
 
 export type WorksheetRow = Worksheet & {
   username: string; bp_short: string; keterangan: string | null; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
-  status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null;
+  status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null; tf_date: string | null;
 };
 export type GrRow = Gr & { po_aging: string; check_status: "Done" | "Check" };
 export type KwRow = Kwitansi & { jadwal_bayar: string | null; aging: number; selisih: number };
@@ -63,6 +63,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
       status: w.invoice_no && agingInv.has(w.invoice_no) ? "Outstanding" : "Lunas",
       jadwal_bayar: first?.kuitansi_no ? sched.get(first.kuitansi_no) ?? null : null,
       lama_tf: first?.kuitansi_date && w.invoice_date ? daysBetween(first.kuitansi_date, w.invoice_date) : null,
+      tf_date: first?.kuitansi_date ?? null,
     };
   });
 
