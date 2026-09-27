@@ -49,6 +49,21 @@ export type Datasets = {
 export type DatasetName = keyof Datasets;
 
 type Raw = Record<string, unknown>;
+
+// pack_erp (Fase 29): payment_term & nama/lokasi BP dikirim sebagai kamus (`terms`, `labels`) + indeks per invoice
+// (`t`, `l`) agar teks yang berulang tidak dikirim 51 ribu kali. Format lama (kolom teks langsung) tetap dibaca.
+export function decodeErp(r: Raw): Datasets["erp"] {
+  const payments = unpack<Datasets["erp"]["payments"][number]>(r.payments as Packed);
+  const terms = r.terms as string[] | undefined;
+  const labels = r.labels as [string, string][] | undefined;
+  if (!terms || !labels) return { invoices: unpack<ErpInvoice>(r.invoices as Packed), payments };
+  const raw = unpack<ErpInvoice & { t: number; l: number }>(r.invoices as Packed);
+  const invoices = raw.map(({ t, l, ...i }) => {
+    const lb = labels[l];
+    return { ...i, payment_term: terms[t] || null, bp_name: lb?.[0] || null, bp_location: lb?.[1] || null };
+  });
+  return { invoices, payments };
+}
 const tables = (raw: Raw, names: string[]) => Object.fromEntries(names.map((n) => [n, unpack(raw[n] as Packed)]));
 
 export const DATASETS: { [K in DatasetName]: { rpc: string; deps: DatasetKey[]; decode: (raw: Raw) => Datasets[K] } } = {
@@ -58,7 +73,7 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; deps: DatasetKey[]; 
   m10: { rpc: "pack_m10", deps: ["m10"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi", "schedule"]) as Datasets["m10"] },
   rkm: { rpc: "pack_rkm", deps: ["rkm"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi"]) as Datasets["rkm"] },
   mutasi: { rpc: "pack_mutasi", deps: ["mutasi"], decode: (r) => tables(r, ["accounts", "mutations"]) as Datasets["mutasi"] },
-  erp: { rpc: "pack_erp", deps: ["erp"], decode: (r) => tables(r, ["invoices", "payments"]) as Datasets["erp"] },
+  erp: { rpc: "pack_erp", deps: ["erp"], decode: decodeErp },
   tukar: { rpc: "pack_tukar", deps: ["tukar"], decode: (r) => tables(r, ["done"]) as Datasets["tukar"] },
   settings: { rpc: "pack_settings", deps: ["settings"], decode: (r) => r },
   remarks: { rpc: "pack_remarks", deps: ["remarks"], decode: (r) => tables(r, ["remarks"]) as Datasets["remarks"] },

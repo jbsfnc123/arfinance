@@ -23,6 +23,9 @@ describe("deteksi jenis file", () => {
     expect(detectKind([{ name: "S", rows: INVOICE_REPORT }])).toBe("erp");
     expect(detectKind([{ name: "S", rows: [["Invoice No.", "Payment Document", "Payment Amount", "Payment Date"]] }])).toBe("erp");
     expect(detectKind([{ name: "S", rows: [[], ["Invoice No", "Open Amt"]] }])).toBe("target");
+    // File Target ber-kolom Collection Name / Due Date tetap Target (dulu salah terbaca Aging → menimpa snapshot)
+    expect(detectKind([{ name: "Target", rows: [["Invoice No", "Business Partner", "Collection Name", "Marketing", "Due Date", "Open Amt", "No SJ"]] }])).toBe("target");
+    expect(detectKind([{ name: "Sheet1", rows: [["Invoice No", "Collection Name", "Due Date", "Open Amt", "Current 0 - 30", "Due + > 90"]] }])).toBe("aging");
     expect(detectKind([{ name: "S", rows: [["Search Key", "Name", "PIC AR"]] }])).toBe("bpmaster");
     expect(detectKind([{ name: "MUT_4888", rows: [["Tanggal Transaksi", "Keterangan", "Jumlah"]] }])).toBe("mutasi");
   });
