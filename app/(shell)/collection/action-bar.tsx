@@ -9,6 +9,7 @@ import { buildWaMessage, effectiveTemplate, normalizePhone, waLink, type WaTempl
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import type { Patch } from "./collection-view";
+import type { PayHistTarget } from "@/components/payment-history-modal";
 import { exportExcel, printRows } from "./export";
 import {
   ContactsModal, FotoModal, NoteModal, readDeviceTemplate, ResiModal, TukarModal, WaEditModal, type Contact,
@@ -23,11 +24,15 @@ export function ActionBar(props: {
   clear: () => void;
   patch: Patch;
   serverTemplate: Partial<WaTemplate> | null;
+  // undefined = tanpa akses; "multi" = centang > 1 BP; "none" = BP tidak dikenal di aging
+  history?: { bpKey: string; bp: string; group: string | null; marketplace: boolean } | "multi" | "none";
+  onHistory?: (t: PayHistTarget) => void;
 }) {
   const { selected, collection, patch } = props;
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [modal, setModal] = useState<ModalName>(null);
+  const [histMenu, setHistMenu] = useState(false);
   const [exportMenu, setExportMenu] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [manualPhone, setManualPhone] = useState<string | null>(null);
@@ -178,6 +183,35 @@ export function ActionBar(props: {
             <button type="button" className={btnGhost} onClick={() => setModal("tukar")}>
               <span className="material-symbols-outlined">swap_horiz</span>Tukar Faktur
             </button>
+            {props.history !== undefined && (() => {
+              const h = props.history;
+              const ok = typeof h === "object";
+              return (
+                <div className="relative">
+                  <button type="button" className={btnGhost} disabled={!ok}
+                    title={h === "multi" ? "Pilih invoice dari satu BP" : h === "none" ? "BP tidak ditemukan di aging terbaru" : "Ringkasan pembayaran 3 bulan terakhir"}
+                    onClick={() => {
+                      if (!ok) return;
+                      if (h.group) setHistMenu(!histMenu);
+                      else props.onHistory?.({ kind: "bp", key: h.bpKey, name: h.bp });
+                    }}>
+                    <span className="material-symbols-outlined">history</span>Lihat History Pembayaran
+                  </button>
+                  {ok && h.group && histMenu && (
+                    <div className="absolute bottom-full mb-1 w-72 rounded-xl border border-line bg-surface p-1 shadow-lg" onMouseLeave={() => setHistMenu(false)}>
+                      <button type="button" className="block w-full rounded px-3 py-2 text-left text-sm hover:bg-surface-2"
+                        onClick={() => { setHistMenu(false); props.onHistory?.({ kind: "bp", key: h.bpKey, name: h.bp }); }}>
+                        BP ini <span className="block truncate text-xs text-fg-2">{h.bp}</span>
+                      </button>
+                      <button type="button" className="block w-full rounded px-3 py-2 text-left text-sm hover:bg-surface-2"
+                        onClick={() => { setHistMenu(false); props.onHistory?.({ kind: "group", name: h.group! }); }}>
+                        Group <span className="block truncate text-xs text-fg-2">{h.group}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <div className="relative">
               <button type="button" className={btnGhost} onClick={() => setExportMenu(!exportMenu)}>
                 <span className="material-symbols-outlined">download</span>Export

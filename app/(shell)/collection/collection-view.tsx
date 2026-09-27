@@ -15,6 +15,8 @@ import {
 } from "@/lib/modules/collection/view-model";
 import type { WaTemplate } from "@/lib/modules/collection/wa-message";
 import { useViewState } from "@/lib/ui/view-state";
+import { findTarget } from "@/lib/modules/collection/payment-history";
+import { PaymentHistoryModal, type PayHistTarget } from "@/components/payment-history-modal";
 import { btnGhost, card, inputCls } from "@/components/ui";
 import { KpiPanel, CategoryCards } from "./kpi-panel";
 import { FilterBar } from "./filter-bar";
@@ -29,6 +31,7 @@ export function CollectionView(props: {
   initial: string;
   locked: boolean;
   own: string | null;
+  canPayHist?: boolean;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -110,6 +113,15 @@ export function CollectionView(props: {
     () => selection.map((inv) => byInvoice.get(inv)).filter((r): r is CollectionRow => !!r),
     [selection, byInvoice],
   );
+  // Tombol "Lihat History Pembayaran": hanya bila centang berasal dari satu BP (dan akun punya akses menunya).
+  const [histTarget, setHistTarget] = useState<PayHistTarget | null>(null);
+  const history = useMemo(() => {
+    if (!props.canPayHist || !selectedRows.length) return undefined;
+    const bps = new Set(selectedRows.map((r) => r.business_partner));
+    if (bps.size > 1) return "multi" as const;
+    const t = aging.data ? findTarget([...bps][0], aging.data.lines) : null;
+    return t ?? ("none" as const);
+  }, [props.canPayHist, selectedRows, aging.data]);
 
   function pick(name: string) {
     // Ganti collection: filter & centang tersimpan per collection (kembali ke collection lama = tampilan lama).
@@ -194,7 +206,10 @@ export function CollectionView(props: {
         clear={() => setSelection([])}
         patch={patch}
         serverTemplate={(settings.data?.wa_template as Partial<WaTemplate> | undefined) ?? null}
+        history={history}
+        onHistory={setHistTarget}
       />
+      <PaymentHistoryModal target={histTarget} onClose={() => setHistTarget(null)} />
     </div>
   );
 }

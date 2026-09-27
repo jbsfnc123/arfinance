@@ -59,6 +59,25 @@ export function compareCells(x: unknown, y: unknown, numeric: boolean, dir: 1 | 
   return cmp * dir;
 }
 
+/**
+ * Filter dinamis: opsi tiap filter dihitung dari baris yang lolos filter LAIN (+ pencarian), dengan jumlah baris.
+ * Opsi terpilih tetap ada walau jumlahnya 0 agar bisa dikosongkan.
+ */
+export function filterOptions<T>(rows: T[], filters: LFilter<T>[], active: Record<string, string>, match: (r: T) => boolean) {
+  const val = (r: T, k: string) => String((r as Record<string, unknown>)[k] ?? "");
+  return filters.map((fl) => {
+    const others = Object.entries(active).filter(([k]) => k !== fl.k);
+    const counts = new Map<string, number>();
+    for (const r of rows) {
+      if (!match(r) || !others.every(([k, v]) => val(r, k) === v)) continue;
+      const v = val(r, fl.k);
+      counts.set(v, (counts.get(v) ?? 0) + 1);
+    }
+    const opts = fl.options.filter((o) => counts.has(o) || active[fl.k] === o).map((o) => ({ value: o, count: counts.get(o) ?? 0 }));
+    return { ...fl, opts };
+  });
+}
+
 export function LocalTable<T>(props: {
   title: string;
   rows: T[];
@@ -82,6 +101,9 @@ export function LocalTable<T>(props: {
   maxHeight?: string;  // kelas tinggi saat fill=false
   minHeight?: number;  // batas bawah tinggi saat fill (default 320)
   noExport?: boolean;
+  defaultSort?: { k: string; dir: 1 | -1 }; // urutan bila user belum mengklik header
+  defaultLimit?: number;  // tampilkan N teratas selama cari/filter belum aktif (mis. 20 terlama)
+  limitNote?: string;     // keterangan N teratas
 }) {
   // Cari, filter, urutan, centang, Teks penuh & posisi scroll diingat selama tab browser terbuka (pindah menu aman).
   const vk = `table:${props.stateKey ?? props.hideKey ?? props.title}`;
@@ -108,21 +130,31 @@ export function LocalTable<T>(props: {
   const activeF = useMemo(() => Object.fromEntries(Object.entries(f).filter(([k, v]) =>
     v && props.filters?.find((fl) => fl.k === k)?.options.includes(v))), [f, props.filters]);
 
-  const rows = useMemo(() => {
+  const matchSearch = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const searchCols = props.search.map((k) => props.cols.find((c) => c.k === k));
+    return (r: T) => !needle || props.search.some((k, i) => {
+      const c = searchCols[i];
+      return (c?.text ? c.text(r) : String(r[k] ?? "")).toLowerCase().includes(needle);
+    });
+  }, [q, props.search, props.cols]);
+  const dynFilters = useMemo(() => filterOptions(props.rows, props.filters ?? [], activeF, matchSearch),
+    [props.rows, props.filters, activeF, matchSearch]);
+
+  const [showAll, setShowAll] = useState(false);
+  const allRows = useMemo(() => {
     let out = props.rows.filter((r) =>
-      Object.entries(activeF).every(([k, v]) => String((r as Record<string, unknown>)[k] ?? "") === v) &&
-      (!needle || props.search.some((k, i) => {
-        const c = searchCols[i];
-        return (c?.text ? c.text(r) : String(r[k] ?? "")).toLowerCase().includes(needle);
-      })));
-    if (sort) {
-      const col = props.cols.find((c) => c.k === sort.k);
-      out = [...out].sort((a, b) => compareCells((a as Record<string, unknown>)[sort.k], (b as Record<string, unknown>)[sort.k], !!col?.n, sort.dir));
+      Object.entries(activeF).every(([k, v]) => String((r as Record<string, unknown>)[k] ?? "") === v) && matchSearch(r));
+    const s = sort ?? props.defaultSort;
+    if (s) {
+      const col = props.cols.find((c) => c.k === s.k);
+      out = [...out].sort((a, b) => compareCells((a as Record<string, unknown>)[s.k], (b as Record<string, unknown>)[s.k], !!col?.n, s.dir));
     }
     return out;
-  }, [props.rows, props.search, props.cols, q, activeF, sort]);
+  }, [props.rows, props.cols, props.defaultSort, activeF, matchSearch, sort]);
+  // N teratas hanya selama cari/filter belum aktif (dan "Tampilkan semua" belum diklik).
+  const limited = !!props.defaultLimit && !showAll && !q.trim() && Object.keys(activeF).length === 0 && allRows.length > props.defaultLimit;
+  const rows = useMemo(() => (limited ? allRows.slice(0, props.defaultLimit) : allRows), [limited, allRows, props.defaultLimit]);
 
   if (process.env.NODE_ENV !== "production" && props.rows.length) {
     const seen = new Set<string | number>();
@@ -160,7 +192,7 @@ export function LocalTable<T>(props: {
   async function exportXlsx() {
     await downloadXlsx(`${props.title}.xlsx`, props.title.slice(0, 31), [
       cols.map((c) => c.l),
-      ...rows.map((r) => cols.map((c) => (c.text ? c.text(r) : (r[c.k] as unknown) ?? ""))),
+      ...allRows.map((r) => cols.map((c) => (c.text ? c.text(r) : (r[c.k] as unknown) ?? ""))),
     ]);
   }
 
@@ -169,11 +201,11 @@ export function LocalTable<T>(props: {
       <div className="flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari…" aria-label={`Cari di ${props.title}`}
           className={`${inputCls} !w-44 xl:!w-60`} />
-        {props.filters?.map((fl) => (
-          <select key={fl.k} value={activeF[fl.k] ?? ""} onChange={(e) => setF({ ...f, [fl.k]: e.target.value })} className={`${inputCls} !w-auto`}
+        {dynFilters.map((fl) => (
+          <select key={fl.k} value={activeF[fl.k] ?? ""} onChange={(e) => setF({ ...f, [fl.k]: e.target.value })} className={`${inputCls} !w-auto max-w-64`}
             aria-label={`Filter ${fl.l}`}>
-            <option value="">{fl.l}: semua</option>
-            {fl.options.map((o) => <option key={o}>{o}</option>)}
+            <option value="">{fl.l}: semua ({fl.opts.length})</option>
+            {fl.opts.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.count.toLocaleString("id-ID")})</option>)}
           </select>
         ))}
         {props.toolbar}
@@ -213,6 +245,19 @@ export function LocalTable<T>(props: {
           </button>
         )}
         <span className="ml-auto flex flex-wrap items-center gap-2">
+          {limited && (
+            <span className="text-sm text-fg-2">
+              {props.limitNote ?? `${props.defaultLimit} teratas`} ·{" "}
+              <button type="button" className="text-accent hover:underline" onClick={() => setShowAll(true)}>
+                Tampilkan semua ({allRows.length.toLocaleString("id-ID")})
+              </button>
+            </span>
+          )}
+          {!limited && props.defaultLimit && showAll && !q.trim() && Object.keys(activeF).length === 0 && (
+            <button type="button" className="text-sm text-accent hover:underline" onClick={() => setShowAll(false)}>
+              Kembali ke {props.defaultLimit} teratas
+            </button>
+          )}
           <span className="whitespace-nowrap text-sm text-fg-2">
             {props.loading ? "Memuat…" : rows.length === props.rows.length
               ? `${rows.length.toLocaleString("id-ID")} baris`

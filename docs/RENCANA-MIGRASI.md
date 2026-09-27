@@ -642,3 +642,16 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   Tab/bulan/filter halaman lain memakai kunci `<rute>:<nama>`. Form input, modal, dan login sengaja tidak diingat.
 - Perbaikan: `getEntry` dataset yang belum dimuat kini mengembalikan objek kosong yang sama (sebelumnya objek baru tiap
   panggilan → peringatan React "getSnapshot should be cached" saat navigasi pertama).
+
+## History Pembayaran BP v2 (Fase 28, 2026-09-27)
+- KPI dihapus. Switch **Per BP / Per Group** (`payhist:mode`). Group = `payment_group` ≠ nama marketing tanpa prefix angka
+  (`groupOf`, mis. PG "Proyek" + marketing "04-Proyek" → tanpa group). Mode Group: BP ber-group digabung per payment group
+  (outstanding & overdue = seluruh BP group di aging terbaru), BP tanpa group tetap baris BP.
+- TikTok/Shopee diabaikan seluruhnya (`isMarketplace`: PG aging atau bp_key/bp_name berawalan Shopee-/TikTok-).
+  Batasan: status group dari aging terbaru (BP lunas semua = tanpa group).
+- Default 20 baris dengan rata-rata lama terlama sampai cari/filter aktif (`LocalTable` `defaultSort` + `defaultLimit`).
+- `LocalTable` kini memakai **filter dinamis** (`filterOptions`): opsi tiap filter dari baris yang lolos filter lain + cari,
+  dengan jumlah baris — berlaku untuk semua tabel standar.
+- Modal ringkasan `components/payment-history-modal.tsx` (per bulan, 3 terlama, per BP dalam group, semua transaksi +
+  Excel); juga dari Daftar Tagihan → tombol "Lihat History Pembayaran" (centang dari satu BP; bila ber-group pilih BP/Group;
+  hanya untuk akun berakses `coll.payhist`).
