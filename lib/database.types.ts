@@ -426,31 +426,6 @@ export type Database = {
         Update: never
         Relationships: []
       }
-      business_partners: {
-        Row: {
-          search_key: string
-          bp_key: string
-          name: string | null
-          payment_group: string | null
-          pic_ar: string | null
-          sales_agent: string | null
-          payment_term: string | null
-          marketing_group: string | null
-          customer_type: string | null
-          credit_limit: number | null
-          credit_status: string | null
-          sales_region: string | null
-          branch: string | null
-          description: string | null
-          first_sale: string | null
-          last_sale: string | null
-          customer: string | null
-          updated_at: string
-        }
-        Insert: never
-        Update: never
-        Relationships: []
-      }
       ar_aging_snapshots: {
         Row: {
           id: number
@@ -1024,10 +999,6 @@ export type Database = {
         Row: Database["public"]["Tables"]["courier_schedules"]["Row"]
         Relationships: []
       }
-      v_target_months: {
-        Row: { month: string | null; invoices: number | null; total: number | null }
-        Relationships: []
-      }
     }
     Functions: {
       set_invoice_remark: { Args: { p_items: Json; p_text: string; p_source: string }; Returns: number }
@@ -1061,14 +1032,12 @@ export type Database = {
       upload_rows: { Args: { p_batch: string; p_offset: number; p_rows: Json }; Returns: number }
       aging_commit: { Args: { p_batch: string }; Returns: Json }
       erp_commit: { Args: { p_batch: string }; Returns: Json }
-      bp_commit: { Args: { p_batch: string }; Returns: Json }
       mp_erp_rows: { Args: { p_pos: string[]; p_group: string | null; p_dari: string | null; p_ke: string | null }; Returns: Json }
       mutasi_import: { Args: { p_sheets: Json; p_file_name: string }; Returns: number }
       m10_gr_add: { Args: { p_rows: Json; p_file_name: string; p_first: boolean }; Returns: number }
       m10_kw_add: { Args: { p_rows: Json; p_username: string; p_file_name: string }; Returns: Json }
       m10_schedule_upsert: { Args: { p_rows: Json; p_file_name?: string | null }; Returns: number }
       m10_schedule_delete: { Args: { p_no_kw: string[] }; Returns: number }
-      m10_set_keterangan: { Args: { p_ids: number[]; p_text: string }; Returns: number }
       m10_set_tax_name: { Args: { p_value: string }; Returns: number }
       admin_set_pin: { Args: { p_pin: string; p_user: string }; Returns: undefined }
       ar_target_replace: {
@@ -1084,7 +1053,6 @@ export type Database = {
         Args: { p_bp: string; p_cat: string; p_isi: string; p_new_cat: string; p_new_isi: string }
         Returns: number
       }
-      pin_login: { Args: { p_ip: string; p_pin: string }; Returns: Json }
       courier_dates: { Args: never; Returns: { invoices: number; send_date: string }[] }
       courier_names: { Args: never; Returns: { name: string }[] }
       courier_submit: {

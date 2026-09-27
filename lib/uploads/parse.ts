@@ -4,11 +4,10 @@ import { parseNumber } from "@/lib/parsers/number";
 // Parser laporan ERP BERSAMA (Fase 7). Setiap laporan di-upload sekali lalu dipakai semua menu:
 //   aging    (Blank_A4 = MASTER AGING)          → Collection, Mitra10, RKM, Tukar Faktur
 //   erp      (Invoice and Payment Date Comparison) → Mutasi Bank, Dashboard Collection, Marketplace
-//   bpmaster (Business Partner)                 → master BP (Presentasi AR kini berdiri sendiri)
 // Kolom dicari berdasarkan nama header (tidak peka huruf besar/kecil & tanda baca).
 
 export type Sheet = { name: string; rows: unknown[][] };
-export type SharedKind = "aging" | "erp" | "bpmaster";
+export type SharedKind = "aging" | "erp";
 export type FileKind = SharedKind | "target" | "mutasi";
 
 export const norm = (v: unknown) => String(v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -59,7 +58,6 @@ function mapRows<T>(rows: unknown[][], h: { row: number; idx: Map<string, number
 export function detectKind(sheets: Sheet[]): FileKind | null {
   if (sheets.some((s) => headerRow(s.rows, ["Tanggal Transaksi", "Jumlah"]))) return "mutasi";
   const first = sheets[0]?.rows ?? [];
-  if (headerRow(first, ["Search Key", "Name"])) return "bpmaster";
   // Aging (Blank_A4) wajib punya kolom khas aging: Tax Name atau kolom umur piutang. File Target juga punya
   // Open Amt / Invoice No / Due Date / Collection Name — dulu ikut terbaca sebagai Aging dan bisa menimpa snapshot.
   const agingCols = ["Tax Name", "Current 0 - 30", "Due + > 90", "Due + 1 - 7"].some((c) => headerRow(first, ["Open Amt", c]));
@@ -170,34 +168,10 @@ export function parseErp(sheets: Sheet[]) {
   throw new Error("Header 'Invoice No.' dengan 'Invoice Date' / 'Payment Date' tidak ditemukan.");
 }
 
-// ── Master Business Partner ──────────────────────────────────────
-export type BpRow = {
-  search_key: string | null; name: string | null; payment_group: string | null; pic_ar: string | null;
-  sales_agent: string | null; payment_term: string | null; marketing_group: string | null; customer_type: string | null;
-  credit_limit: number | null; credit_status: string | null; sales_region: string | null; branch: string | null;
-  description: string | null; first_sale: string | null; last_sale: string | null; customer: string | null;
-};
-const BP: Spec<BpRow> = {
-  search_key: { h: ["Search Key"], f: str }, name: { h: ["Name"], f: str }, payment_group: { h: ["Payment Group"], f: str },
-  pic_ar: { h: ["PIC AR"], f: str }, sales_agent: { h: ["Sales / Agent"], f: str }, payment_term: { h: ["Payment Term"], f: str },
-  marketing_group: { h: ["Marketing Groups"], f: str }, customer_type: { h: ["TypeOfCustomer"], f: str },
-  credit_limit: { h: ["Credit Limit"], f: numOrNull }, credit_status: { h: ["Credit Status"], f: str },
-  sales_region: { h: ["Sales Region"], f: str }, branch: { h: ["Branch"], f: str }, description: { h: ["Description"], f: str },
-  first_sale: { h: ["First Sale"], f: date }, last_sale: { h: ["LastSale"], f: date }, customer: { h: ["Customer"], f: str },
-};
-
-export function parseBpMaster(sheets: Sheet[]) {
-  const s = sheets[0];
-  const h = s && headerRow(s.rows, ["Search Key", "Name"]);
-  if (!h) throw new Error("Header 'Search Key' / 'Name' tidak ditemukan di file Business Partner.");
-  return { rows: mapRows(s.rows, h, BP).rows.filter((r) => r.search_key) };
-}
-
 // Menu yang ikut terisi dari tiap jenis laporan (ditampilkan di pratinjau Pusat Upload).
 export const KIND_INFO: Record<FileKind, { label: string; feeds: string }> = {
   aging: { label: "Aging (Blank_A4 / MASTER AGING)", feeds: "Collection, Dashboard Controller, Tukar Faktur, Mitra10, RKM" },
   erp: { label: "Invoice & Payment Date Comparison", feeds: "Mutasi Bank vs Realisasi, Dashboard Collection, Marketplace (ERP)" },
-  bpmaster: { label: "Master Business Partner", feeds: "(disimpan sebagai master BP; tidak dipakai Presentasi AR lagi)" },
   target: { label: "Target bulanan", feeds: "Dashboard Controller, Mutasi Bank vs Realisasi" },
   mutasi: { label: "Mutasi rekening bank", feeds: "Mutasi Bank vs Realisasi" },
 };

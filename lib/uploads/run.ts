@@ -3,7 +3,7 @@ import type { Database } from "@/lib/database.types";
 import { rupiah, monthLabel } from "@/lib/format";
 import { parseTarget } from "@/lib/modules/collection/parse-target";
 import { parseMutasiWorkbook } from "@/lib/modules/mutasi/parse";
-import { parseAging, parseBpMaster, parseErp, type FileKind, type Sheet } from "./parse";
+import { parseAging, parseErp, type FileKind, type Sheet } from "./parse";
 import { uploadShared } from "./commit";
 
 export type Summary = string;
@@ -21,7 +21,6 @@ export function summarize(kind: FileKind, sheets: Sheet[]): Summary {
     return `${fmtN(e.invoices)} invoice / ${fmtN(e.rows.filter((r) => r.payment_date).length)} pembayaran · laporan per tanggal ${e.meta.kind === "invoice" ? "invoice" : "payment"} · ${months(e.months)}` +
       (e.meta.paymentGroup ? ` · Payment Group ${e.meta.paymentGroup}` : "");
   }
-  if (kind === "bpmaster") return `${fmtN(parseBpMaster(sheets).rows.length)} Business Partner`;
   if (kind === "target") {
     const t = parseTarget(sheets[0].rows);
     return `${fmtN(t.rows.length)} invoice · total target ${rupiah(t.rows.reduce((a, r) => a + r.target, 0))}`;
@@ -35,17 +34,13 @@ export async function runUpload(supabase: SupabaseClient<Database>, kind: FileKi
     const a = parseAging(sheets);
     const { result: r, seenAt } = await uploadShared(supabase, "aging", file, a.rows);
     return { seenAt, result: r, message: `Snapshot aging ${monthLabel(String(r.month))}: ${fmtN(Number(r.rows))} baris` +
-      (r.current ? ` · Collection ${fmtN(Number(r.collectionRows))} invoice · Mitra10 ${fmtN(Number(r.m10Rows))} invoice (${r.m10NewInvoices} baru ke Kertas Kerja, ${r.m10Lunas} lunas)` : " · bukan bulan terbaru: hanya dipakai riwayat/Presentasi") };
+      (r.current ? ` · Collection ${fmtN(Number(r.collectionRows))} invoice · Mitra10 ${fmtN(Number(r.m10Rows))} invoice (${r.m10NewInvoices} baru ke Kertas Kerja, ${r.m10Lunas} lunas)` : " · bukan bulan terbaru: disimpan sebagai snapshot sebelumnya") };
   }
   if (kind === "erp") {
     const e = parseErp(sheets);
     const { result: r, seenAt } = await uploadShared(supabase, "erp", file, e.rows, e.meta);
     return { seenAt, result: r, message: `${fmtN(Number(r.invoices))} invoice & ${fmtN(Number(r.payments))} pembayaran disimpan` +
       (Number(r.deletedInvoices) || Number(r.deletedPayments) ? ` · ${r.deletedInvoices} invoice / ${r.deletedPayments} pembayaran lama yang tidak ada lagi dihapus` : "") };
-  }
-  if (kind === "bpmaster") {
-    const { result: r, seenAt } = await uploadShared(supabase, "bpmaster", file, parseBpMaster(sheets).rows);
-    return { seenAt, result: r, message: `${fmtN(Number(r.rows))} Business Partner disimpan (master diganti penuh)` };
   }
   if (kind === "target") {
     const month = opt.month;

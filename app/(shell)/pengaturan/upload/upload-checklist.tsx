@@ -9,7 +9,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { card } from "@/components/ui";
 
 // Checklist upload: per menu (ke bawah) daftar file yang dibutuhkan. Tercentang bila sudah di-upload
-// hari ini (WIB) — atau bulan ini untuk Target & Master BP — dan otomatis silang lagi saat ganti hari.
+// hari ini (WIB) — atau bulan ini untuk Target — dan otomatis silang lagi saat ganti hari.
 export function UploadChecklist({ version }: { version: number }) {
   const supabase = useMemo(() => createClient(), []);
   const [stats, setStats] = useState<UploadStat[] | null>(null);
@@ -48,7 +48,7 @@ export function UploadChecklist({ version }: { version: number }) {
           {stats ? <><b className={done === status.size ? "text-success" : "text-fg"}>{done}</b> dari {status.size} file sudah di-upload</> : error ? <span className="text-danger">Gagal memuat: {error}</span> : "Memuat…"}
         </span>
       </div>
-      <p className="mt-1 text-xs text-fg-2">Status kembali silang setiap ganti hari (WIB). Target & Master Business Partner cukup sekali per bulan. File yang sama cukup di-upload sekali untuk semua menu.</p>
+      <p className="mt-1 text-xs text-fg-2">Status kembali silang setiap ganti hari (WIB). Target cukup sekali per bulan. File yang sama cukup di-upload sekali untuk semua menu.</p>
 
       <ul className="mt-3 space-y-3">
         {CHECKLIST.map((g) => (

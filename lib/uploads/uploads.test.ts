@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectKind, parseAging, parseBpMaster, parseErp } from "./parse";
+import { detectKind, parseAging, parseErp } from "./parse";
 
 
 const d = (y: number, m: number, day: number) => (Date.UTC(y, m - 1, day) - Date.UTC(1899, 11, 30)) / 864e5;
@@ -26,7 +26,7 @@ describe("deteksi jenis file", () => {
     // File Target ber-kolom Collection Name / Due Date tetap Target (dulu salah terbaca Aging → menimpa snapshot)
     expect(detectKind([{ name: "Target", rows: [["Invoice No", "Business Partner", "Collection Name", "Marketing", "Due Date", "Open Amt", "No SJ"]] }])).toBe("target");
     expect(detectKind([{ name: "Sheet1", rows: [["Invoice No", "Collection Name", "Due Date", "Open Amt", "Current 0 - 30", "Due + > 90"]] }])).toBe("aging");
-    expect(detectKind([{ name: "S", rows: [["Search Key", "Name", "PIC AR"]] }])).toBe("bpmaster");
+    expect(detectKind([{ name: "S", rows: [["Search Key", "Name", "PIC AR"]] }])).toBeNull(); // Master BP tidak dipakai lagi
     expect(detectKind([{ name: "MUT_4888", rows: [["Tanggal Transaksi", "Keterangan", "Jumlah"]] }])).toBe("mutasi");
   });
 });
@@ -52,10 +52,6 @@ describe("parser laporan bersama", () => {
     const pay = parseErp([{ name: "S", rows: report(d(2026, 10, 1), d(2026, 10, 31), INVOICE_REPORT.slice(5, 7)) }]);
     expect(pay.meta.kind).toBe("payment");
     expect(parseErp([{ name: "S", rows: [["Invoice No.", "Payment Document", "Payment Amount", "Payment Date"], ["A", "P", 5, d(2026, 9, 2)]] }]).meta.kind).toBe("payment");
-  });
-
-  it("bp master", () => {
-    expect(parseBpMaster([{ name: "S", rows: [["Search Key", "Name", "PIC AR"], ["1000258-PKP", "A", "X"], ["", "B", ""]] }]).rows).toHaveLength(1);
   });
 });
 
