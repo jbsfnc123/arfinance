@@ -39,7 +39,7 @@ export const CHECKLIST: { menu: string; files: FileKey[] }[] = [
   { menu: "Collection (Daftar Tagihan & Dashboard)", files: ["aging", "target"] },
   { menu: "Dashboard Mutasi Bank vs Realisasi", files: ["mutasi", "erp_invoice", "erp_payment", "target"] },
   { menu: "Collection – History Pembayaran BP", files: ["aging", "erp_invoice", "erp_payment"] },
-  { menu: "Tukar Faktur – Jadwal Kolektor", files: ["jadwal_kolektor"] },
+  { menu: "Tukar Faktur – Laporan & Jadwal Kolektor", files: ["jadwal_kolektor"] },
   { menu: "Mitra10 Tukar Faktur", files: ["aging", "m10_gr", "m10_kw", "m10_jadwal"] },
   { menu: "RKM Tukar Faktur", files: ["aging", "rkm_gr", "rkm_kw"] },
   { menu: "Cek Selisih Harga PO/SO", files: ["so_master"] },

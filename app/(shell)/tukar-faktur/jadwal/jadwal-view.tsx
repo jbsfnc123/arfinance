@@ -8,11 +8,19 @@ import { groupJadwal, type JadwalRow } from "@/lib/modules/tukar/dashboard";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
+import { Tabs } from "@/components/tabs";
+import { useViewState } from "@/lib/ui/view-state";
+import { LaporanHarian } from "./laporan-harian";
+
+const TABS = [
+  { key: "jadwal", label: "Jadwal", icon: "event" },
+  { key: "laporan", label: "Laporan Harian", icon: "summarize" },
+] as const;
 
 type Recent = { tanggal: string; kolektor: string; lokasi: number; invoices: number };
 
-// Port view Jadwal Kolektor (Aplikasi Utama): navigasi tanggal kirim, invoice per BP
-// dengan status tukar faktur, dan ringkasan 5 hari terakhir.
+// Laporan & Jadwal Kolektor. Tab Jadwal (port view Jadwal Kolektor Aplikasi Utama): navigasi tanggal kirim, invoice per BP
+// dengan status tukar faktur, ringkasan 5 hari terakhir. Tab Laporan Harian: pindahan Dashboard Tukar Faktur lama.
 export function JadwalView() {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
@@ -21,6 +29,7 @@ export function JadwalView() {
   const [rows, setRows] = useState<JadwalRow[]>([]);
   const [recent, setRecent] = useState<Recent[]>([]);
   const [open, setOpen] = useState<string | null>(null);
+  const [tab, setTab] = useViewState<(typeof TABS)[number]["key"]>("jadwal:tab", "jadwal");
 
   useEffect(() => {
     supabase.rpc("jadwal_dates").then(({ data }) => setDates((data ?? []).map((d) => d.send_date)));
@@ -46,8 +55,11 @@ export function JadwalView() {
 
   return (
     <div className="w-full space-y-4">
+      <h1 className="text-2xl font-medium">Laporan &amp; Jadwal Kolektor</h1>
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
+      {tab === "laporan" ? <LaporanHarian /> : (<>
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto text-2xl font-medium">Jadwal Kolektor</h1>
+        <span className="mr-auto text-sm text-fg-2">Tanggal kirim</span>
         <button type="button" className={btnGhost} disabled={!prev} onClick={() => prev && setDate(prev)} aria-label="Tanggal sebelumnya">
           <span className="material-symbols-outlined">chevron_left</span>
         </button>
@@ -120,6 +132,7 @@ export function JadwalView() {
           </table>
         </TableBox>
       </section>
+      </>)}
     </div>
   );
 }
