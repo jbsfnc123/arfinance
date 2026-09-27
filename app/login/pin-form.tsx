@@ -6,13 +6,18 @@ import { PIN_LENGTH } from "@/lib/auth/constants";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
-// Langkah 2 login: keypad PIN untuk nama yang sudah dipilih di langkah 1 (NameStep).
+// Langkah 2 login: tombol Masuk (akun tanpa PIN langsung masuk). Bila server meminta PIN, keypad PIN tampil.
+// Perangkat mengingat nama yang wajib PIN sehingga login berikutnya langsung ke keypad.
+const pinKey = (name: string) => `login:needpin:${name.toLowerCase()}`;
+const rememberPin = (name: string) => { try { localStorage.setItem(pinKey(name), "1"); } catch { /* opsional */ } };
+const knownPin = (name: string) => { try { return localStorage.getItem(pinKey(name)) === "1"; } catch { return false; } };
 export function PinForm({ initialError, name, next, onChangeName }: {
   initialError: string | null; name: string; next: string; onChangeName: () => void;
 }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginWithPin, null);
   const [pin, setPin] = useState("");
   const [handledAt, setHandledAt] = useState<number | null>(null);
+  const [usePin, setUsePin] = useState(() => knownPin(name));
   const formRef = useRef<HTMLFormElement>(null);
   const error = state?.error ?? initialError;
 
@@ -20,12 +25,18 @@ export function PinForm({ initialError, name, next, onChangeName }: {
   if (state && state.at !== handledAt) {
     setHandledAt(state.at);
     setPin("");
+    if (state.needPin && !usePin) { setUsePin(true); rememberPin(name); }
   }
+
+  // Berhasil masuk ke host yang sama → muat penuh agar workspace di-rewrite oleh proxy.
+  useEffect(() => {
+    if (state?.go) window.location.replace(state.go);
+  }, [state]);
 
   // Kirim otomatis begitu digit ke-6 terisi.
   useEffect(() => {
-    if (pin.length === PIN_LENGTH && !pending) formRef.current?.requestSubmit();
-  }, [pin, pending]);
+    if (usePin && pin.length === PIN_LENGTH && !pending) formRef.current?.requestSubmit();
+  }, [pin, pending, usePin]);
 
   function press(key: string) {
     if (pending) return;
@@ -36,6 +47,7 @@ export function PinForm({ initialError, name, next, onChangeName }: {
   // Keyboard fisik (desktop) juga didukung.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (!usePin) return;
       if (/^\d$/.test(e.key)) press(e.key);
       else if (e.key === "Backspace") press("⌫");
     }
@@ -53,6 +65,20 @@ export function PinForm({ initialError, name, next, onChangeName }: {
         Masuk sebagai <b>{name}</b> ·{" "}
         <button type="button" onClick={onChangeName} className="text-accent underline" disabled={pending}>Ganti</button>
       </p>
+
+      {!usePin && (
+        <>
+          <button type="submit" disabled={pending}
+            className="h-12 w-full rounded-xl bg-accent text-base font-medium text-on-accent hover:bg-accent-strong disabled:opacity-60">
+            {pending ? "Memeriksa…" : "Masuk"}
+          </button>
+          <p className="mt-3 min-h-5 text-sm text-danger" role="alert">{pending ? "" : error}</p>
+          <button type="button" onClick={() => setUsePin(true)} className="mt-1 text-sm text-fg-2 underline hover:text-fg" disabled={pending}>
+            Masuk dengan PIN
+          </button>
+        </>
+      )}
+      {usePin && (<>
 
       <div className="flex justify-center gap-2" aria-label="PIN" aria-live="polite">
         {Array.from({ length: PIN_LENGTH }, (_, i) => (
@@ -89,6 +115,7 @@ export function PinForm({ initialError, name, next, onChangeName }: {
           ),
         )}
       </div>
+      </>)}
     </form>
   );
 }

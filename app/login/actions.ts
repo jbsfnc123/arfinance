@@ -8,13 +8,13 @@ import { derivePassword, isValidPin } from "@/lib/auth/pin";
 import { canEnterWorkspace, homeWorkspace, isDivision } from "@/lib/menu";
 import { isSharedHost, parseNext, workspaceFromHost, workspaceUrl } from "@/lib/workspace";
 
-export type LoginState = { error: string; at: number } | null;
+export type LoginState = { error: string; at: number; needPin?: boolean; go?: string } | null;
 
 type PinLoginResult =
   | { status: "ok"; user_id: string; email: string }
   | { status: "invalid" | "locked" };
 
-const fail = (error: string): LoginState => ({ error, at: Date.now() });
+const fail = (error: string) => ({ error, at: Date.now() });
 
 async function clientIp() {
   const h = await headers();
@@ -30,30 +30,43 @@ export async function searchNames(q: string): Promise<string[]> {
   return (data as string[] | null) ?? [];
 }
 
-// Satu pintu login (tangki.space): Nama + PIN, lalu diarahkan ke workspace sesuai divisi akun
-// (atau kembali ke alamat asal ?next bila akun boleh membukanya).
+// Login: Nama (+ PIN bila akun tidak diizinkan tanpa PIN), lalu diarahkan ke workspace sesuai akses akun
+// (atau kembali ke alamat asal ?next bila akun boleh membukanya). Satu pintu di tangki.space; Aplikasi Kolektor
+// (kolektor.tangki.space) punya halaman login sendiri. PIN kosong → coba login cukup nama (name_login).
 export async function loginWithPin(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const name = String(formData.get("name") ?? "").trim();
   const pin = String(formData.get("pin") ?? "");
   if (!name) return fail("Pilih nama terlebih dahulu.");
-  if (!isValidPin(pin)) return fail("PIN harus 6 digit angka.");
-
   const { h, ip } = await clientIp();
-
-  // pin_login_named juga mencatat percobaan & menerapkan batas brute-force.
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc("pin_login_named", { p_name: name, p_pin: pin, p_ip: ip });
-  if (error) return fail("Login gagal. Coba lagi.");
 
-  const result = data as PinLoginResult;
-  if (result.status === "locked") return fail("Terlalu banyak percobaan. Coba lagi dalam 15 menit.");
-  if (result.status !== "ok") return fail("Nama atau PIN salah.");
+  let result: PinLoginResult | { status: "need_pin" };
+  if (!pin) {
+    // Akun yang dicentang "Login tanpa PIN" (bukan Super Admin) langsung masuk; lainnya diminta PIN.
+    const { data, error } = await admin.rpc("name_login", { p_name: name, p_ip: ip });
+    if (error) return fail("Login gagal. Coba lagi.");
+    result = data as PinLoginResult | { status: "need_pin" };
+    if (result.status === "need_pin") return { error: "", at: Date.now(), needPin: true };
+  } else {
+    if (!isValidPin(pin)) return { ...fail("PIN harus 6 digit angka."), needPin: true };
+    // pin_login_named juga mencatat percobaan & menerapkan batas brute-force.
+    const { data, error } = await admin.rpc("pin_login_named", { p_name: name, p_pin: pin, p_ip: ip });
+    if (error) return { ...fail("Login gagal. Coba lagi."), needPin: true };
+    result = data as PinLoginResult;
+  }
+  if (result.status === "locked") return { ...fail("Terlalu banyak percobaan. Coba lagi dalam 15 menit."), needPin: !!pin };
+  if (result.status !== "ok") return pin ? { ...fail("Nama atau PIN salah."), needPin: true } : fail("Nama tidak ditemukan.");
 
   const { data: prof } = await admin
-    .from("profiles").select("active, division, role:roles(kind)").eq("id", result.user_id).single();
+    .from("profiles").select("active, division, role_id, role:roles(kind)").eq("id", result.user_id).single();
   const role = prof?.role as { kind: string } | null | undefined;
   if (!prof?.active || !role) return fail("Akun Anda dinonaktifkan. Hubungi Super Admin.");
-  const access = { kind: role.kind, allowed: new Set<string>(), division: isDivision(prof.division) ? prof.division : "ar" as const };
+  // Menu role dibutuhkan untuk menentukan workspace (Aplikasi Kolektor = menu tukar.detail).
+  const { data: menus } = await admin.from("role_menus").select("submenu_id").eq("role_id", prof.role_id);
+  const access = {
+    kind: role.kind, allowed: new Set<string>((menus ?? []).map((m) => m.submenu_id)),
+    division: isDivision(prof.division) ? prof.division : "ar" as const,
+  };
 
   const supabase = await createClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -63,9 +76,15 @@ export async function loginWithPin(_prev: LoginState, formData: FormData): Promi
   if (signInError) return fail("Akun bermasalah. Hubungi Super Admin.");
 
   const host = h.get("host");
+  const here = workspaceFromHost(host);
   const next = parseNext(String(formData.get("next") ?? ""), host);
-  if (next && canEnterWorkspace(next.ws, access)) redirect(next.url);
-  // Dev (*.localhost): cookie tidak dibagi antar host → tetap di host ini bila boleh.
-  if (!isSharedHost(host) && canEnterWorkspace(workspaceFromHost(host), access)) redirect("/");
-  redirect(workspaceUrl(homeWorkspace(access), host));
+  let target: string;
+  if (next && canEnterWorkspace(next.ws, access)) target = next.url;
+  // Dev (*.localhost) & Aplikasi Kolektor: tetap di host ini bila boleh.
+  else if ((!isSharedHost(host) || here === "kolektor") && canEnterWorkspace(here, access)) target = workspaceUrl(here, host);
+  else target = workspaceUrl(homeWorkspace(access), host);
+  // Tujuan di host yang sama harus dimuat penuh oleh browser: redirect() server action merender rute secara internal
+  // tanpa rewrite workspace di proxy (kolektor "/" akan tampil sebagai halaman AR).
+  if (host && new URL(target).host === host) return { error: "", at: Date.now(), go: target };
+  redirect(target);
 }

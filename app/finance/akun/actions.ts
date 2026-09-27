@@ -24,12 +24,15 @@ export async function createAccount(_prev: ActionResult, fd: FormData): Promise<
   const collection = str(fd, "collection_name") || null;
   const division = str(fd, "division");
   const pin = str(fd, "pin");
+  const pinOptional = fd.get("pin_optional") === "on";
   if (!isDivision(division)) return err("Pilih divisi AR, AP, atau AR + AP.");
 
   if (!name) return err("Nama wajib diisi.");
-  if (!isValidPin(pin)) return err("PIN harus 6 digit angka.");
+  // PIN boleh kosong hanya untuk akun "Login tanpa PIN".
+  if (pin ? !isValidPin(pin) : !pinOptional) return err("PIN harus 6 digit angka.");
   const kind = await roleKind(roleId);
   if (!kind) return err("Role tidak ditemukan.");
+  if (kind === "sa" && pinOptional) return err("Akun Super Admin wajib memakai PIN.");
   if (kind === "coll" && !collection) return err("Akun Collection wajib punya Collection Name.");
 
   const admin = createAdminClient();
@@ -50,8 +53,9 @@ export async function createAccount(_prev: ActionResult, fd: FormData): Promise<
     role_id: roleId,
     collection_name: collection,
     division,
+    pin_optional: pinOptional,
   });
-  const { error: pinError } = profileError
+  const { error: pinError } = profileError || !pin
     ? { error: profileError }
     : await admin.rpc("admin_set_pin", { p_user: id, p_pin: pin });
 
@@ -84,12 +88,14 @@ export async function updateAccount(_prev: ActionResult, fd: FormData): Promise<
   const collection = str(fd, "collection_name") || null;
   const division = str(fd, "division");
   const active = fd.get("active") === "on";
+  const pinOptional = fd.get("pin_optional") === "on";
   if (!isDivision(division)) return err("Pilih divisi AR, AP, atau AR + AP.");
 
   if (!name) return err("Nama wajib diisi.");
   const kind = await roleKind(roleId);
   if (!kind) return err("Role tidak ditemukan.");
   if (kind === "coll" && !collection) return err("Akun Collection wajib punya Collection Name.");
+  if (kind === "sa" && pinOptional) return err("Akun Super Admin wajib memakai PIN.");
   // Cegah Super Admin mengunci dirinya sendiri.
   if (id === me.id && (!active || kind !== "sa")) {
     return err("Anda tidak bisa menonaktifkan atau menurunkan role akun Anda sendiri.");
@@ -98,7 +104,7 @@ export async function updateAccount(_prev: ActionResult, fd: FormData): Promise<
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: name, role_id: roleId, collection_name: collection, division, active })
+    .update({ display_name: name, role_id: roleId, collection_name: collection, division, active, pin_optional: pinOptional })
     .eq("id", id);
   if (error) return err(error.message);
 

@@ -2,9 +2,10 @@
 //   tangki.space / www.  → Finance Workspace (khusus Super Admin, route app/finance)
 //   ar.tangki.space      → AR Workspace (route app/(shell), path apa adanya)
 //   ap.tangki.space      → AP Workspace (route app/ap)
-// Dev: finance.localhost:3000 / ap.localhost:3000 / localhost:3000. Preview *.vercel.app = AR.
+//   kolektor.tangki.space → Aplikasi Kolektor tanpa sidebar (route app/kolektor, login sendiri)
+// Dev: finance.localhost:3000 / ap.localhost:3000 / kolektor.localhost:3000 / localhost:3000. Preview *.vercel.app = AR.
 
-export type Workspace = "finance" | "ar" | "ap";
+export type Workspace = "finance" | "ar" | "ap" | "kolektor";
 
 export const ROOT_DOMAIN = "tangki.space";
 export const WORKSPACE_HEADER = "x-workspace";
@@ -13,6 +14,7 @@ export const WORKSPACES: Record<Workspace, { label: string; icon: string; sub: s
   finance: { label: "Finance Workspace", icon: "account_balance", sub: "", desc: "Portal & pengaturan pusat (Super Admin)" },
   ar: { label: "AR Workspace", icon: "request_quote", sub: "ar.", desc: "Piutang: collection, tukar faktur, faktur pajak, rekonsiliasi" },
   ap: { label: "AP Workspace", icon: "payments", sub: "ap.", desc: "Hutang usaha — modul menyusul" },
+  kolektor: { label: "Aplikasi Kolektor", icon: "local_shipping", sub: "kolektor.", desc: "Tukar faktur kolektor di HP (tanpa menu)" },
 };
 
 const hostname = (host: string) => host.toLowerCase().split(":")[0];
@@ -21,10 +23,11 @@ export function workspaceFromHost(host: string | null | undefined): Workspace {
   const h = hostname(host ?? "");
   if (h === ROOT_DOMAIN || h === `www.${ROOT_DOMAIN}` || h === "finance.localhost") return "finance";
   if (h === `ap.${ROOT_DOMAIN}` || h === "ap.localhost") return "ap";
+  if (h === `kolektor.${ROOT_DOMAIN}` || h === "kolektor.localhost") return "kolektor";
   return "ar";
 }
 
-export const isWorkspace = (v: unknown): v is Workspace => v === "finance" || v === "ar" || v === "ap";
+export const isWorkspace = (v: unknown): v is Workspace => v === "finance" || v === "ar" || v === "ap" || v === "kolektor";
 
 // Alamat workspace lain dari host yang sedang dipakai (produksi → https://…tangki.space, dev → *.localhost).
 export function workspaceUrl(ws: Workspace, currentHost: string | null | undefined, path = "/") {
@@ -32,7 +35,7 @@ export function workspaceUrl(ws: Workspace, currentHost: string | null | undefin
   const h = hostname(host);
   if (h === "localhost" || h.endsWith(".localhost")) {
     const port = host.includes(":") ? `:${host.split(":")[1]}` : "";
-    const sub = { finance: "finance.", ar: "", ap: "ap." }[ws];
+    const sub = { finance: "finance.", ar: "", ap: "ap.", kolektor: "kolektor." }[ws];
     return `http://${sub}localhost${port}${path}`;
   }
   return `https://${WORKSPACES[ws].sub}${ROOT_DOMAIN}${path}`;
@@ -54,11 +57,12 @@ export function isSharedHost(host: string | null | undefined) {
 }
 
 export function routeFor(ws: Workspace, pathname: string, shared = false): Route {
-  if (shared && ws !== "finance" && /^\/login(\/|$)/.test(pathname)) return { kind: "moved", ws: "finance", path: "/login" };
+  // Login satu pintu di tangki.space — kecuali Aplikasi Kolektor yang punya halaman login sendiri (HP).
+  if (shared && ws !== "finance" && ws !== "kolektor" && /^\/login(\/|$)/.test(pathname)) return { kind: "moved", ws: "finance", path: "/login" };
   if (SHARED.test(pathname) || hasExtension(pathname)) return { kind: "next" };
   if (ws === "ar") {
     if (MOVED_TO_FINANCE[pathname]) return { kind: "moved", ws: "finance", path: MOVED_TO_FINANCE[pathname] };
-    return /^\/(finance|ap)(\/|$)/.test(pathname) ? { kind: "notfound" } : { kind: "next" };
+    return /^\/(finance|ap|kolektor)(\/|$)/.test(pathname) ? { kind: "notfound" } : { kind: "next" };
   }
   return { kind: "rewrite", path: `/${ws}${pathname === "/" ? "" : pathname}` };
 }
@@ -72,7 +76,7 @@ export function authCookieOptions(host: string | null | undefined) {
 
 // Alamat login untuk request yang belum login: produksi → tangki.space/login?next=<asal>, dev → host sendiri.
 export function loginUrl(host: string | null | undefined, from: string) {
-  const base = isSharedHost(host) ? workspaceUrl("finance", host, "/login") : "/login";
+  const base = isSharedHost(host) && workspaceFromHost(host) !== "kolektor" ? workspaceUrl("finance", host, "/login") : "/login";
   return `${base}?next=${encodeURIComponent(from)}`;
 }
 

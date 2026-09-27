@@ -76,3 +76,16 @@ describe("akses workspace (divisi akun)", () => {
     expect(ids).not.toContain("set.database");
   });
 });
+
+describe("akses Aplikasi Kolektor", () => {
+  const acc = (kind: string, menus: string[], division: "ar" | "ap" | "both" = "ar") => ({ kind, allowed: new Set(menus), division });
+  it("butuh menu Aplikasi Kolektor (apa pun divisinya); Kurir diarahkan ke kolektor", () => {
+    expect(canEnterWorkspace("kolektor", acc("kurir", ["tukar.detail"]))).toBe(true);
+    expect(canEnterWorkspace("kolektor", acc("ctrl", ["tukar.detail"], "ap"))).toBe(true);
+    expect(canEnterWorkspace("kolektor", acc("coll", ["coll.tagihan"]))).toBe(false);
+    expect(canEnterWorkspace("kolektor", acc("sa", []))).toBe(true);
+    expect(homeWorkspace(acc("kurir", ["tukar.detail"]))).toBe("kolektor");
+    expect(homeWorkspace(acc("kurir", []))).toBe("ar"); // tanpa menu kolektor tetap ke divisinya
+    expect(homeWorkspace(acc("ctrl", ["tukar.detail"], "both"))).toBe("finance");
+  });
+});

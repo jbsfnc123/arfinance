@@ -14,6 +14,7 @@ type Account = {
   role_id: string;
   division: string;
   has_pin: boolean;
+  pin_optional: boolean;
 };
 
 function Feedback({ state }: { state: ActionResult }) {
@@ -38,6 +39,19 @@ function PinInput(props: { name?: string; required?: boolean }) {
       autoComplete="off"
       className={`${inputCls} font-mono tracking-widest`}
     />
+  );
+}
+
+// Login cukup nama. Siapa pun yang mengetik nama ini bisa masuk → hanya untuk akun berisiko rendah.
+function NoPinCheck({ defaultChecked, onChange }: { defaultChecked?: boolean; onChange?: (v: boolean) => void }) {
+  return (
+    <label className="flex items-start gap-2 text-sm sm:col-span-6" title="Tidak berlaku untuk role Super Admin">
+      <input type="checkbox" name="pin_optional" defaultChecked={defaultChecked} onChange={(e) => onChange?.(e.target.checked)} className="mt-1" />
+      <span>
+        Login tanpa PIN (cukup nama)
+        <span className="block text-xs text-warning">Siapa pun yang mengetik nama ini bisa masuk sebagai akun ini. Tidak berlaku untuk Super Admin.</span>
+      </span>
+    </label>
   );
 }
 
@@ -69,6 +83,7 @@ function DivisionSelect({ defaultValue }: { defaultValue?: string }) {
 
 function CreateForm({ roles }: { roles: Role[] }) {
   const [state, action, pending] = useActionState(createAccount, null);
+  const [noPin, setNoPin] = useState(false);
   return (
     <form
       action={action}
@@ -80,10 +95,11 @@ function CreateForm({ roles }: { roles: Role[] }) {
       <RoleSelect roles={roles} />
       <DivisionSelect />
       <input name="collection_name" placeholder="Collection Name (khusus Collection)" className={inputCls} />
-      <PinInput />
+      <PinInput required={!noPin} />
       <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Menyimpan…" : "Tambah"}
       </button>
+      <NoPinCheck onChange={setNoPin} />
       <div className="sm:col-span-6">
         <Feedback state={state} />
       </div>
@@ -109,9 +125,12 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
             {role?.name ?? "—"}
             {" · "}{role?.kind === "sa" ? "Semua workspace" : `Divisi ${DIVISION_LABEL[account.division as Division] ?? "AR"}`}
             {account.collection_name && ` · ${account.collection_name}`}
-            {!account.has_pin && " · belum ada PIN"}
+            {!account.has_pin && !account.pin_optional && " · belum ada PIN"}
           </div>
         </div>
+        {account.pin_optional && (
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning" title="Login cukup nama">Tanpa PIN</span>
+        )}
         <span
           className={`rounded-full px-2 py-0.5 text-xs ${
             account.active ? "bg-success/15 text-success" : "bg-danger/15 text-danger"
@@ -145,6 +164,7 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
           <button type="submit" disabled={editPending} className={btnPrimary}>
             Simpan
           </button>
+          {role?.kind !== "sa" && <NoPinCheck defaultChecked={account.pin_optional} />}
           <div className="sm:col-span-6">
             <Feedback state={editState} />
           </div>

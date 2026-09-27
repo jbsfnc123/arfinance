@@ -3,10 +3,11 @@ import { getSession } from "@/lib/session";
 import { currentHost } from "@/lib/workspace-server";
 import { WORKSPACES, workspaceUrl, type Workspace } from "@/lib/workspace";
 import { card } from "@/components/ui";
+import { canEnterWorkspace } from "@/lib/menu";
 
-// Portal Finance Workspace: pintu ke AR & AP. Ringkasan akun/role hanya untuk Super Admin.
+// Portal Finance Workspace: pintu ke AR, AP & Aplikasi Kolektor. Ringkasan akun/role hanya untuk Super Admin.
 export default async function FinancePortal() {
-  const [supabase, host, { role, profile }] = await Promise.all([createClient(), currentHost(), getSession()]);
+  const [supabase, host, { role, profile, access }] = await Promise.all([createClient(), currentHost(), getSession()]);
   const isSa = role.kind === "sa";
   const [{ count: accounts }, { count: active }, { count: roles }] = isSa
     ? await Promise.all([
@@ -15,7 +16,7 @@ export default async function FinancePortal() {
       supabase.from("roles").select("*", { count: "exact", head: true }),
     ])
     : [{ count: 0 }, { count: 0 }, { count: 0 }];
-  const targets: Workspace[] = ["ar", "ap"];
+  const targets = (["ar", "ap", "kolektor"] as Workspace[]).filter((w) => canEnterWorkspace(w, access));
 
   return (
     <div className="mx-auto max-w-5xl">
