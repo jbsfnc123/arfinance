@@ -658,3 +658,13 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
 - Fase 28b: mode dipisah — "BP tanpa group" (hanya BP tanpa group) dan "Payment Group" (hanya group). BP/Group dengan
   transaksi telat > 365 hari (`hasOld`, `OLD_DAYS`) tidak ikut daftar default 20 teratas (`LocalTable` `limitWhere`,
   `topRows`); angka tetap memuat transaksi tsb dan barisnya diberi penanda "> 365 hr" saat dicari / Tampilkan semua.
+
+## Audit database (Fase 29, 2026-09-27)
+- Diterapkan (migrasi 0033, tanpa hapus data): `detectKind` + `aging_commit` menolak file Target sebagai Aging (dulu
+  file Target bisa menimpa snapshot aging bulan yang sama); `erp_commit` tidak menyimpan payment_doc gabungan "A/…/B/…"
+  yang menduplikasi doc tunggal; `pack_erp` kirim `terms` & `labels` (kamus) + indeks `t`/`l` per invoice (invoice
+  7,5 → 5,2 MB; `decodeErp` membaca format lama & baru); RLS `bank_accounts` satu policy SELECT.
+- m10_worksheet / rkm_worksheet BUKAN duplikat: buku SJ append-only (SJ yang keluar dari aging = Lunas di dashboard).
+- Menunggu persetujuan user (penghapusan data): snapshot aging palsu dari file Target (id 6, 6.415 baris), retensi
+  snapshot terbaru + 1, 1 duplikat erp_payments (SI/083054/VI/XXVI/TRA 12/08 Rp1.554.000), Master BP
+  (business_partners, bp_commit, kind bpmaster), fungsi mati pin_login / m10_set_keterangan, view v_target_months.
