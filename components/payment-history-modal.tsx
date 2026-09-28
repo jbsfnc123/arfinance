@@ -21,7 +21,8 @@ export const lamaTxt = (d: number | null) => (d === null ? "–" : `${d > 0 ? "+
 export function usePaymentHistory() {
   const today = todayJakarta();
   const period = useMemo(() => historyPeriod(today), [today]);
-  const erp = useDataset("erp");
+  // Paket ERP khusus periode History (±4 bulan), bukan seluruh ERP — kunjungan pertama jauh lebih cepat.
+  const erp = useDataset("payhist");
   const aging = useDataset("aging");
   const bpRows = useMemo(() => (erp.data && aging.data ? paymentHistory(erp.data, aging.data.lines, period, today) : []),
     [erp.data, aging.data, period, today]);

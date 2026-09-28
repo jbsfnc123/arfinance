@@ -1026,6 +1026,7 @@ export type Database = {
       pack_m10: { Args: Record<string, never>; Returns: Json }
       pack_mutasi: { Args: Record<string, never>; Returns: Json }
       pack_erp: { Args: Record<string, never>; Returns: Json }
+      pack_erp_recent: { Args: Record<string, never>; Returns: Json }
       pack_tukar: { Args: Record<string, never>; Returns: Json }
       usage_report: { Args: Record<string, never>; Returns: Json }
       deck_month_save: { Args: { p_month: string; p_data: string; p_filled: number; p_total: number; p_file?: string | null; p_upload?: boolean }; Returns: undefined }

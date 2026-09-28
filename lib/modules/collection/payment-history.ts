@@ -53,8 +53,10 @@ export function historyPeriod(today: string): Period {
   return { from: `${months[0]}-01`, to: last, months };
 }
 
-/** Jumlah transaksi pembayaran per bulan periode (semua term) — untuk peringatan data yang belum di-upload. */
-export function coverage(erp: Datasets["erp"], period: Period) {
+/** Jumlah transaksi pembayaran per bulan periode (semua term) — untuk peringatan data yang belum di-upload.
+ *  Paket History (pack_erp_recent) hanya berisi pembayaran invoice ber-tempo, jadi hitungannya dikirim server (`counts`). */
+export function coverage(erp: Datasets["erp"] & { counts?: Record<string, number> }, period: Period) {
+  if (erp.counts) return period.months.map((m) => ({ month: m, payments: erp.counts![m] ?? 0 }));
   const n = Object.fromEntries(period.months.map((m) => [m, 0]));
   for (const p of erp.payments) { const k = p.payment_date?.slice(0, 7); if (k && k in n) n[k]++; }
   return period.months.map((m) => ({ month: m, payments: n[m] }));

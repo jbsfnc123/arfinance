@@ -7,15 +7,10 @@ export default async function CollectionPage({ searchParams }: PageProps<"/colle
   const { session, allowed, label } = await menuGuard("coll.tagihan");
   if (!allowed) return <NoAccess label={label} />;
 
-  const locked = session.role.kind === "coll";
-  const own = session.profile.collection_name;
-
-  if (locked && !own) {
-    return <NoAccess label={label} reason="Akun Anda belum punya Collection Name. Hubungi Super Admin." />;
-  }
-
+  // Tidak ada batas data antar collection: semua akun ber-menu ini memilih collection mana pun. Collection Name akun
+  // (opsional) hanya menjadi collection awal.
   const { c } = await searchParams;
-  const initial = locked ? own! : typeof c === "string" ? c : "";
+  const initial = typeof c === "string" ? c : "";
 
   const payhist = findMenuById("coll.payhist");
   const canPayHist = !!payhist && canAccess(payhist.item, session.access);
@@ -24,8 +19,7 @@ export default async function CollectionPage({ searchParams }: PageProps<"/colle
     <CollectionView
       canPayHist={canPayHist}
       initial={initial}
-      locked={locked}
-      own={own}
+      preferred={session.profile.collection_name}
     />
   );
 }

@@ -9,6 +9,6 @@ export const err = (message: string): ActionResult => ({ ok: false, message, at:
 export const KIND_LABEL: Record<string, string> = {
   sa: "Super Admin (semua menu)",
   ctrl: "Controller",
-  coll: "Collection (data dibatasi Collection Name)",
+  coll: "Collection",
   kurir: "Kurir",
 };

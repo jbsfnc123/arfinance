@@ -116,3 +116,36 @@ describe("History Pembayaran BP", () => {
     expect(topRows(bp, 2).map((r) => r.name)).toEqual(["Gias 2", "Gias 1"]);
   });
 });
+
+// pack_erp_recent (Fase 35): server hanya mengirim pembayaran sejak awal 3 bulan sebelum bulan berjalan + invoice yang
+// dibayar di rentang itu. Hasil History harus identik dengan memakai seluruh ERP.
+describe("History dari paket ERP ±4 bulan", () => {
+  it("identik dengan ERP penuh", () => {
+    const today = "2026-09-15";
+    const period = historyPeriod(today);
+    const from = period.from; // 1 Juni = awal 3 bulan sebelum September
+    expect(from).toBe("2026-06-01");
+    const payments = erp.payments.filter((p) => p.payment_date >= from);
+    const paid = new Set(payments.map((p) => p.invoice_no));
+    const recent: Datasets["erp"] = { invoices: erp.invoices.filter((i) => paid.has(i.invoice_no)), payments };
+    expect(recent.payments.length).toBeLessThan(erp.payments.length);
+    const full = paymentHistory(erp, aging, period, today);
+    const sub = paymentHistory(recent, aging, period, today);
+    expect(sub).toEqual(full);
+    expect(groupHistory(sub, aging, period, today)).toEqual(groupHistory(full, aging, period, today));
+    expect(coverage(recent, period)).toEqual(coverage(erp, period));
+  });
+  it("hanya invoice ber-tempo (+ counts server) tetap identik", () => {
+    const today = "2026-09-15";
+    const period = historyPeriod(today);
+    const tempo = new Set(erp.invoices.filter((i) => hasTempo(i.payment_term) && i.due_date).map((i) => i.invoice_no));
+    const payments = erp.payments.filter((p) => p.payment_date >= period.from && tempo.has(p.invoice_no));
+    const paid = new Set(payments.map((p) => p.invoice_no));
+    const counts: Record<string, number> = {};
+    for (const p of erp.payments) if (p.payment_date >= period.from) counts[p.payment_date.slice(0, 7)] = (counts[p.payment_date.slice(0, 7)] ?? 0) + 1;
+    const lean = { invoices: erp.invoices.filter((i) => paid.has(i.invoice_no)), payments, counts };
+    expect(lean.invoices.some((i) => i.payment_term === "C B D")).toBe(false);
+    expect(paymentHistory(lean, aging, period, today)).toEqual(paymentHistory(erp, aging, period, today));
+    expect(coverage(lean, period)).toEqual(coverage(erp, period));
+  });
+});
