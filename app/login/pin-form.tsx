@@ -6,18 +6,15 @@ import { PIN_LENGTH } from "@/lib/auth/constants";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
-// Langkah 2 login: tombol Masuk (akun tanpa PIN langsung masuk). Bila server meminta PIN, keypad PIN tampil.
-// Perangkat mengingat nama yang wajib PIN sehingga login berikutnya langsung ke keypad.
-const pinKey = (name: string) => `login:needpin:${name.toLowerCase()}`;
-const rememberPin = (name: string) => { try { localStorage.setItem(pinKey(name), "1"); } catch { /* opsional */ } };
-const knownPin = (name: string) => { try { return localStorage.getItem(pinKey(name)) === "1"; } catch { return false; } };
-export function PinForm({ initialError, name, next, onChangeName }: {
-  initialError: string | null; name: string; next: string; onChangeName: () => void;
+// Langkah 2 login: akun "Login tanpa PIN" → hanya tombol Masuk; akun ber-PIN → langsung keypad PIN.
+// (Bila status akun berubah sejak halaman dimuat dan server meminta PIN, keypad ikut tampil.)
+export function PinForm({ initialError, name, noPin, next, onChangeName }: {
+  initialError: string | null; name: string; noPin: boolean; next: string; onChangeName: () => void;
 }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginWithPin, null);
   const [pin, setPin] = useState("");
   const [handledAt, setHandledAt] = useState<number | null>(null);
-  const [usePin, setUsePin] = useState(() => knownPin(name));
+  const [usePin, setUsePin] = useState(!noPin);
   const formRef = useRef<HTMLFormElement>(null);
   const error = state?.error ?? initialError;
 
@@ -25,7 +22,7 @@ export function PinForm({ initialError, name, next, onChangeName }: {
   if (state && state.at !== handledAt) {
     setHandledAt(state.at);
     setPin("");
-    if (state.needPin && !usePin) { setUsePin(true); rememberPin(name); }
+    if (state.needPin && !usePin) setUsePin(true);
   }
 
   // Berhasil masuk ke host yang sama → muat penuh agar workspace di-rewrite oleh proxy.
@@ -73,9 +70,6 @@ export function PinForm({ initialError, name, next, onChangeName }: {
             {pending ? "Memeriksa…" : "Masuk"}
           </button>
           <p className="mt-3 min-h-5 text-sm text-danger" role="alert">{pending ? "" : error}</p>
-          <button type="button" onClick={() => setUsePin(true)} className="mt-1 text-sm text-fg-2 underline hover:text-fg" disabled={pending}>
-            Masuk dengan PIN
-          </button>
         </>
       )}
       {usePin && (<>

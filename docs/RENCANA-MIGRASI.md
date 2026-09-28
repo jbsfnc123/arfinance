@@ -693,3 +693,7 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   wajib PIN. Tujuan login di host yang sama dimuat penuh oleh browser (`go`), karena redirect server action merender
   rute tanpa rewrite workspace.
 - Migrasi 0036.
+- Fase 31b: langkah 1 login = dropdown nama (tanpa ketik). Daftar dari `loginNamesFor` (lib/auth/login-names.ts):
+  kolektor.tangki.space → hanya akun role Kurir; login lain → semua akun aktif kecuali Kurir. Akun "tanpa PIN" →
+  hanya tombol Masuk; akun ber-PIN → langsung keypad. Server menolak akun Kurir di login utama & non-Kurir di
+  kolektor (`loginAllowedHere`). `searchNames` dihapus (RPC `login_names` tidak dipakai lagi).

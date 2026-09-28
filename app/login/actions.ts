@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { derivePassword, isValidPin } from "@/lib/auth/pin";
 import { canEnterWorkspace, homeWorkspace, isDivision } from "@/lib/menu";
 import { isSharedHost, parseNext, workspaceFromHost, workspaceUrl } from "@/lib/workspace";
+import { loginAllowedHere } from "@/lib/auth/login-names";
 
 export type LoginState = { error: string; at: number; needPin?: boolean; go?: string } | null;
 
@@ -19,15 +20,6 @@ const fail = (error: string) => ({ error, at: Date.now() });
 async function clientIp() {
   const h = await headers();
   return { h, ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown" };
-}
-
-// Saran nama untuk langkah 1 (≥ 2 huruf, maks. 5 nama akun aktif, dibatasi per IP di database).
-export async function searchNames(q: string): Promise<string[]> {
-  const query = String(q ?? "").trim().slice(0, 60);
-  if (query.length < 2) return [];
-  const { ip } = await clientIp();
-  const { data } = await createAdminClient().rpc("login_names", { p_q: query, p_ip: ip });
-  return (data as string[] | null) ?? [];
 }
 
 // Login: Nama (+ PIN bila akun tidak diizinkan tanpa PIN), lalu diarahkan ke workspace sesuai akses akun
@@ -61,6 +53,11 @@ export async function loginWithPin(_prev: LoginState, formData: FormData): Promi
     .from("profiles").select("active, division, role_id, role:roles(kind)").eq("id", result.user_id).single();
   const role = prof?.role as { kind: string } | null | undefined;
   if (!prof?.active || !role) return fail("Akun Anda dinonaktifkan. Hubungi Super Admin.");
+  // Akun kolektor hanya lewat kolektor.tangki.space; akun lain lewat login utama (sama dengan daftar dropdown).
+  const hereWs = workspaceFromHost(h.get("host"));
+  if (!loginAllowedHere(role.kind, hereWs)) {
+    return fail(hereWs === "kolektor" ? "Halaman ini khusus akun kolektor." : "Akun kolektor masuk lewat kolektor.tangki.space.");
+  }
   // Menu role dibutuhkan untuk menentukan workspace (Aplikasi Kolektor = menu tukar.detail).
   const { data: menus } = await admin.from("role_menus").select("submenu_id").eq("role_id", prof.role_id);
   const access = {
