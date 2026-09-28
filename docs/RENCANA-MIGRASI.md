@@ -701,3 +701,24 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   nama tidak disimpan di perangkat). kolektor.tangki.space mandiri: logout kembali ke login kolektor, header tanpa tautan
   portal, WorkspaceDenied tanpa tautan host lain, tujuan login dipaksa tetap kolektor (`staysOnKolektor`). Cookie sesi
   persisten 400 hari (`AUTH_COOKIE_MAX_AGE`) → tetap masuk sampai Keluar.
+
+## Tukar Faktur › Ekspedisi (Fase 32, 2026-09-29)
+- Menu `tukar.ekspedisi` (`/tukar-faktur/ekspedisi`): tab Pilih Invoice = invoice aging terbaru (filter Payment Group,
+  BP, Key BP, Status TF default "Belum TF", invoice date; `LocalTable` `defaultFilter`) + panel Masukkan No Resi &
+  tanggal tukar faktur; tab Riwayat Resi (ubah/hapus). Logika di `lib/modules/tukar/ekspedisi.ts`;
+  `pickExchanges` diekspor dari `collection/rows.ts`.
+- Migrasi 0037: RPC `ekspedisi_save` / `ekspedisi_edit` / `ekspedisi_delete` menulis `invoice_exchanges` metode
+  Ekspedisi, **satu baris per invoice** (simpan ulang = ganti resi/tanggal). Validasi di `private.ekspedisi_check`
+  (No Resi wajib ≤ 60 karakter, tanggal wajib & tidak melebihi hari ini WIB). `pack_aging` / `pack_activity` terbuka
+  untuk `tukar.ekspedisi` (aging semua collection hanya untuk akun non-collection). Menu awal: role Controller.
+- Hasilnya langsung mengisi Tgl Tukar Faktur & No Resi di Daftar Tagihan (prioritas Kolektor → Ekspedisi → …).
+
+## Akses menu per akun (Fase 33, 2026-09-29)
+- Migrasi 0038: tabel `profile_menus(user_id, submenu_id)` = menu yang boleh dibuka **tiap akun**; di-backfill sama
+  persis dengan `role_menus` saat itu. `private.has_menu` kini membaca `profile_menus` (Super Admin tetap semua menu).
+  RLS: akun membaca miliknya sendiri, hanya Super Admin yang menambah/menghapus.
+- `role_menus` = **default** untuk akun baru (trigger `profile_menus_default` saat `profiles` dibuat) dan saat Super
+  Admin mengganti role sambil memilih "ganti menu dengan default role baru". Mengubah default role TIDAK mengubah akun lama.
+- Akun & PIN: tombol Akses menu per akun (checklist bersama `MenuChecklist`, tanda +/− terhadap default role, tombol
+  Samakan dengan default role, badge "Menu disesuaikan"). Role & Akses = pengaturan default menu. Beranda tidak lagi
+  terhapus saat menyimpan menu role. Sesi (`lib/session.ts`) & login membaca `profile_menus`.
