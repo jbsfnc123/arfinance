@@ -42,6 +42,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
   { id: "tukar", label: "Tukar Faktur", icon: "swap_horiz", children: [
     { id: "tukar.jadwal", label: "Laporan & Jadwal Kolektor", href: "/tukar-faktur/jadwal" },
     { id: "tukar.detail", label: "Aplikasi Kolektor",    href: "/tukar-faktur/kurir" },
+    { id: "tukar.ekspedisi", label: "Ekspedisi",         href: "/tukar-faktur/ekspedisi" },
     { id: "tukar.upload", label: "Upload Jadwal",        href: "/tukar-faktur/upload", needs: "ctrl" },
     { id: "rek.mitra10",  label: "Mitra10 Tukar Faktur", href: "/mitra10" },
     { id: "tukar.rkm",    label: "RKM Tukar Faktur",     href: "/rkm" },

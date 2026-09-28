@@ -1,6 +1,6 @@
 import { daysBetween } from "@/lib/parsers/date";
 import { num } from "@/lib/local/pack";
-import type { AgingLine, Datasets, Note, Promise_, Target } from "@/lib/local/datasets";
+import type { AgingLine, Datasets, Exchange, Note, Promise_, Target } from "@/lib/local/datasets";
 import type { RawRow } from "./view-model";
 import type { NoteLatest } from "./note-groups";
 import type { ForecastRow, GroupRow, OverdueRow, SpvSummary } from "./spv-summary";
@@ -51,16 +51,22 @@ function latestBy<T extends { id: number; invoice_no: string }>(rows: T[]) {
 
 const TUKAR_ORDER = ["Kolektor", "Ekspedisi", "Sistem", "WA", "Email"];
 
+/** Tukar faktur terpilih per invoice: metode prioritas (Kolektor > Ekspedisi > Sistem > WA > Email), lalu id terkecil. */
+export function pickExchanges(exchanges: Exchange[]) {
+  const ex = new Map<string, Exchange>();
+  const rank = (m: string) => { const i = TUKAR_ORDER.indexOf(m); return i < 0 ? 99 : i; };
+  for (const e of exchanges) {
+    const p = ex.get(e.invoice_no);
+    if (!p || rank(e.metode) < rank(p.metode) || (rank(e.metode) === rank(p.metode) && e.id < p.id)) ex.set(e.invoice_no, e);
+  }
+  return ex;
+}
+
 // v_collection_rows: invoice open (> 1.000) + catatan terbaru, janji bayar terbaru, tukar faktur terpilih.
 export function collectionRows(ar: ArInvoice[], act: Datasets["activity"], remarks?: Map<string, string>): RawRow[] {
   const note = latestBy(act.notes);
   const promise = latestBy(act.promises);
-  const ex = new Map<string, Datasets["activity"]["exchanges"][number]>();
-  const rank = (m: string) => { const i = TUKAR_ORDER.indexOf(m); return i < 0 ? 99 : i; };
-  for (const e of act.exchanges) {
-    const p = ex.get(e.invoice_no);
-    if (!p || rank(e.metode) < rank(p.metode) || (rank(e.metode) === rank(p.metode) && e.id < p.id)) ex.set(e.invoice_no, e);
-  }
+  const ex = pickExchanges(act.exchanges);
   return ar.filter((a) => a.open_amt > 1000).map((a) => {
     const n = note.get(a.invoice_no);
     const x = ex.get(a.invoice_no);
