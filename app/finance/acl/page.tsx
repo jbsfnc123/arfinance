@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import { ACL_GROUPS, AP_MENU_REGISTRY, MENU_REGISTRY } from "@/lib/menu";
+import { aclGroups } from "@/lib/menu";
 import { NoAccess } from "@/components/no-access";
 import { RolesView } from "./roles-view";
 
@@ -20,19 +20,15 @@ export default async function AclPage() {
   const accountCount: Record<string, number> = {};
   for (const a of accounts ?? []) accountCount[a.role_id] = (accountCount[a.role_id] ?? 0) + 1;
 
-  // Registry dikirim tanpa href eksternal panjang; cukup id, label, needs per grup.
-  const groups = [...ACL_GROUPS, ...MENU_REGISTRY, ...AP_MENU_REGISTRY].map((g) => ({
-    id: g.id,
-    label: g.label,
-    items: g.children.map((c) => ({ id: c.id, label: c.label, needs: c.needs ?? null })),
-  }));
+  const groups = aclGroups();
 
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-medium">Role &amp; Akses Menu</h1>
       <p className="mt-1 text-sm text-fg-2">
-        Setiap akun memakai satu role. Centang menu yang boleh dibuka setiap role. Role jenis Super
-        Admin otomatis melihat semua menu.
+        Menu yang dicentang di sini adalah <b>default</b> untuk akun baru dengan role tersebut. Mengubahnya tidak
+        mengubah akun yang sudah ada — akses menu tiap akun diatur di Akun &amp; PIN. Role jenis Super Admin otomatis
+        melihat semua menu.
       </p>
       <RolesView
         myRoleId={myRole.id}

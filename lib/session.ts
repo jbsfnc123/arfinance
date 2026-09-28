@@ -12,7 +12,7 @@ export type Session = {
 
 // Satu kali per request (dibagi layout & menuGuard lewat cache()):
 //   - identitas dari JWT diverifikasi LOKAL (getClaims, kunci ES256) — tanpa panggilan jaringan ke Auth;
-//   - profil + role + submenu role diambil dalam SATU query.
+//   - profil + role + menu akun (profile_menus) diambil dalam SATU query.
 export const getSession = cache(async (): Promise<Session> => {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
@@ -21,7 +21,7 @@ export const getSession = cache(async (): Promise<Session> => {
 
   const { data } = await supabase
     .from("profiles")
-    .select("*, role:roles(id, name, kind, menus:role_menus(submenu_id))")
+    .select("*, role:roles(id, name, kind), menus:profile_menus(submenu_id)")
     .eq("id", userId)
     .single();
 
@@ -30,8 +30,7 @@ export const getSession = cache(async (): Promise<Session> => {
     redirect("/login?error=inactive");
   }
 
-  const { role: roleRow, ...profile } = data;
-  const { menus, ...role } = roleRow as typeof roleRow & { menus: { submenu_id: string }[] | null };
+  const { role, menus, ...profile } = data;
   return {
     profile,
     role,

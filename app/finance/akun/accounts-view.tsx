@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { createAccount, resetPin, updateAccount } from "./actions";
+import { createAccount, resetPin, saveAccountMenus, updateAccount } from "./actions";
 import { btnGhost, btnPrimary, inputCls, type ActionResult } from "../ui";
-import { DIVISION_LABEL, type Division } from "@/lib/menu";
+import { DIVISION_LABEL, menusDiffer, type AclGroup, type Division } from "@/lib/menu";
+import { MenuChecklist } from "../menu-checklist";
 
 type Role = { id: string; name: string; kind: string };
 type Account = {
@@ -55,9 +56,9 @@ function NoPinCheck({ defaultChecked, onChange }: { defaultChecked?: boolean; on
   );
 }
 
-function RoleSelect({ roles, defaultValue }: { roles: Role[]; defaultValue?: string }) {
+function RoleSelect({ roles, defaultValue, onChange }: { roles: Role[]; defaultValue?: string; onChange?: (id: string) => void }) {
   return (
-    <select name="role_id" required defaultValue={defaultValue ?? ""} className={inputCls}>
+    <select name="role_id" required defaultValue={defaultValue ?? ""} onChange={(e) => onChange?.(e.target.value)} className={inputCls}>
       <option value="" disabled>
         Pilih role…
       </option>
@@ -107,11 +108,20 @@ function CreateForm({ roles }: { roles: Role[] }) {
   );
 }
 
-function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[]; isMe: boolean }) {
-  const [mode, setMode] = useState<"view" | "edit" | "pin">("view");
+type Menus = { groups: AclGroup[]; accountMenus: Record<string, string[]>; roleMenus: Record<string, string[]> };
+
+function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: Role[]; isMe: boolean; menus: Menus }) {
+  const [mode, setMode] = useState<"view" | "edit" | "pin" | "menu">("view");
   const [editState, editAction, editPending] = useActionState(updateAccount, null);
   const [pinState, pinAction, pinPending] = useActionState(resetPin, null);
+  const [menuState, menuAction, menuPending] = useActionState(saveAccountMenus, null);
+  const [pickedRole, setPickedRole] = useState(account.role_id);
   const role = roles.find((r) => r.id === account.role_id);
+  const picked = roles.find((r) => r.id === pickedRole);
+  const isSa = role?.kind === "sa";
+  const mine = menus.accountMenus[account.id] ?? [];
+  const def = menus.roleMenus[account.role_id] ?? [];
+  const custom = !isSa && menusDiffer(mine, def);
 
   return (
     <li className="px-4 py-3">
@@ -126,8 +136,12 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
             {" · "}{role?.kind === "sa" ? "Semua workspace" : `Divisi ${DIVISION_LABEL[account.division as Division] ?? "AR"}`}
             {account.collection_name && ` · ${account.collection_name}`}
             {!account.has_pin && !account.pin_optional && " · belum ada PIN"}
+            {" · "}{isSa ? "semua menu" : `${mine.length} menu`}
           </div>
         </div>
+        {custom && (
+          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent" title="Akses menu berbeda dari default role">Menu disesuaikan</span>
+        )}
         {account.pin_optional && (
           <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning" title="Login cukup nama">Tanpa PIN</span>
         )}
@@ -144,13 +158,18 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
         <button type="button" className={btnGhost} onClick={() => setMode(mode === "pin" ? "view" : "pin")}>
           Reset PIN
         </button>
+        {!isSa && (
+          <button type="button" className={btnGhost} onClick={() => setMode(mode === "menu" ? "view" : "menu")} aria-expanded={mode === "menu"}>
+            Akses menu
+          </button>
+        )}
       </div>
 
       {mode === "edit" && (
         <form action={editAction} className="mt-3 grid gap-3 sm:grid-cols-6">
           <input type="hidden" name="id" value={account.id} />
           <input name="display_name" required defaultValue={account.display_name} className={inputCls} />
-          <RoleSelect roles={roles} defaultValue={account.role_id} />
+          <RoleSelect roles={roles} defaultValue={account.role_id} onChange={setPickedRole} />
           <DivisionSelect defaultValue={account.division} />
           <input
             name="collection_name"
@@ -165,8 +184,38 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
             Simpan
           </button>
           {role?.kind !== "sa" && <NoPinCheck defaultChecked={account.pin_optional} />}
+          {pickedRole !== account.role_id && picked?.kind !== "sa" && (
+            <label className="flex items-start gap-2 text-sm sm:col-span-6">
+              <input type="checkbox" name="reset_menus" defaultChecked className="mt-1" />
+              <span>
+                Ganti akses menu dengan default role baru ({picked?.name})
+                <span className="block text-xs text-fg-2">Tidak dicentang = akses menu akun tetap seperti sekarang.</span>
+              </span>
+            </label>
+          )}
           <div className="sm:col-span-6">
             <Feedback state={editState} />
+          </div>
+        </form>
+      )}
+
+      {mode === "menu" && !isSa && (
+        <form action={menuAction} key={menuState?.ok ? menuState.at : "menu"} className="mt-3 space-y-3 rounded-xl border border-line p-3">
+          <input type="hidden" name="id" value={account.id} />
+          <p className="text-xs text-fg-2">
+            Centang menu yang boleh dibuka akun ini. Tanda <span className="text-success">+</span> / <span className="text-warning">−</span> = berbeda
+            dari default role {role?.name}.
+          </p>
+          <MenuChecklist groups={menus.groups} kind={role?.kind ?? ""} selected={mine} defaults={def} />
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" disabled={menuPending} className={btnPrimary}>
+              {menuPending ? "Menyimpan…" : "Simpan akses menu"}
+            </button>
+            <button type="submit" name="use_default" value="1" disabled={menuPending || !custom} className={btnGhost}
+              onClick={(e) => { if (!confirm(`Samakan akses menu ${account.display_name} dengan default role ${role?.name}?`)) e.preventDefault(); }}>
+              Samakan dengan default role
+            </button>
+            <Feedback state={menuState} />
           </div>
         </form>
       )}
@@ -187,14 +236,14 @@ function AccountRow({ account, roles, isMe }: { account: Account; roles: Role[];
   );
 }
 
-export function AccountsView({ me, roles, accounts }: { me: string; roles: Role[]; accounts: Account[] }) {
+export function AccountsView({ me, roles, accounts, ...menus }: { me: string; roles: Role[]; accounts: Account[] } & Menus) {
   return (
     <>
       <CreateForm roles={roles} />
       <ul className="mt-6 divide-y divide-line rounded-xl border border-line bg-surface">
         {accounts.length === 0 && <li className="px-4 py-6 text-sm text-fg-2">Belum ada akun.</li>}
         {accounts.map((a) => (
-          <AccountRow key={a.id} account={a} roles={roles} isMe={a.id === me} />
+          <AccountRow key={a.id} account={a} roles={roles} isMe={a.id === me} menus={menus} />
         ))}
       </ul>
     </>

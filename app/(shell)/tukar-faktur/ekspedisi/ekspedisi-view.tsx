@@ -48,13 +48,10 @@ const HIST_COLS: LCol<ResiGroup>[] = [
   { k: "bps", l: "Business Partner", w: 360, wrap: true },
 ];
 
-type Rpc = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
-
 // Tukar Faktur › Ekspedisi: (1) pilih invoice dari aging terbaru, (2) masukkan No Resi & tanggal tukar faktur.
 // Tersimpan sebagai tukar faktur metode Ekspedisi → Tgl Tukar Faktur & No Resi di Daftar Tagihan ikut terisi.
 export function EkspedisiView() {
   const supabase = useMemo(() => createClient(), []);
-  const rpc = supabase.rpc.bind(supabase) as unknown as Rpc;
   const toast = useToast();
   const aging = useDataset("aging");
   const activity = useDataset("activity");
@@ -80,7 +77,7 @@ export function EkspedisiView() {
 
   async function save(resi: string, tanggal: string) {
     const invoices = selected.map((r) => r.invoice_no);
-    const { data, error } = await rpc("ekspedisi_save", { p_invoices: invoices, p_resi: resi.trim(), p_tanggal: tanggal });
+    const { data, error } = await supabase.rpc("ekspedisi_save", { p_invoices: invoices, p_resi: resi.trim(), p_tanggal: tanggal });
     if (error) { toast(`Gagal menyimpan: ${error.message}`, "danger"); return false; }
     toast(`No Resi ${resi.trim()} dicatat untuk ${Number(data ?? invoices.length)} invoice.`, "success");
     setSel(new Set());
@@ -89,7 +86,7 @@ export function EkspedisiView() {
   }
 
   async function edit(g: ResiGroup, resi: string, tanggal: string) {
-    const { error } = await rpc("ekspedisi_edit", { p_ids: g.ids, p_resi: resi.trim(), p_tanggal: tanggal });
+    const { error } = await supabase.rpc("ekspedisi_edit", { p_ids: g.ids, p_resi: resi.trim(), p_tanggal: tanggal });
     if (error) { toast(`Gagal mengubah: ${error.message}`, "danger"); return; }
     toast(`Resi diperbarui untuk ${g.count} invoice.`, "success");
     setOpen(null);
@@ -98,7 +95,7 @@ export function EkspedisiView() {
 
   async function remove(g: ResiGroup) {
     if (!confirm(`Hapus resi ${g.resi} dari ${g.count} invoice? Tukar faktur ekspedisi invoice tersebut dibatalkan.`)) return;
-    const { error } = await rpc("ekspedisi_delete", { p_ids: g.ids });
+    const { error } = await supabase.rpc("ekspedisi_delete", { p_ids: g.ids });
     if (error) { toast(`Gagal menghapus: ${error.message}`, "danger"); return; }
     toast(`Resi ${g.resi} dihapus.`, "success");
     setOpen(null);

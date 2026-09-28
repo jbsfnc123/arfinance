@@ -58,8 +58,8 @@ export async function loginWithPin(_prev: LoginState, formData: FormData): Promi
   if (!loginAllowedHere(role.kind, hereWs)) {
     return fail(hereWs === "kolektor" ? "Halaman ini khusus akun kolektor." : "Akun kolektor masuk lewat kolektor.tangki.space.");
   }
-  // Menu role dibutuhkan untuk menentukan workspace (Aplikasi Kolektor = menu tukar.detail).
-  const { data: menus } = await admin.from("role_menus").select("submenu_id").eq("role_id", prof.role_id);
+  // Menu akun dibutuhkan untuk menentukan workspace (Aplikasi Kolektor = menu tukar.detail).
+  const { data: menus } = await admin.from("profile_menus").select("submenu_id").eq("user_id", result.user_id);
   const access = {
     kind: role.kind, allowed: new Set<string>((menus ?? []).map((m) => m.submenu_id)),
     division: isDivision(prof.division) ? prof.division : "ar" as const,

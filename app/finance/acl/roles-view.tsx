@@ -3,9 +3,11 @@
 import { useActionState, useState } from "react";
 import { createRole, deleteRole, saveRoleMenus, updateRole } from "./actions";
 import { btnGhost, btnPrimary, inputCls, KIND_LABEL, type ActionResult } from "../ui";
+import { MenuChecklist } from "../menu-checklist";
+import type { AclGroup } from "@/lib/menu";
 
 type Role = { id: string; name: string; kind: string };
-type Group = { id: string; label: string; items: { id: string; label: string; needs: string | null }[] };
+type Group = AclGroup;
 
 function Feedback({ state }: { state: ActionResult }) {
   if (!state) return null;
@@ -22,13 +24,6 @@ function KindSelect({ defaultValue }: { defaultValue?: string }) {
       ))}
     </select>
   );
-}
-
-// Menu dengan syarat jenis role tetap tersembunyi walau dicentang (lihat canAccess di lib/menu.ts).
-function blockedFor(kind: string, needs: string | null) {
-  if (needs === "sa") return kind !== "sa";
-  if (needs === "ctrl") return kind !== "sa" && kind !== "ctrl";
-  return false;
 }
 
 function RoleCard(props: {
@@ -96,35 +91,10 @@ function RoleCard(props: {
       ) : (
         <form action={menuAction} className="mt-4">
           <input type="hidden" name="role_id" value={role.id} />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {groups.map((g) => (
-              <fieldset key={g.id}>
-                <legend className="text-xs font-medium uppercase tracking-wide text-fg-2">{g.label}</legend>
-                {g.items.map((item) => {
-                  const blocked = blockedFor(role.kind, item.needs);
-                  return (
-                    <label
-                      key={item.id}
-                      className={`mt-1 flex items-center gap-2 text-sm ${blocked ? "text-fg-disabled" : ""}`}
-                      title={blocked ? "Butuh role Controller/Super Admin" : undefined}
-                    >
-                      <input
-                        type="checkbox"
-                        name="menu"
-                        value={item.id}
-                        defaultChecked={selected.includes(item.id)}
-                        disabled={blocked}
-                      />
-                      {item.label}
-                    </label>
-                  );
-                })}
-              </fieldset>
-            ))}
-          </div>
+          <MenuChecklist groups={groups} kind={role.kind} selected={selected} />
           <div className="mt-4 flex items-center gap-3">
             <button type="submit" disabled={menuPending} className={btnPrimary}>
-              {menuPending ? "Menyimpan…" : "Simpan akses menu"}
+              {menuPending ? "Menyimpan…" : "Simpan default menu"}
             </button>
             <Feedback state={menuState} />
           </div>
