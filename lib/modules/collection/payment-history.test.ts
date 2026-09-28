@@ -135,4 +135,17 @@ describe("History dari paket ERP ±4 bulan", () => {
     expect(groupHistory(sub, aging, period, today)).toEqual(groupHistory(full, aging, period, today));
     expect(coverage(recent, period)).toEqual(coverage(erp, period));
   });
+  it("hanya invoice ber-tempo (+ counts server) tetap identik", () => {
+    const today = "2026-09-15";
+    const period = historyPeriod(today);
+    const tempo = new Set(erp.invoices.filter((i) => hasTempo(i.payment_term) && i.due_date).map((i) => i.invoice_no));
+    const payments = erp.payments.filter((p) => p.payment_date >= period.from && tempo.has(p.invoice_no));
+    const paid = new Set(payments.map((p) => p.invoice_no));
+    const counts: Record<string, number> = {};
+    for (const p of erp.payments) if (p.payment_date >= period.from) counts[p.payment_date.slice(0, 7)] = (counts[p.payment_date.slice(0, 7)] ?? 0) + 1;
+    const lean = { invoices: erp.invoices.filter((i) => paid.has(i.invoice_no)), payments, counts };
+    expect(lean.invoices.some((i) => i.payment_term === "C B D")).toBe(false);
+    expect(paymentHistory(lean, aging, period, today)).toEqual(paymentHistory(erp, aging, period, today));
+    expect(coverage(lean, period)).toEqual(coverage(erp, period));
+  });
 });

@@ -2,8 +2,10 @@
 -- (1) Keputusan user 2026-09-29: TIDAK ADA batas data antar collection. Akun jenis Collection melihat semua collection
 --     (tidak ada data rahasia antar collection); halaman tetap diatur centang menu per akun (profile_menus). Collection
 --     Name di profil hanya collection awal Daftar Tagihan (opsional). Diubah lewat penggantian teks yang dicek (pola 0034).
--- (2) pack_erp_recent: data ERP khusus History Pembayaran (pembayaran sejak awal 3 bulan sebelum bulan berjalan, ±4 bulan)
---     agar kunjungan pertama tidak mengunduh seluruh ERP. Format sama dengan pack_erp (kamus terms/labels).
+-- (2) pack_erp_recent: data ERP khusus History Pembayaran — hanya invoice BER-TEMPO ("Net N Days", sama dengan hasTempo di
+--     lib/modules/collection/payment-history.ts) yang punya due date & dibayar sejak awal 3 bulan sebelum bulan berjalan
+--     (±4 bulan), beserta pembayarannya. `counts` = jumlah SEMUA pembayaran per bulan (semua term) untuk peringatan
+--     bulan yang belum di-upload. Format invoice/payment sama dengan pack_erp (kamus terms/labels).
 
 create or replace function private.can_see_collection(p_coll text)
 returns boolean
@@ -48,10 +50,15 @@ begin
           or private.has_menu('rek.marketplace') or private.has_menu('coll.payhist')) then
     raise exception 'Akses ditolak' using errcode = '42501';
   end if;
-  v_pay := format('payment_date >= %L', v_from);
-  v_inv := format('invoice_no in (select invoice_no from public.erp_payments where payment_date >= %L)', v_from);
+  -- Invoice ber-tempo yang dibayar di rentang; pembayaran hanya milik invoice tersebut.
+  v_inv := format('payment_term ~* %L and due_date is not null
+                   and invoice_no in (select invoice_no from public.erp_payments where payment_date >= %L)', '^\s*net\s+\d+\s+days?', v_from);
+  v_pay := format('payment_date >= %L and invoice_no in (select invoice_no from public.erp_invoices where %s)', v_from, v_inv);
   return jsonb_build_object(
     'from', v_from,
+    'counts', (select coalesce(jsonb_object_agg(m, n), '{}'::jsonb) from (
+                 select to_char(payment_date, 'YYYY-MM') as m, count(*) as n
+                 from public.erp_payments where payment_date >= v_from group by 1) c),
     'invoices', private.pack(
       'select invoice_no, invoice_date, amount, bp_key, due_date,
               dense_rank() over (order by coalesce(payment_term, '''')) - 1 as t,
