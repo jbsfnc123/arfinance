@@ -45,6 +45,8 @@ export type Datasets = {
   tukar: { done: { tanggal_tukar: string | null; kurir: string | null; business_partner: string | null; kode: string | null }[] };
   settings: Record<string, unknown>;
   remarks: { remarks: Remark[] };
+  // ERP khusus History Pembayaran: pembayaran ±4 bulan terakhir + invoice yang dibayar (pack_erp_recent).
+  payhist: { invoices: ErpInvoice[]; payments: { invoice_no: string; payment_date: string; amount: number }[] };
 };
 export type DatasetName = keyof Datasets;
 
@@ -77,4 +79,5 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; deps: DatasetKey[]; 
   tukar: { rpc: "pack_tukar", deps: ["tukar"], decode: (r) => tables(r, ["done"]) as Datasets["tukar"] },
   settings: { rpc: "pack_settings", deps: ["settings"], decode: (r) => r },
   remarks: { rpc: "pack_remarks", deps: ["remarks"], decode: (r) => tables(r, ["remarks"]) as Datasets["remarks"] },
+  payhist: { rpc: "pack_erp_recent", deps: ["erp"], decode: decodeErp },
 };

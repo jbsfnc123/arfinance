@@ -95,7 +95,7 @@ function CreateForm({ roles }: { roles: Role[] }) {
       <input name="display_name" required placeholder="Nama" className={inputCls} />
       <RoleSelect roles={roles} />
       <DivisionSelect />
-      <input name="collection_name" placeholder="Collection Name (khusus Collection)" className={inputCls} />
+      <input name="collection_name" placeholder="Collection awal Daftar Tagihan (opsional)" title="Collection yang terbuka pertama kali di Daftar Tagihan" className={inputCls} />
       <PinInput required={!noPin} />
       <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Menyimpan…" : "Tambah"}
@@ -174,7 +174,7 @@ function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: 
           <input
             name="collection_name"
             defaultValue={account.collection_name ?? ""}
-            placeholder="Collection Name"
+            placeholder="Collection awal (opsional)"
             className={inputCls}
           />
           <label className="flex items-center gap-2 text-sm">

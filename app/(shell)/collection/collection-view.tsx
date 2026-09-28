@@ -29,8 +29,7 @@ export type Patch = (invoiceNos: string[], fn: (r: CollectionRow) => CollectionR
 // perubahan dari aksi/realtime ditambal sebagai "override" sampai dataset versi baru tiba.
 export function CollectionView(props: {
   initial: string;
-  locked: boolean;
-  own: string | null;
+  preferred: string | null; // Collection Name akun (opsional): collection awal bila ada di aging
   canPayHist?: boolean;
 }) {
   const router = useRouter();
@@ -43,22 +42,20 @@ export function CollectionView(props: {
   const lastUpdate = (settings.data?.last_tagihan_update as string | undefined) ?? aging.data?.uploadedAt ?? null;
   // Collection terpilih, filter, kolom & centang diingat selama tab terbuka: kembali dari menu lain (tanpa ?c=)
   // langsung ke collection & tampilan yang sama. Filter & centang disimpan per collection.
+  // Semua akun ber-menu Daftar Tagihan melihat semua collection (keputusan user 2026-09-29).
   const [storedColl, setColl] = useViewState("collection:coll", "");
-  const coll = props.locked ? props.initial : props.initial || storedColl;
+  const ar = useMemo(() => (aging.data ? arOf(aging.data.lines, settings.data ?? null) : []), [aging.data, settings.data]);
+  const collections = useMemo(() => collectionSummary(ar), [ar]);
+  const preferred = props.preferred && collections.some((c) => c.name === props.preferred) ? props.preferred : "";
+  const coll = props.initial || storedColl || preferred;
   useEffect(() => {
-    if (!props.locked && props.initial && props.initial !== storedColl) setColl(props.initial);
-  }, [props.locked, props.initial, storedColl, setColl]);
+    if (props.initial && props.initial !== storedColl) setColl(props.initial);
+  }, [props.initial, storedColl, setColl]);
   const [filters, setFilters] = useViewState<Filters>(`collection:${coll}:filters`, EMPTY_FILTERS);
   const [columns, setColumns] = useViewState<ColumnKey[]>("collection:columns", DEFAULT_COLUMNS);
   const [selection, setSelection] = useViewState<string[]>(`collection:${coll}:sel`, []);
 
   // Hitungan dibagi antar halaman (lib/local/derived): tidak diulang saat kembali ke menu ini.
-  const ar = useMemo(() => (aging.data ? arOf(aging.data.lines, settings.data ?? null) : []), [aging.data, settings.data]);
-  const collections = useMemo(() => {
-    const list = collectionSummary(ar).filter((c) => !props.locked || c.name === props.own);
-    if (props.locked && props.own && !list.length) list.push({ name: props.own, invoices: 0, total: 0 });
-    return list;
-  }, [ar, props.locked, props.own]);
   const base = useMemo(() => (coll && activity.data ? collectionRowsOf(ar, activity.data, remarks.map, coll, todayJakarta()) : []),
     [ar, activity.data, coll, remarks.map]);
 
@@ -154,15 +151,11 @@ export function CollectionView(props: {
   return (
     <div className={selection.length ? "pb-28" : ""}>
       <div className="flex flex-wrap items-center gap-3">
-        {props.locked ? (
-          <h1 className="text-xl font-medium">{coll}</h1>
-        ) : (
-          <select value={coll} onChange={(e) => pick(e.target.value)} className={`${inputCls} !w-auto text-base font-medium`}>
-            {collections.map((c) => (
-              <option key={c.name} value={c.name}>{c.name}</option>
-            ))}
-          </select>
-        )}
+        <select value={coll} onChange={(e) => pick(e.target.value)} className={`${inputCls} !w-auto text-base font-medium`} aria-label="Collection">
+          {collections.map((c) => (
+            <option key={c.name} value={c.name}>{c.name}</option>
+          ))}
+        </select>
         <span className="text-xs text-fg-2">Data per: {fmtTimestamp(lastUpdate)}</span>
         <button type="button" className={`${btnGhost} relative ml-auto`} onClick={reload} disabled={loading}>
           <span className="material-symbols-outlined">refresh</span>

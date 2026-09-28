@@ -49,7 +49,6 @@ export async function createAccount(_prev: ActionResult, fd: FormData): Promise<
   const kind = await roleKind(roleId);
   if (!kind) return err("Role tidak ditemukan.");
   if (kind === "sa" && pinOptional) return err("Akun Super Admin wajib memakai PIN.");
-  if (kind === "coll" && !collection) return err("Akun Collection wajib punya Collection Name.");
 
   const admin = createAdminClient();
   const id = crypto.randomUUID();
@@ -110,7 +109,6 @@ export async function updateAccount(_prev: ActionResult, fd: FormData): Promise<
   if (!name) return err("Nama wajib diisi.");
   const kind = await roleKind(roleId);
   if (!kind) return err("Role tidak ditemukan.");
-  if (kind === "coll" && !collection) return err("Akun Collection wajib punya Collection Name.");
   if (kind === "sa" && pinOptional) return err("Akun Super Admin wajib memakai PIN.");
   // Cegah Super Admin mengunci dirinya sendiri.
   if (id === me.id && (!active || kind !== "sa")) {
