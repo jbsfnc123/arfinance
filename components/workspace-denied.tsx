@@ -2,15 +2,17 @@ import { canEnterWorkspace, type Access } from "@/lib/menu";
 import { WORKSPACES, workspaceUrl, type Workspace } from "@/lib/workspace";
 
 // Ditampilkan saat akun sudah login (cookie bersama *.tangki.space) tetapi divisinya tidak
-// mencakup workspace ini: tawarkan workspace yang boleh dibuka.
+// mencakup workspace ini: tawarkan workspace yang boleh dibuka. Aplikasi Kolektor tidak menautkan ke host lain.
 export function WorkspaceDenied({ ws, access, host }: { ws: Workspace; access: Access; host: string | null }) {
-  const others = (Object.keys(WORKSPACES) as Workspace[]).filter((w) => w !== ws && canEnterWorkspace(w, access));
+  const others = ws === "kolektor" ? [] : (Object.keys(WORKSPACES) as Workspace[]).filter((w) => w !== ws && canEnterWorkspace(w, access));
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 text-center">
         <span className="material-symbols-outlined !text-5xl text-danger">lock</span>
         <h1 className="mt-3 text-xl font-medium">Tidak ada akses {WORKSPACES[ws].label}</h1>
-        <p className="mt-2 text-sm text-fg-2">Divisi akun Anda tidak mencakup workspace ini. Hubungi Super Admin.</p>
+        <p className="mt-2 text-sm text-fg-2">
+          {ws === "kolektor" ? "Akun ini tidak punya akses Aplikasi Kolektor. Hubungi Super Admin." : "Divisi akun Anda tidak mencakup workspace ini. Hubungi Super Admin."}
+        </p>
         {others.length > 0 && (
           <div className="mt-4 space-y-2">
             {others.map((w) => (

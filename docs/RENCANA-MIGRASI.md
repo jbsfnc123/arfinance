@@ -697,3 +697,7 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   kolektor.tangki.space → hanya akun role Kurir; login lain → semua akun aktif kecuali Kurir. Akun "tanpa PIN" →
   hanya tombol Masuk; akun ber-PIN → langsung keypad. Server menolak akun Kurir di login utama & non-Kurir di
   kolektor (`loginAllowedHere`). `searchNames` dihapus (RPC `login_names` tidak dipakai lagi).
+- Fase 31c: Super Admin tidak pernah tampil di dropdown; masuk lewat `tangki.space/login?admin` (ketik nama → PIN,
+  nama tidak disimpan di perangkat). kolektor.tangki.space mandiri: logout kembali ke login kolektor, header tanpa tautan
+  portal, WorkspaceDenied tanpa tautan host lain, tujuan login dipaksa tetap kolektor (`staysOnKolektor`). Cookie sesi
+  persisten 400 hari (`AUTH_COOKIE_MAX_AGE`) → tetap masuk sampai Keluar.

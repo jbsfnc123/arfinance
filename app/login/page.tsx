@@ -12,14 +12,16 @@ const ERRORS: Record<string, string> = {
 // workspace sesuai akses. Aplikasi Kolektor (kolektor.tangki.space) punya halaman login sendiri berisi akun kolektor saja.
 // Dev (*.localhost) tetap login per host karena cookie tidak bisa dibagi antar host.
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const [{ error, next }, host] = await Promise.all([searchParams, currentHost()]);
+  const [{ error, next, admin }, host] = await Promise.all([searchParams, currentHost()]);
+  // Alamat khusus (bookmark) untuk akun yang tidak tampil di daftar, mis. Super Admin: ketik nama → PIN.
+  const manual = admin !== undefined;
   const initialError = typeof error === "string" ? ERRORS[error] ?? null : null;
   const here = workspaceFromHost(host);
   const ws = isSharedHost(host) && here !== "kolektor" ? "finance" : here;
   const w = WORKSPACES[ws];
 
-  // Hanya nama & tanda "tanpa PIN" yang dikirim ke browser.
-  const { data } = await createAdminClient()
+  // Hanya nama & tanda "tanpa PIN" yang dikirim ke browser (mode manual: tidak ada daftar sama sekali).
+  const { data } = manual ? { data: [] } : await createAdminClient()
     .from("profiles").select("display_name, active, pin_optional, role:roles(kind)").eq("active", true);
   const accounts: LoginAccount[] = (data ?? []).map((p) => ({
     display_name: p.display_name, active: p.active, pin_optional: p.pin_optional,
@@ -32,8 +34,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <div className="w-full max-w-xs rounded-2xl border border-line bg-surface p-6 text-center">
         <span className="material-symbols-outlined !text-5xl text-accent">{w.icon}</span>
         <h1 className="mt-3 text-2xl font-medium">{w.label}</h1>
-        <p className="mt-1 text-sm text-fg-2">Pilih nama Anda untuk masuk</p>
-        <LoginFlow initialError={initialError} next={typeof next === "string" ? next : ""} names={names} />
+        <p className="mt-1 text-sm text-fg-2">{manual ? "Masuk dengan nama & PIN" : "Pilih nama Anda untuk masuk"}</p>
+        <LoginFlow initialError={initialError} next={typeof next === "string" ? next : ""} names={names} manual={manual} />
       </div>
     </main>
   );

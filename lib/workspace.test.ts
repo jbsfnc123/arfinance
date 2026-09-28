@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authCookieOptions, loginUrl, parseNext, routeFor, workspaceFromHost, workspaceUrl } from "./workspace";
+import { AUTH_COOKIE_MAX_AGE, authCookieOptions, loginUrl, parseNext, routeFor, staysOnKolektor, workspaceFromHost, workspaceUrl } from "./workspace";
 
 describe("workspace per host", () => {
   it("mengenali host produksi, dev, dan preview", () => {
@@ -45,10 +45,12 @@ describe("routing per workspace", () => {
 
 describe("cookie sesi", () => {
   it("dibagi ke semua *.tangki.space, host-only di dev", () => {
-    expect(authCookieOptions("ar.tangki.space")).toEqual({ name: "sb-tangki-auth", domain: ".tangki.space" });
-    expect(authCookieOptions("tangki.space")).toEqual({ name: "sb-tangki-auth", domain: ".tangki.space" });
-    expect(authCookieOptions("localhost:3000")).toEqual({ name: "sb-tangki-auth" });
-    expect(authCookieOptions("evil-tangki.space")).toEqual({ name: "sb-tangki-auth" });
+    const base = { name: "sb-tangki-auth", maxAge: AUTH_COOKIE_MAX_AGE, sameSite: "lax", path: "/" };
+    expect(authCookieOptions("ar.tangki.space")).toEqual({ ...base, domain: ".tangki.space", secure: true });
+    expect(authCookieOptions("kolektor.tangki.space")).toEqual({ ...base, domain: ".tangki.space", secure: true });
+    expect(authCookieOptions("localhost:3000")).toEqual(base);
+    expect(AUTH_COOKIE_MAX_AGE).toBe(400 * 86400); // sesi diingat browser 400 hari
+    expect(authCookieOptions("evil-tangki.space")).toEqual(base); // bukan subdomain: tanpa domain bersama
   });
 });
 
@@ -86,5 +88,13 @@ describe("Aplikasi Kolektor (kolektor.tangki.space)", () => {
     expect(routeFor("ar", "/kolektor", true)).toEqual({ kind: "notfound" });
     expect(loginUrl("kolektor.tangki.space", "https://kolektor.tangki.space/")).toBe("/login?next=https%3A%2F%2Fkolektor.tangki.space%2F");
     expect(parseNext("https://kolektor.tangki.space/", "kolektor.tangki.space")).toEqual({ ws: "kolektor", url: "https://kolektor.tangki.space/" });
+  });
+});
+
+describe("Aplikasi Kolektor tidak kembali ke tangki.space", () => {
+  it("tujuan login di host kolektor selalu host kolektor", () => {
+    expect(staysOnKolektor("kolektor.tangki.space", "https://tangki.space/")).toBe("https://kolektor.tangki.space/");
+    expect(staysOnKolektor("kolektor.tangki.space", "https://kolektor.tangki.space/")).toBe("https://kolektor.tangki.space/");
+    expect(staysOnKolektor("tangki.space", "https://ar.tangki.space/")).toBe("https://ar.tangki.space/"); // host lain tidak diubah
   });
 });

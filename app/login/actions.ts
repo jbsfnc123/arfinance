@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { derivePassword, isValidPin } from "@/lib/auth/pin";
 import { canEnterWorkspace, homeWorkspace, isDivision } from "@/lib/menu";
-import { isSharedHost, parseNext, workspaceFromHost, workspaceUrl } from "@/lib/workspace";
+import { isSharedHost, parseNext, staysOnKolektor, workspaceFromHost, workspaceUrl } from "@/lib/workspace";
 import { loginAllowedHere } from "@/lib/auth/login-names";
 
 export type LoginState = { error: string; at: number; needPin?: boolean; go?: string } | null;
@@ -80,6 +80,7 @@ export async function loginWithPin(_prev: LoginState, formData: FormData): Promi
   // Dev (*.localhost) & Aplikasi Kolektor: tetap di host ini bila boleh.
   else if ((!isSharedHost(host) || here === "kolektor") && canEnterWorkspace(here, access)) target = workspaceUrl(here, host);
   else target = workspaceUrl(homeWorkspace(access), host);
+  target = staysOnKolektor(host, target);
   // Tujuan di host yang sama harus dimuat penuh oleh browser: redirect() server action merender rute secara internal
   // tanpa rewrite workspace di proxy (kolektor "/" akan tampil sebagai halaman AR).
   if (host && new URL(target).host === host) return { error: "", at: Date.now(), go: target };
