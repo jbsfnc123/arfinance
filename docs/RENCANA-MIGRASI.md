@@ -722,3 +722,25 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
 - Akun & PIN: tombol Akses menu per akun (checklist bersama `MenuChecklist`, tanda +/− terhadap default role, tombol
   Samakan dengan default role, badge "Menu disesuaikan"). Role & Akses = pengaturan default menu. Beranda tidak lagi
   terhapus saat menyimpan menu role. Sesi (`lib/session.ts`) & login membaca `profile_menus`.
+
+## Perbaikan audit: collection terbuka & paket History Pembayaran (Fase 35, 2026-09-29)
+- Keputusan user: **tidak ada batas data antar collection**. Akun jenis Collection (`coll`) melihat semua collection;
+  halaman tetap diatur centang menu per akun (`profile_menus`). Collection Name di profil hanya collection awal Daftar
+  Tagihan (opsional; bila tidak ada di aging → layar pilih collection).
+- Migrasi 0039: `private.can_see_collection` = true untuk sa/ctrl/coll; `pack_aging`, `pack_activity`, `pack_erp`,
+  `pack_targets`, `pack_remarks`, `private.can_remark` membuka akses `coll` (penggantian teks yang dicek, pola 0034).
+- RPC baru `pack_erp_recent` (dataset `payhist`, dipakai History Pembayaran): hanya invoice ber-tempo (Net N Days,
+  due date terisi) yang dibayar sejak awal 3 bulan sebelum bulan berjalan + pembayarannya; `counts` = jumlah SEMUA
+  pembayaran per bulan (untuk peringatan bulan belum di-upload). Format sama dengan `pack_erp` (kamus terms/labels).
+- Uji: Ulfa (coll) → 6 paket berhasil, aging 21.033 baris / 4 collection; Firman (kurir) → `pack_aging` &
+  `pack_erp_recent` ditolak 42501; `counts` identik dengan hitungan dari `pack_erp`; tidak ada data berubah.
+- Ukuran: `pack_erp` 6,85 MB (51.263 invoice / 54.901 bayar) → `pack_erp_recent` 5,56 MB (42.614 / 42.678) — hanya
+  ±19% lebih kecil karena data ERP yang di-upload memang sebagian besar ±4 bulan terakhir.
+- Produksi (Super Admin, ar.tangki.space/collection/history-pembayaran): kunjungan pertama (browser baru) 11,0 →
+  7,1–7,8 dtk; kunjungan kedua (cache) 1,2 → 0,8–0,9 dtk. 1 dari 3 kunjungan pertama gagal (lihat risiko di bawah).
+- **Risiko tersisa (sudah ada sebelum Fase 35):** paket JSON besar (aging 5,6 MB, ERP 5,5–6,9 MB) kadang melewati
+  `statement_timeout` 8 dtk role `authenticated` saat CPU Supabase Free sedang tinggi → RPC 500 dan halaman tertahan
+  "Memuat…" tanpa coba ulang. 24 jam sebelum Fase 35: `pack_erp` 2/17 panggilan 500, 15 statement timeout. Uji beban
+  bersamaan: aging+`pack_erp` 1/4 gagal, aging+`pack_erp_recent` 0/4. Query `pack_erp_recent` sendiri ±1,2 dtk di
+  server; sisanya serialisasi/pengiriman JSON. Kandidat tindak lanjut: coba ulang otomatis di `useDataset`, paket
+  lebih kecil (kolom/rentang), atau naikkan statement_timeout khusus RPC paket.
