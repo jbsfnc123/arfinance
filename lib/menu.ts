@@ -6,7 +6,8 @@ import type { Workspace } from "@/lib/workspace";
 //  - Iframe ke GAS diganti route internal; `phase` = fase migrasi yang akan mengisinya.
 //  - 'ext.batal' (form pembatalan) digabung ke 'inv.pengajuan'; 'ext.ltkp' pindah ke grup Faktur Pajak.
 //  - 'set.pin' dihapus: PIN hanya diatur Super Admin lewat 'set.akun'.
-//  - Akses menu diatur per role (tabel role_menus), bukan per akun.
+//  - Akses menu diatur PER AKUN (tabel profile_menus, Akun & PIN). Menu role (role_menus, Role & Akses) hanya
+//    default yang disalin ke akun baru.
 //  - Grup "Rekonsiliasi" & "Laporan" baru untuk aplikasi yang dulu berdiri sendiri.
 
 export type Needs = "ctrl" | "sa";
@@ -42,6 +43,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
   { id: "tukar", label: "Tukar Faktur", icon: "swap_horiz", children: [
     { id: "tukar.jadwal", label: "Laporan & Jadwal Kolektor", href: "/tukar-faktur/jadwal" },
     { id: "tukar.detail", label: "Aplikasi Kolektor",    href: "/tukar-faktur/kurir" },
+    { id: "tukar.ekspedisi", label: "Ekspedisi",         href: "/tukar-faktur/ekspedisi" },
     { id: "tukar.upload", label: "Upload Jadwal",        href: "/tukar-faktur/upload", needs: "ctrl" },
     { id: "rek.mitra10",  label: "Mitra10 Tukar Faktur", href: "/mitra10" },
     { id: "tukar.rkm",    label: "RKM Tukar Faktur",     href: "/rkm" },
@@ -89,6 +91,23 @@ export const ACL_GROUPS: MenuGroup[] = [HOME_GROUP];
 // Menu AP Workspace — diisi fase berikutnya.
 export const AP_MENU_REGISTRY: MenuGroup[] = [];
 
+export type AclGroup = { id: string; label: string; items: { id: string; label: string; needs: Needs | null }[] };
+/** Grup checklist akses menu (Role & Akses dan Akun & PIN), tanpa href. */
+export function aclGroups(): AclGroup[] {
+  return [...ACL_GROUPS, ...MENU_REGISTRY, ...AP_MENU_REGISTRY].map((g) => ({
+    id: g.id, label: g.label, items: g.children.map((c) => ({ id: c.id, label: c.label, needs: c.needs ?? null })),
+  }));
+}
+/** Semua id menu yang boleh dicentang. */
+export const ACL_MENU_IDS: ReadonlySet<string> = new Set(aclGroups().flatMap((g) => g.items.map((i) => i.id)));
+
+/** Menu akun berbeda dari default role? (urutan diabaikan, id tak dikenal diabaikan) */
+export function menusDiffer(account: Iterable<string>, roleDefault: Iterable<string>) {
+  const a = new Set([...account].filter((m) => ACL_MENU_IDS.has(m)));
+  const b = new Set([...roleDefault].filter((m) => ACL_MENU_IDS.has(m)));
+  return a.size !== b.size || [...a].some((m) => !b.has(m));
+}
+
 // Navigasi Finance Workspace (tangki.space, khusus Super Admin). Halaman admin pusat pindah ke sini.
 export const FINANCE_NAV = [
   { href: "/", label: "Portal", icon: "apps" },
@@ -128,7 +147,7 @@ function meetsNeeds(item: MenuItem, kind: string) {
 }
 
 // Deny-by-default: Super Admin melihat semua; user lain hanya submenu yang dicentang
-// untuk role-nya (role_menus) dan memenuhi syarat jenis role (needs).
+// untuk akunnya (profile_menus) dan memenuhi syarat jenis role (needs).
 export function canAccess(item: MenuItem, access: Access) {
   if (!meetsNeeds(item, access.kind)) return false;
   return access.kind === "sa" || access.allowed.has(item.id);

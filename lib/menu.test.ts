@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HOME_ITEM, canEnterWorkspace, homeWorkspace, MENU_REGISTRY, canAccess, findMenuById, findMenuByHref, firstAllowedHref, visibleMenu } from "./menu";
+import { ACL_MENU_IDS, HOME_ITEM, aclGroups, canEnterWorkspace, homeWorkspace, MENU_REGISTRY, canAccess, findMenuById, findMenuByHref, firstAllowedHref, menusDiffer, visibleMenu } from "./menu";
 
 const item = (id: string) => MENU_REGISTRY.flatMap((g) => g.children).find((c) => c.id === id)!;
 
@@ -87,5 +87,21 @@ describe("akses Aplikasi Kolektor", () => {
     expect(homeWorkspace(acc("kurir", ["tukar.detail"]))).toBe("kolektor");
     expect(homeWorkspace(acc("kurir", []))).toBe("ar"); // tanpa menu kolektor tetap ke divisinya
     expect(homeWorkspace(acc("ctrl", ["tukar.detail"], "both"))).toBe("finance");
+  });
+});
+
+describe("akses menu per akun", () => {
+  it("checklist memuat Beranda & semua submenu tanpa duplikat", () => {
+    const ids = aclGroups().flatMap((g) => g.items.map((i) => i.id));
+    expect(ids).toContain("home");
+    expect(ids).toContain("tukar.ekspedisi");
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ACL_MENU_IDS.has("home")).toBe(true);
+  });
+  it("menusDiffer: urutan diabaikan, id tak dikenal diabaikan", () => {
+    expect(menusDiffer(["home", "coll.tagihan"], ["coll.tagihan", "home"])).toBe(false);
+    expect(menusDiffer(["home", "menu.lama"], ["home"])).toBe(false);
+    expect(menusDiffer(["home"], ["home", "coll.tagihan"])).toBe(true);
+    expect(menusDiffer(["home", "coll.case"], ["home", "coll.tagihan"])).toBe(true);
   });
 });

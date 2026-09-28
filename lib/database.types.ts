@@ -928,6 +928,20 @@ export type Database = {
           },
         ]
       }
+      profile_menus: {
+        Row: { user_id: string; submenu_id: string }
+        Insert: { user_id: string; submenu_id: string }
+        Update: { user_id?: string; submenu_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: "profile_menus_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_menus: {
         Row: { role_id: string; submenu_id: string }
         Insert: { role_id: string; submenu_id: string }
@@ -1016,6 +1030,9 @@ export type Database = {
       usage_report: { Args: Record<string, never>; Returns: Json }
       deck_month_save: { Args: { p_month: string; p_data: string; p_filled: number; p_total: number; p_file?: string | null; p_upload?: boolean }; Returns: undefined }
       deck_month_delete: { Args: { p_month: string }; Returns: undefined }
+      ekspedisi_save: { Args: { p_invoices: string[]; p_resi: string; p_tanggal: string }; Returns: number }
+      ekspedisi_edit: { Args: { p_ids: number[]; p_resi: string; p_tanggal: string }; Returns: number }
+      ekspedisi_delete: { Args: { p_ids: number[] }; Returns: number }
       upload_status: { Args: Record<string, never>; Returns: Json }
       pack_rkm: { Args: Record<string, never>; Returns: Json }
       rkm_sync: { Args: Record<string, never>; Returns: number }

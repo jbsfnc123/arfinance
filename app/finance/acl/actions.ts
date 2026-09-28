@@ -3,12 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/session";
-import { MENU_REGISTRY } from "@/lib/menu";
+import { ACL_MENU_IDS } from "@/lib/menu";
 import { err, ok, type ActionResult } from "../ui";
 
 const PATH = "/finance/acl";
 const KINDS = ["sa", "ctrl", "coll", "kurir"];
-const MENU_IDS = new Set(MENU_REGISTRY.flatMap((g) => g.children.map((c) => c.id)));
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
 
 export async function createRole(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -60,10 +59,11 @@ export async function deleteRole(_prev: ActionResult, fd: FormData): Promise<Act
   return ok("Role dihapus.");
 }
 
+// Default menu role: hanya disalin ke akun BARU (trigger database); akun yang sudah ada tidak berubah.
 export async function saveRoleMenus(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
   await requireSuperAdmin();
   const roleId = str(fd, "role_id");
-  const menus = fd.getAll("menu").map(String).filter((m) => MENU_IDS.has(m));
+  const menus = fd.getAll("menu").map(String).filter((m) => ACL_MENU_IDS.has(m));
 
   const supabase = await createClient();
   const { error: delError } = await supabase.from("role_menus").delete().eq("role_id", roleId);
@@ -76,5 +76,5 @@ export async function saveRoleMenus(_prev: ActionResult, fd: FormData): Promise<
   }
 
   revalidatePath(PATH);
-  return ok(`${menus.length} menu disimpan.`);
+  return ok(`${menus.length} menu default disimpan (berlaku untuk akun baru).`);
 }

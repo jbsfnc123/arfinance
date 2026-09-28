@@ -6,10 +6,26 @@ import { createClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/session";
 import { derivePassword, isValidPin, syntheticEmail } from "@/lib/auth/pin";
 import { err, ok, type ActionResult } from "../ui";
-import { isDivision } from "@/lib/menu";
+import { ACL_MENU_IDS, isDivision } from "@/lib/menu";
 
 const PATH = "/finance/akun";
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
+
+// Ganti seluruh menu akun (hapus lalu isi ulang). Super Admin tidak perlu entri (semua menu).
+async function replaceAccountMenus(userId: string, menus: string[]) {
+  const supabase = await createClient();
+  const { error: delError } = await supabase.from("profile_menus").delete().eq("user_id", userId);
+  if (delError) return delError.message;
+  if (menus.length === 0) return null;
+  const { error } = await supabase.from("profile_menus").insert(menus.map((submenu_id) => ({ user_id: userId, submenu_id })));
+  return error?.message ?? null;
+}
+
+async function roleDefaultMenus(roleId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("role_menus").select("submenu_id").eq("role_id", roleId);
+  return (data ?? []).map((m) => m.submenu_id).filter((m) => ACL_MENU_IDS.has(m));
+}
 
 async function roleKind(roleId: string) {
   const supabase = await createClient();
@@ -102,12 +118,41 @@ export async function updateAccount(_prev: ActionResult, fd: FormData): Promise<
   }
 
   const supabase = await createClient();
+  const { data: before } = await supabase.from("profiles").select("role_id").eq("id", id).single();
   const { error } = await supabase
     .from("profiles")
     .update({ display_name: name, role_id: roleId, collection_name: collection, division, active, pin_optional: pinOptional })
     .eq("id", id);
   if (error) return err(error.message);
 
+  // Role diganti + dicentang "Ganti akses menu dengan default role baru" → menu akun = default role baru.
+  const roleChanged = !!before && before.role_id !== roleId;
+  if (roleChanged && fd.get("reset_menus") === "on") {
+    const menuError = await replaceAccountMenus(id, await roleDefaultMenus(roleId));
+    if (menuError) return err(`Akun disimpan, tetapi akses menu gagal diganti: ${menuError}`);
+    revalidatePath(PATH);
+    return ok("Akun disimpan; akses menu diganti dengan default role baru.");
+  }
+
   revalidatePath(PATH);
   return ok("Akun disimpan.");
+}
+
+// Akses menu per akun (Super Admin). "Samakan dengan default role" = isi dengan menu default role akun.
+export async function saveAccountMenus(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  await requireSuperAdmin();
+  const id = str(fd, "id");
+  const supabase = await createClient();
+  const { data: prof } = await supabase.from("profiles").select("role_id, role:roles(kind)").eq("id", id).single();
+  if (!prof) return err("Akun tidak ditemukan.");
+  if ((prof.role as { kind: string } | null)?.kind === "sa") return err("Super Admin otomatis melihat semua menu.");
+
+  const menus = fd.get("use_default") === "1"
+    ? await roleDefaultMenus(prof.role_id)
+    : [...new Set(fd.getAll("menu").map(String))].filter((m) => ACL_MENU_IDS.has(m));
+  const menuError = await replaceAccountMenus(id, menus);
+  if (menuError) return err(menuError);
+
+  revalidatePath(PATH);
+  return ok(fd.get("use_default") === "1" ? `Disamakan dengan default role (${menus.length} menu).` : `${menus.length} menu disimpan.`);
 }
