@@ -12,11 +12,9 @@ const accounts = [
 ];
 
 describe("daftar nama login per halaman", () => {
-  it("login utama: semua akun aktif kecuali kolektor, A–Z, tanda tanpa PIN", () => {
-    expect(loginNamesFor(accounts, "finance")).toEqual([
-      { name: "Ani", noPin: true }, { name: "Mando", noPin: false }, { name: "Super Admin", noPin: false },
-    ]);
-    expect(loginNamesFor(accounts, "ar").map((a) => a.name)).toEqual(["Ani", "Mando", "Super Admin"]);
+  it("login utama: semua akun aktif kecuali kolektor & Super Admin, A–Z, tanda tanpa PIN", () => {
+    expect(loginNamesFor(accounts, "finance")).toEqual([{ name: "Ani", noPin: true }, { name: "Mando", noPin: false }]);
+    expect(loginNamesFor(accounts, "ar").map((a) => a.name)).toEqual(["Ani", "Mando"]);
   });
   it("kolektor.tangki.space: hanya akun kolektor aktif", () => {
     expect(loginNamesFor(accounts, "kolektor")).toEqual([{ name: "Abdul", noPin: true }, { name: "Budi", noPin: false }]);

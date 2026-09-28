@@ -70,8 +70,12 @@ export function routeFor(ws: Workspace, pathname: string, shared = false): Route
 // Cookie sesi bersama untuk semua *.tangki.space (login sekali). Nama baru sengaja dipakai agar
 // cookie lama ar.tangki.space (host-only) diabaikan dan tidak ada dua sesi yang bentrok.
 export const AUTH_COOKIE = "sb-tangki-auth";
+// Sesi diingat browser 400 hari (batas maksimum browser) — tidak hilang saat browser/HP ditutup; token diperbarui
+// otomatis oleh proxy, jadi pengguna tetap masuk sampai menekan Keluar.
+export const AUTH_COOKIE_MAX_AGE = 400 * 24 * 60 * 60;
 export function authCookieOptions(host: string | null | undefined) {
-  return isSharedHost(host) ? { name: AUTH_COOKIE, domain: `.${ROOT_DOMAIN}` } : { name: AUTH_COOKIE };
+  const base = { name: AUTH_COOKIE, maxAge: AUTH_COOKIE_MAX_AGE, sameSite: "lax" as const, path: "/" };
+  return isSharedHost(host) ? { ...base, domain: `.${ROOT_DOMAIN}`, secure: true } : base;
 }
 
 // Alamat login untuk request yang belum login: produksi → tangki.space/login?next=<asal>, dev → host sendiri.
@@ -82,6 +86,12 @@ export function loginUrl(host: string | null | undefined, from: string) {
 
 // `next` hanya diterima bila mengarah ke keluarga host yang sama (tangki.space / *.localhost) —
 // mencegah open redirect. Mengembalikan workspace tujuan + URL, atau null.
+// Tujuan akhir login: Aplikasi Kolektor tidak pernah diarahkan ke host lain (termasuk tangki.space).
+export function staysOnKolektor(host: string | null | undefined, target: string) {
+  if (workspaceFromHost(host) !== "kolektor") return target;
+  try { return new URL(target).host === (host ?? "").toLowerCase() ? target : workspaceUrl("kolektor", host); } catch { return workspaceUrl("kolektor", host); }
+}
+
 export function parseNext(next: string | null | undefined, currentHost: string | null | undefined): { ws: Workspace; url: string } | null {
   if (!next) return null;
   let u: URL;

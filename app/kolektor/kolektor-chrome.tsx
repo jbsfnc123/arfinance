@@ -5,10 +5,9 @@ import { clearViewState, ensureViewOwner } from "@/lib/ui/view-state";
 import { WORKSPACES } from "@/lib/workspace";
 import { ToastProvider } from "@/components/toast";
 
-// Kerangka ringkas untuk HP: judul, nama akun, keluar. Tanpa sidebar & menu lain.
-export function KolektorChrome({ user, portalHref, children }: {
+// Kerangka ringkas untuk HP: judul, nama akun, keluar. Tanpa sidebar & tanpa tautan ke tangki.space.
+export function KolektorChrome({ user, children }: {
   user: { id: string; name: string; role: string };
-  portalHref: string | null;
   children: React.ReactNode;
 }) {
   ensureViewOwner(user.id);
@@ -28,11 +27,6 @@ export function KolektorChrome({ user, portalHref, children }: {
         <span className="font-medium">{WORKSPACES.kolektor.label}</span>
         <div className="ml-auto flex items-center gap-1">
           <span className="max-w-32 truncate text-right text-sm" title={`${user.name} · ${user.role}`}>{user.name}</span>
-          {portalHref && (
-            <a href={portalHref} title="Pilih workspace" className="flex h-11 w-11 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2">
-              <span className="material-symbols-outlined">apps</span>
-            </a>
-          )}
           <form action="/auth/signout" method="post" onSubmit={signOut}>
             <button type="submit" title="Keluar" aria-label="Keluar"
               className="flex h-11 w-11 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-fg">
