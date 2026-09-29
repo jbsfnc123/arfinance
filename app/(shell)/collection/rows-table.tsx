@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { rupiah } from "@/lib/format";
-import { cellText, COLUMN_DEFS, type CollectionRow, type ColumnKey } from "@/lib/modules/collection/view-model";
+import { cellText, COLUMN_DEFS, type CollectionRow, type CollectionSort, type ColumnKey } from "@/lib/modules/collection/view-model";
 import { useFillHeight } from "@/lib/ui/fill-height";
 import { useScrollMemory } from "@/lib/ui/view-state";
 import { btnGhost, card } from "@/components/ui";
@@ -30,6 +30,10 @@ export function RowsTable(props: {
   setSelection: (fn: (prev: string[]) => string[]) => void;
   onEditKeterangan?: (row: CollectionRow) => void;
   scrollKey?: string; // posisi scroll diingat selama tab terbuka
+  // Header seperti LocalTable (Mitra10): klik = urut naik → turun → normal; ikon mata = sembunyikan kolom.
+  sort?: CollectionSort;
+  onSort?: (key: ColumnKey) => void;
+  onHide?: (key: ColumnKey) => void;
 }) {
   const { rows, columns, selection, setSelection } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -87,15 +91,30 @@ export function RowsTable(props: {
               <th className="w-12 border-b border-line px-3 py-2 text-left">
                 <input type="checkbox" checked={allChecked} onChange={toggleAll} aria-label="Pilih semua baris" />
               </th>
-              {cols.map((c) => (
-                <th
-                  key={c.key}
-                  style={{ minWidth: WIDTH[c.key] ?? 120 }}
-                  className={`whitespace-nowrap border-b border-line px-3 py-2 text-xs font-medium text-fg-2 ${c.money ? "text-right" : "text-left"}`}
-                >
-                  {c.label}
-                </th>
-              ))}
+              {cols.map((c) => {
+                const active = props.sort?.k === c.key ? props.sort.dir : 0;
+                return (
+                  <th
+                    key={c.key}
+                    style={{ minWidth: WIDTH[c.key] ?? 120 }}
+                    onClick={props.onSort ? () => props.onSort!(c.key) : undefined}
+                    aria-sort={active === 1 ? "ascending" : active === -1 ? "descending" : undefined}
+                    title={props.onSort ? "Klik untuk mengurutkan" : undefined}
+                    className={`group relative whitespace-nowrap border-b border-line py-2 text-xs font-medium text-fg-2 ${props.onHide ? "pl-3 pr-7" : "px-3"} ${props.onSort ? "cursor-pointer select-none hover:text-fg" : ""} ${c.money ? "text-right" : "text-left"}`}
+                  >
+                    {c.label}
+                    {active === 1 && " ▲"}
+                    {active === -1 && " ▼"}
+                    {props.onHide && cols.length > 1 && (
+                      <button type="button" title={`Sembunyikan kolom ${c.label}`} aria-label={`Sembunyikan kolom ${c.label}`}
+                        onClick={(e) => { e.stopPropagation(); props.onHide!(c.key); }}
+                        className="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100">
+                        <span className="material-symbols-outlined !text-sm">visibility_off</span>
+                      </button>
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
