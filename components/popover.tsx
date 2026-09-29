@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-// Panel mengambang (glass) yang menutup saat klik di luar / Esc. Posisi diatur pemanggil lewat className.
+// Panel mengambang (kaca menengah, turun dari Top bar) yang menutup saat klik di luar / Esc. Posisi diatur pemanggil
+// lewat className. Elemen pemicu diberi atribut data-popover-anchor agar kliknya tidak langsung menutup panel.
 export function Popover({ open, onClose, children, className = "", label }: {
   open: boolean; onClose: () => void; children: React.ReactNode; className?: string; label: string;
 }) {
@@ -20,7 +21,7 @@ export function Popover({ open, onClose, children, className = "", label }: {
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div ref={ref} role="dialog" aria-label={label} className={`glass pop-in absolute z-50 rounded-2xl ${className}`}>
+    <div ref={ref} role="dialog" aria-label={label} className={`glass drop-in absolute z-50 rounded-[16px] ${className}`}>
       {children}
     </div>
   );

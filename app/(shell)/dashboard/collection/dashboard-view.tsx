@@ -11,9 +11,9 @@ import { fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { AGING_BUCKETS } from "@/lib/modules/collection/aging";
 import { round1, type GroupRow, type SpvSummary } from "@/lib/modules/collection/spv-summary";
 import { Chart } from "@/components/chart";
-import { AGING_COLOR, chartTheme, pctColor, SERIES } from "@/lib/ui/palette";
+import { agingColors, chartTheme, pctColor, seriesColors } from "@/lib/ui/palette";
 import { useResolvedTheme } from "@/lib/ui/prefs";
-import { btnGhost, card, cardTitle, chip, inputCls, td, th } from "@/components/ui";
+import { btnGhost, card, cardTitle, chip, inputCls, tableCls, td, th } from "@/components/ui";
 import { Skeleton, SkeletonChart } from "@/components/skeleton";
 import { useViewState } from "@/lib/ui/view-state";
 
@@ -51,18 +51,22 @@ export function DashboardView() {
     <div className="mx-auto max-w-[1920px]">
       <header className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <div className="mr-auto">
-          <h1 className="text-[22px] font-semibold leading-tight">Dashboard Collection</h1>
+          <h1 className="text-[22px] font-semibold leading-tight tracking-tight">Dashboard Collection</h1>
           <p className="text-xs text-fg-2">Pantau kinerja collection &amp; piutang outstanding per bulan target</p>
         </div>
-        <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} !w-auto`} aria-label="Bulan target">
-          {(months.includes(month) ? months : [month, ...months]).map((m) => (
-            <option key={m} value={m}>Target {monthLabel(m)}</option>
-          ))}
-        </select>
-        <span className="text-xs text-fg-2">Diperbarui {fmtTimestamp(data?.lastTagihanUpdate)}</span>
-        <button type="button" className={btnGhost} onClick={reload} disabled={loading}>
-          <span className={`material-symbols-outlined !text-base ${loading ? "animate-spin" : ""}`}>refresh</span>Refresh
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} !w-auto !rounded-[10px] !py-1.5`} aria-label="Bulan target">
+            {(months.includes(month) ? months : [month, ...months]).map((m) => (
+              <option key={m} value={m}>Target {monthLabel(m)}</option>
+            ))}
+          </select>
+          <span className="flex items-center gap-1 px-1 text-xs text-fg-2">
+            <span className="material-symbols-outlined !text-[15px]">cloud_done</span>Diperbarui {fmtTimestamp(data?.lastTagihanUpdate)}
+          </span>
+          <button type="button" className={`${btnGhost} !rounded-[10px]`} onClick={reload} disabled={loading}>
+            <span className={`material-symbols-outlined !text-base ${loading ? "animate-spin" : ""}`}>refresh</span>Refresh
+          </button>
+        </div>
       </header>
 
       {noData ? (
@@ -115,11 +119,11 @@ function Kpi({ label, value, sub, badge, tone = "neutral" }: { label: string; va
   return (
     <div className={`${card} relative overflow-hidden p-4`}>
       <span aria-hidden className={`absolute left-4 top-[19px] h-2 w-2 rounded-full ${TONE[tone]}`} />
-      <div className="flex items-center gap-2 pl-4 text-[11px] font-semibold uppercase tracking-wide text-fg-2">
+      <div className="flex items-center gap-2 pl-4 text-[11px] font-medium uppercase tracking-[0.06em] text-fg-2">
         {label}
         {badge && <span className={`${chip} bg-surface-2 text-fg`}>{badge}</span>}
       </div>
-      <div className="mt-1.5 whitespace-nowrap text-xl font-semibold leading-tight tabular-nums 2xl:text-2xl">{value}</div>
+      <div className="mt-2 whitespace-nowrap text-xl font-semibold leading-tight tracking-tight tabular-nums 2xl:text-[24px]">{value}</div>
       <div className="mt-0.5 text-xs text-fg-2">{sub}</div>
     </div>
   );
@@ -157,27 +161,28 @@ function DonutCard({ title, d, kind, className }: { title: string; d: SpvSummary
   const t = chartTheme();
   const pct = d.pencapaian;
   const fPct = d.target > 0 ? (d.forecast / d.target) * 100 : 0;
+  const S = seriesColors(theme);
   const values = kind === "pencapaian"
-    ? [{ value: Math.min(100, pct), color: pctColor(pct) }, { value: Math.max(0, 100 - pct), color: t.track }]
+    ? [{ value: Math.min(100, pct), color: pctColor(pct, theme) }, { value: Math.max(0, 100 - pct), color: t.track }]
     : [
-        { value: pct, color: SERIES.collected },
-        { value: fPct, color: SERIES.promise },
+        { value: pct, color: S.collected },
+        { value: fPct, color: S.promise },
         { value: Math.max(0, 100 - pct - fPct), color: t.track },
       ];
   const center = kind === "pencapaian" ? Math.round(pct) : Math.round(pct + fPct);
-  const accent = kind === "pencapaian" ? pctColor(pct) : SERIES.accent;
+  const accent = kind === "pencapaian" ? pctColor(pct, theme) : S.accent;
 
   const option: EChartsOption = {
     tooltip: { show: false },
     series: [{
       type: "pie", radius: ["66%", "84%"], center: ["50%", "50%"], silent: true, label: { show: false },
       animationDuration: 500, animationEasing: "cubicOut",
-      data: values.map((v) => ({ value: v.value, itemStyle: { color: v.color, borderRadius: 4, borderColor: theme === "dark" ? "#202226" : "#ffffff", borderWidth: 2 } })),
+      data: values.map((v) => ({ value: v.value, itemStyle: { color: v.color, borderRadius: 4, borderColor: theme === "dark" ? "#232428" : "#ffffff", borderWidth: 2 } })),
     }],
   };
   const legend = kind === "pencapaian"
-    ? [{ c: pctColor(pct), l: "Terkumpul", v: rupiah(d.terkumpul) }, { c: t.track, l: "Sisa", v: rupiah(d.sisa) }]
-    : [{ c: SERIES.collected, l: "Terkumpul", v: `${round1(pct)}%` }, { c: SERIES.promise, l: "Janji Bayar", v: `${round1(fPct)}%` }];
+    ? [{ c: pctColor(pct, theme), l: "Terkumpul", v: rupiah(d.terkumpul) }, { c: t.track, l: "Sisa", v: rupiah(d.sisa) }]
+    : [{ c: S.collected, l: "Terkumpul", v: `${round1(pct)}%` }, { c: S.promise, l: "Janji Bayar", v: `${round1(fPct)}%` }];
   return (
     <section className={`${card} p-4 ${className ?? ""}`}>
       <CardHead title={title} sub={kind === "pencapaian" ? `Target ${rupiah(d.target)}` : `${d.forecastCount} invoice berjanji bayar`} />
@@ -199,6 +204,7 @@ function DonutCard({ title, d, kind, className }: { title: string; d: SpvSummary
 }
 
 function AgingCard({ d, className }: { d: SpvSummary; className?: string }) {
+  const AG = agingColors(useResolvedTheme());
   const t = chartTheme();
   const buckets = AGING_BUCKETS.map((b) => d.agData[b] ?? { count: 0, nominal: 0 });
   const total = buckets.reduce((s, b) => s + Number(b.nominal), 0);
@@ -221,7 +227,7 @@ function AgingCard({ d, className }: { d: SpvSummary; className?: string }) {
     },
     series: [{
       type: "bar", barMaxWidth: 56, animationDuration: 500,
-      data: buckets.map((b, i) => ({ value: Number(b.nominal), itemStyle: { color: AGING_COLOR[i], borderRadius: [6, 6, 0, 0] } })),
+      data: buckets.map((b, i) => ({ value: Number(b.nominal), itemStyle: { color: AG[i], borderRadius: [6, 6, 0, 0] } })),
       label: { show: true, position: "top", distance: 4, color: t.label, fontSize: 11, textBorderWidth: 0, formatter: (p) => `${pct(Number((p as { value: number }).value))}%` },
     }],
   };
@@ -233,7 +239,7 @@ function AgingCard({ d, className }: { d: SpvSummary; className?: string }) {
       <ul className="mt-2 space-y-1.5 text-xs">
         {AGING_BUCKETS.map((b, i) => (
           <li key={b} className="flex items-center gap-2">
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: AGING_COLOR[i] }} />
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: AG[i] }} />
             <span className="flex-1 text-fg-2">{b}</span>
             <span className="tabular-nums">{rupiah(buckets[i].nominal)}</span>
             <span className="w-14 text-right tabular-nums text-fg-2">{buckets[i].count} inv</span>
@@ -267,13 +273,13 @@ function TopOverdue({ d, className }: { d: SpvSummary; className?: string }) {
           } />
       </div>
       <div className="mt-2 min-h-0 flex-1 overflow-auto">
-        <table className="w-full text-[13px]">
-          <thead className="sticky top-0 bg-surface">
+        <table className={tableCls}>
+          <thead>
             <tr><th className={th}>Business Partner</th><th className={`${th} text-right`}>Jml Inv</th><th className={`${th} text-right`}>Aging Terlama</th><th className={`${th} text-right`}>Total</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.bp} className="border-t border-line/60 hover:bg-surface-2/60">
+              <tr key={r.bp}>
                 <td className={`${td} max-w-64 truncate`} title={r.bp}>{r.bp}</td>
                 <td className={`${td} text-right tabular-nums`}>{r.count}</td>
                 <td className={`${td} text-right`}>
@@ -297,6 +303,7 @@ const TABS = [
 ] as const;
 
 function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
+  const theme = useResolvedTheme();
   const [tab, setTab] = useViewState<(typeof TABS)[number]["key"]>("dash-coll:tab", "byMarket");
   const rows: GroupRow[] = d[tab];
   return (
@@ -315,7 +322,7 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
           } />
       </div>
       <div className="mt-2 overflow-x-auto">
-        <table className="w-full text-[13px]">
+        <table className={tableCls}>
           <thead>
             <tr>
               <th className={th}>Nama</th><th className={`${th} text-right`}>Lunas/Total</th>
@@ -325,7 +332,7 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.nama} className="border-t border-line/60 hover:bg-surface-2/60">
+              <tr key={r.nama}>
                 <td className={td}>{r.nama}</td>
                 <td className={`${td} text-right tabular-nums`}><span className="text-success">{r.invLunas}</span><span className="text-fg-2">/{r.invTotal}</span></td>
                 <td className={`${td} text-right tabular-nums`}>{rupiah(r.terkumpul)}</td>
@@ -334,7 +341,7 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
                 <td className={td}>
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, r.pencapaian)}%`, background: pctColor(r.pencapaian) }} />
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, r.pencapaian)}%`, background: pctColor(r.pencapaian, theme) }} />
                     </div>
                     <span className="w-12 text-right text-xs tabular-nums">{r.pencapaian}%</span>
                   </div>
@@ -353,6 +360,7 @@ const juta = (n: number | null) => (n === null ? null : Math.round(n / 1e4) / 10
 
 // Pengganti "Janji Bayar per tanggal": pergerakan Alokasi Target per tanggal (data Mutasi vs Realisasi).
 function AllocationCard({ a, className }: { a: ReturnType<typeof allocationSeries> | null; className?: string }) {
+  const S = seriesColors(useResolvedTheme());
   const t = chartTheme();
   if (!a) return <SkeletonChart className={className} height={300} />;
   const option: EChartsOption = {
@@ -362,10 +370,10 @@ function AllocationCard({ a, className }: { a: ReturnType<typeof allocationSerie
     xAxis: { type: "category", data: a.days.map((d) => String(Number(d.date.slice(8)))), axisLabel: { color: t.text }, axisLine: { lineStyle: { color: t.grid } } },
     yAxis: { type: "value", splitLine: { lineStyle: { color: t.grid } }, axisLabel: { color: t.text, formatter: (v: number) => `${v.toLocaleString("id-ID")} jt` } },
     series: [
-      { name: "Alloc in Target / hari", type: "bar", data: a.days.map((d) => juta(d.allocT)), itemStyle: { color: SERIES.bar, borderRadius: [3, 3, 0, 0] }, barMaxWidth: 14 },
-      { name: "Kumulatif Alloc in Target", type: "line", symbolSize: 4, data: a.days.map((d) => juta(d.cumAllocT)), itemStyle: { color: SERIES.success }, lineStyle: { width: 3 } },
-      { name: "Kumulatif Allocated", type: "line", symbolSize: 3, data: a.days.map((d) => juta(d.cumAlloc)), itemStyle: { color: SERIES.warning }, lineStyle: { type: "dashed" } },
-      { name: "Target", type: "line", symbol: "none", data: a.days.map(() => juta(a.target)), itemStyle: { color: SERIES.danger }, lineStyle: { type: "dotted" } },
+      { name: "Alloc in Target / hari", type: "bar", data: a.days.map((d) => juta(d.allocT)), itemStyle: { color: S.bar, borderRadius: [3, 3, 0, 0] }, barMaxWidth: 14 },
+      { name: "Kumulatif Alloc in Target", type: "line", symbolSize: 4, data: a.days.map((d) => juta(d.cumAllocT)), itemStyle: { color: S.success }, lineStyle: { width: 3 } },
+      { name: "Kumulatif Allocated", type: "line", symbolSize: 3, data: a.days.map((d) => juta(d.cumAlloc)), itemStyle: { color: S.warning }, lineStyle: { type: "dashed" } },
+      { name: "Target", type: "line", symbol: "none", data: a.days.map(() => juta(a.target)), itemStyle: { color: S.danger }, lineStyle: { type: "dotted" } },
     ],
   };
   return (
@@ -397,11 +405,11 @@ function ReconCard({ r, className }: { r: ReturnType<typeof reconcileCollected>;
           {stat("Selisih", rupiah(r.selisih), ok ? "text-success" : "text-warning")}
         </div>
       </div>
-      <table className="mt-3 w-full text-[13px]">
+      <table className={`mt-3 ${tableCls}`}>
         <thead><tr><th className={th}>Kemungkinan penyebab</th><th className={`${th} text-right`}>Invoice</th><th className={`${th} text-right`}>Selisih</th></tr></thead>
         <tbody>
           {r.categories.map((c) => (
-            <tr key={c.category} className="cursor-pointer border-t border-line/60 hover:bg-surface-2/60"
+            <tr key={c.category} className="cursor-pointer"
               onClick={() => setSpec({
                 title: c.label,
                 cols: [

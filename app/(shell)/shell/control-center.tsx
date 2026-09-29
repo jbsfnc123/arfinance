@@ -6,10 +6,41 @@ import { useDensity, useTheme, type Density, type ThemeMode } from "@/lib/ui/pre
 import { useLoadedDataset } from "@/lib/local/store";
 import { fmtTimestamp } from "@/lib/format";
 
-// Control Center (kanan atas): tema, kepadatan, layar penuh, refresh data, waktu data terakhir. Hanya isi yang
-// relevan untuk AR Workspace — tidak ada tombol Wi-Fi/Bluetooth tiruan.
+// Control Center (kanan atas): modul-modul kecil — tampilan, kepadatan, layar penuh, refresh, data terakhir.
+// Hanya kontrol yang relevan untuk AR Workspace; tidak ada Wi-Fi/Bluetooth tiruan.
 const THEMES: { v: ThemeMode; l: string; i: string }[] = [{ v: "dark", l: "Gelap", i: "dark_mode" }, { v: "light", l: "Terang", i: "light_mode" }, { v: "system", l: "Sistem", i: "contrast" }];
-const DENSITIES: { v: Density; l: string }[] = [{ v: "comfortable", l: "Nyaman" }, { v: "compact", l: "Padat" }];
+const DENSITIES: { v: Density; l: string; i: string }[] = [{ v: "comfortable", l: "Nyaman", i: "density_medium" }, { v: "compact", l: "Padat", i: "density_small" }];
+
+const mod = "rounded-[14px] border border-hairline bg-fg/[0.045] p-2.5";
+const label = "mb-2 px-0.5 text-[11px] font-semibold text-fg-2";
+
+function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { v: T; l: string; i: string }[]; onChange: (v: T) => void }) {
+  return (
+    <div className="flex gap-1 rounded-[10px] bg-fg/6 p-[3px]">
+      {options.map((o) => (
+        <button key={o.v} type="button" aria-pressed={value === o.v} onClick={() => onChange(o.v)}
+          className={`flex flex-1 flex-col items-center gap-0.5 rounded-[8px] py-1.5 text-[11px] transition-colors ${value === o.v ? "bg-surface text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
+          <span className="material-symbols-outlined !text-[18px]">{o.i}</span>{o.l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Tile({ icon, title, sub, on, onClick, disabled, spin }: { icon: string; title: string; sub?: string; on?: boolean; onClick: () => void; disabled?: boolean; spin?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} aria-pressed={on}
+      className={`${mod} flex items-center gap-2.5 text-left transition-colors hover:bg-fg/8 disabled:opacity-60`}>
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${on ? "bg-accent text-on-accent" : "bg-fg/10 text-fg"}`}>
+        <span className={`material-symbols-outlined !text-[18px] ${spin ? "animate-spin" : ""}`}>{icon}</span>
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[12px] font-semibold leading-tight">{title}</span>
+        {sub && <span className="block truncate text-[11px] text-fg-2">{sub}</span>}
+      </span>
+    </button>
+  );
+}
 
 export function ControlCenter({ open, onClose, onRefresh, refreshing }: { open: boolean; onClose: () => void; onRefresh: () => void; refreshing: boolean }) {
   const [theme, setTheme] = useTheme();
@@ -22,40 +53,25 @@ export function ControlCenter({ open, onClose, onRefresh, refreshing }: { open: 
     return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
   const toggleFull = () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.(); };
-  const seg = "flex-1 rounded-lg px-2 py-1.5 text-xs transition-colors";
   return (
-    <Popover open={open} onClose={onClose} label="Pusat kontrol" className="right-0 top-full mt-2 w-80 p-3">
-      <div className="space-y-3">
-        <section>
-          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-2">Tema</div>
-          <div className="flex gap-1 rounded-xl bg-surface-2/70 p-1">
-            {THEMES.map((t) => (
-              <button key={t.v} type="button" aria-pressed={theme === t.v} onClick={() => setTheme(t.v)}
-                className={`${seg} flex items-center justify-center gap-1 ${theme === t.v ? "bg-surface shadow-sm text-fg" : "text-fg-2 hover:text-fg"}`}>
-                <span className="material-symbols-outlined !text-base">{t.i}</span>{t.l}
-              </button>
-            ))}
-          </div>
+    <Popover open={open} onClose={onClose} label="Pusat kontrol" className="right-0 top-full mt-1.5 w-[320px] p-2.5">
+      <div className="grid grid-cols-2 gap-2">
+        <Tile icon={full ? "fullscreen_exit" : "fullscreen"} title="Layar penuh" sub={full ? "Aktif" : "Nonaktif"} on={full} onClick={toggleFull} />
+        <Tile icon="refresh" title="Refresh data" sub={refreshing ? "Memuat…" : "Semua data di tab ini"} onClick={onRefresh} disabled={refreshing} spin={refreshing} />
+        <section className={`${mod} col-span-2`}>
+          <div className={label}>Tampilan</div>
+          <Segmented value={theme} options={THEMES} onChange={setTheme} />
         </section>
-        <section>
-          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-2">Kepadatan tabel</div>
-          <div className="flex gap-1 rounded-xl bg-surface-2/70 p-1">
-            {DENSITIES.map((d) => (
-              <button key={d.v} type="button" aria-pressed={density === d.v} onClick={() => setDensity(d.v)}
-                className={`${seg} ${density === d.v ? "bg-surface shadow-sm text-fg" : "text-fg-2 hover:text-fg"}`}>{d.l}</button>
-            ))}
-          </div>
+        <section className={`${mod} col-span-2`}>
+          <div className={label}>Kepadatan tabel</div>
+          <Segmented value={density} options={DENSITIES} onChange={setDensity} />
         </section>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={toggleFull} aria-pressed={full} className={`flex items-center gap-2 rounded-xl p-2.5 text-left text-sm ${full ? "bg-accent/15 text-accent" : "bg-surface-2/70 hover:bg-surface-2"}`}>
-            <span className="material-symbols-outlined">{full ? "fullscreen_exit" : "fullscreen"}</span>{full ? "Keluar layar penuh" : "Layar penuh"}
-          </button>
-          <button type="button" onClick={onRefresh} disabled={refreshing} className="flex items-center gap-2 rounded-xl bg-surface-2/70 p-2.5 text-left text-sm hover:bg-surface-2 disabled:opacity-60">
-            <span className={`material-symbols-outlined ${refreshing ? "animate-spin" : ""}`}>refresh</span>Refresh data
-          </button>
-        </div>
-        <div className="rounded-xl bg-surface-2/70 px-3 py-2 text-xs text-fg-2">
-          Data aging per <span className="text-fg">{aging.data ? fmtTimestamp(aging.data.uploadedAt) : "— (belum dimuat di tab ini)"}</span>
+        <div className={`${mod} col-span-2 flex items-center gap-2.5`}>
+          <span className="material-symbols-outlined !text-[18px] text-fg-2">cloud_sync</span>
+          <span className="min-w-0 text-[12px]">
+            <span className="block font-semibold">Data aging terakhir</span>
+            <span className="block truncate text-[11px] text-fg-2">{aging.data ? fmtTimestamp(aging.data.uploadedAt) : "Belum dimuat di tab ini"}</span>
+          </span>
         </div>
       </div>
     </Popover>

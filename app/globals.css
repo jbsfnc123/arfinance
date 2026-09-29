@@ -1,41 +1,55 @@
 @import "tailwindcss";
 
 /*
-  Design tokens AR Workspace (Fase 39, macOS-inspired enterprise).
+  Design tokens AR Workspace — "macOS-inspired professional finance workspace" (Fase 39–40).
   Token lama (--bg, --surface, --surface-2, --border, --text, --text-2, --accent, …) dipertahankan sebagai alias
   sehingga kelas Tailwind existing (bg-surface, text-fg-2, border-line, …) tetap berfungsi di semua halaman.
-  Tema gelap = bawaan (sesuai tampilan lama); terang lewat <html data-theme="light"> (lib/ui/prefs.ts).
+  Tema gelap (graphite) = bawaan; terang (frosted cool-gray) lewat <html data-theme="light"> (lib/ui/prefs.ts).
+  Material kaca bertingkat: .glass-soft (Top bar) < .glass (popover, Control Center) < .glass-strong (Dock, Spotlight,
+  Launcher, modal). Kartu data tetap opak agar angka & chart mudah dibaca.
 */
 :root {
   color-scheme: dark;
-  --background: #17181b;
-  --surface: #202226;
-  --surface-elevated: #26282d;
-  --surface-2: #2c2f35;
-  --surface-glass: rgba(32, 34, 38, 0.72);
-  --border: #35383f;
-  --border-strong: #464a53;
-  --text-primary: #e6e7ea;
-  --text-secondary: #9ba1ab;
-  --text-disabled: #5f6368;
+  --background: #1b1c1f;
+  --surface: #232428;
+  --surface-elevated: #2a2b30;
+  --surface-2: #2e3035;
+  --surface-glass-soft: rgba(30, 31, 35, 0.62);
+  --surface-glass: rgba(40, 41, 46, 0.93);
+  --surface-glass-strong: rgba(44, 45, 51, 0.62);
+  --border: #34363c;
+  --border-strong: #464951;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --highlight: rgba(255, 255, 255, 0.07);
+  --text-primary: #e8e9ec;
+  --text-secondary: #9ea3ad;
+  --text-disabled: #62666e;
   --accent: #8ab4f8;
   --accent-strong: #a8c7fa;
   --on-accent: #062e6f;
-  --pill-active: #1d3f6b;
-  --pill-active-text: #c2e7ff;
-  --danger: #f28b82;
-  --warning: #fdd663;
-  --success: #81c995;
-  --chart-grid: rgba(255, 255, 255, 0.08);
-  --chart-track: #3c4043;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
-  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  --pill-active: #22406a;
+  --pill-active-text: #cfe4ff;
+  --danger: #ee8b82;
+  --warning: #f2cf66;
+  --success: #7fc796;
+  --chart-grid: rgba(255, 255, 255, 0.07);
+  --chart-track: #393b41;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --shadow-popover: 0 12px 36px rgba(0, 0, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-floating: 0 28px 80px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.3);
+  --shadow-dock: 0 12px 40px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  --panel-radius: 18px;
+  --dock-radius: 24px;
   --blur-glass: 28px;
-  --wallpaper: radial-gradient(1200px 600px at 10% -10%, rgba(138, 180, 248, 0.14), transparent 60%),
-    radial-gradient(900px 500px at 100% 110%, rgba(129, 201, 149, 0.1), transparent 60%);
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  --wallpaper: radial-gradient(1100px 700px at 8% -12%, rgba(120, 150, 210, 0.16), transparent 62%),
+    radial-gradient(900px 620px at 104% 18%, rgba(140, 120, 200, 0.09), transparent 60%),
+    radial-gradient(1000px 600px at 70% 118%, rgba(100, 170, 150, 0.09), transparent 62%);
 
   /* alias lama */
   --bg: var(--background);
@@ -43,37 +57,46 @@
   --text-2: var(--text-secondary);
 
   --sidebar-w: 268px;
-  --topbar-h: 44px;
-  --dock-reserve: 96px; /* ruang bawah konten agar Dock tidak menutupi tabel (0 bila tanpa Dock) */
+  --topbar-h: 40px;
+  --dock-reserve: 92px; /* ruang bawah konten agar Dock tidak menutupi tabel */
   --cell-py: 0.5rem;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --background: #eef1f5;
+  --background: #eceff3;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --surface-2: #f1f3f7;
-  --surface-glass: rgba(255, 255, 255, 0.68);
-  --border: #dde2ea;
-  --border-strong: #c7cdd8;
-  --text-primary: #1a1d24;
-  --text-secondary: #5c6676;
-  --text-disabled: #a0a7b3;
+  --surface-2: #f3f5f8;
+  --surface-glass-soft: rgba(246, 247, 250, 0.66);
+  --surface-glass: rgba(252, 252, 254, 0.94);
+  --surface-glass-strong: rgba(250, 251, 253, 0.62);
+  --border: #dfe3ea;
+  --border-strong: #c9cfd9;
+  --hairline: rgba(20, 30, 50, 0.1);
+  --highlight: rgba(255, 255, 255, 0.75);
+  --text-primary: #1b1e25;
+  --text-secondary: #5d6675;
+  --text-disabled: #a2a9b4;
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
   --on-accent: #ffffff;
-  --pill-active: #dbe7ff;
+  --pill-active: #dce8ff;
   --pill-active-text: #1e3a8a;
-  --danger: #c62828;
-  --warning: #b7791f;
-  --success: #1e7e4a;
-  --chart-grid: rgba(0, 0, 0, 0.08);
-  --chart-track: #e2e6ee;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
-  --shadow-lg: 0 18px 50px rgba(16, 24, 40, 0.18);
-  --wallpaper: radial-gradient(1200px 600px at 10% -10%, rgba(37, 99, 235, 0.1), transparent 60%),
-    radial-gradient(900px 500px at 100% 110%, rgba(30, 126, 74, 0.08), transparent 60%);
+  --danger: #c7372f;
+  --warning: #b07714;
+  --success: #1f7a4a;
+  --chart-grid: rgba(20, 30, 50, 0.08);
+  --chart-track: #e3e7ee;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 1px rgba(16, 24, 40, 0.03);
+  --shadow-md: 0 4px 14px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 18px 50px rgba(16, 24, 40, 0.16);
+  --shadow-popover: 0 12px 36px rgba(16, 24, 40, 0.14), 0 2px 6px rgba(16, 24, 40, 0.06);
+  --shadow-floating: 0 28px 80px rgba(16, 24, 40, 0.22), 0 4px 14px rgba(16, 24, 40, 0.08);
+  --shadow-dock: 0 12px 36px rgba(16, 24, 40, 0.16), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --wallpaper: radial-gradient(1100px 700px at 8% -12%, rgba(120, 160, 240, 0.2), transparent 62%),
+    radial-gradient(900px 620px at 104% 18%, rgba(190, 170, 240, 0.14), transparent 60%),
+    radial-gradient(1000px 600px at 70% 118%, rgba(140, 210, 190, 0.16), transparent 62%);
 }
 
 :root[data-density="compact"] {
@@ -87,6 +110,7 @@
   --color-surface-elevated: var(--surface-elevated);
   --color-line: var(--border);
   --color-line-strong: var(--border-strong);
+  --color-hairline: var(--hairline);
   --color-fg: var(--text-primary);
   --color-fg-2: var(--text-secondary);
   --color-fg-disabled: var(--text-disabled);
@@ -102,6 +126,7 @@
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
   --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
   --font-sans: var(--font-inter), "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -114,9 +139,11 @@ body {
 
 body {
   font-family: var(--font-sans);
-  background-image: var(--wallpaper);
+  background-image: var(--noise), var(--wallpaper);
+  background-blend-mode: soft-light, normal;
   background-attachment: fixed;
   font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
 }
 
 .material-symbols-outlined {
@@ -126,35 +153,82 @@ body {
   user-select: none;
 }
 
-/* Panel kaca: Top bar, Dock, menu mengambang, Spotlight, Control Center, modal. Kartu data tetap solid. */
+/* ── Material kaca bertingkat ─────────────────────────────────────────────────── */
+.glass-soft,
+.glass,
+.glass-strong {
+  border: 1px solid var(--hairline);
+}
+.glass-soft {
+  background: var(--surface-glass-soft);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  backdrop-filter: blur(20px) saturate(170%);
+}
 .glass {
   background: var(--surface-glass);
-  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(160%);
-  backdrop-filter: blur(var(--blur-glass)) saturate(160%);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(170%);
+  backdrop-filter: blur(var(--blur-glass)) saturate(170%);
+  box-shadow: var(--shadow-popover), inset 0 1px 0 var(--highlight);
+}
+.glass-strong {
+  background: var(--surface-glass-strong);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--shadow-floating), inset 0 1px 0 var(--highlight);
 }
 
-/* Kepadatan: sel tabel & kartu mengikuti --cell-py (Comfortable/Compact dari Control Center). */
+/* Kepadatan: sel tabel mengikuti --cell-py (Nyaman/Padat dari Control Center). */
 [data-density="compact"] td,
 [data-density="compact"] th {
   padding-top: var(--cell-py);
   padding-bottom: var(--cell-py);
 }
 
-/* Transisi halaman saat berpindah menu (Dock). */
+/* ── Gerak ─────────────────────────────────────────────────────────────────────── */
 @keyframes page-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
 }
-.page-in { animation: page-in 180ms ease-out; }
+.page-in { animation: page-in 160ms ease-out; }
 @keyframes pop-in {
   from { opacity: 0; transform: translateY(6px) scale(0.98); }
   to { opacity: 1; transform: none; }
 }
-.pop-in { animation: pop-in 150ms ease-out; transform-origin: bottom center; }
+.pop-in { animation: pop-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: bottom center; }
+@keyframes drop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.drop-in { animation: drop-in 140ms cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: top right; }
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in { animation: fade-in 140ms ease-out; }
 @media (prefers-reduced-motion: reduce) {
-  .page-in, .pop-in { animation: none; }
+  .page-in, .pop-in, .drop-in, .fade-in { animation: none; }
+}
+
+/* ── Scrollbar tipis (tidak disembunyikan) ─────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-secondary) 38%, transparent) transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-secondary) 32%, transparent);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--text-secondary) 55%, transparent); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Kolom cari di dalam wadah yang sudah menandai fokus (Spotlight, Launcher): tanpa cincin ganda. */
+input.no-ring:focus,
+input.no-ring:focus-visible {
+  outline: none;
 }
 
 /* Fokus keyboard terlihat, tanpa mengganggu klik mouse. */
