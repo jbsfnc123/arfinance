@@ -12,6 +12,7 @@ import { InvoiceLookup } from "../invoice-lookup";
 import { setRemarks, useRemarks } from "@/lib/modules/remarks";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type Hold = Tables<"tax_invoice_holds">;
 
@@ -83,7 +84,7 @@ export function HoldView() {
 
   return (
     <div className="w-full space-y-4">
-      <h1 className="text-2xl font-medium">Hold Faktur Pajak</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Hold Faktur Pajak</h1>
 
       <div className={`${card} space-y-3 p-5`}>
         <h2 className="text-sm font-medium">{editing ? "Ubah hold faktur" : "Tambah hold faktur"}</h2>
@@ -123,10 +124,10 @@ export function HoldView() {
                   <td className={`${td} text-right`}>
                     <button type="button" className="px-1 text-fg-2 hover:text-fg" title="Ubah"
                       onClick={() => { setEditing(h.id); setInv({ invoice_no: h.invoice_no, bp_value: h.bp_value, invoice_date: h.invoice_date ?? "", no_sj: h.no_sj ?? "" }); setKet(remarks.get(h.no_sj, h.invoice_no)); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                      <span className="material-symbols-outlined">edit</span>
+                      <Icon name="edit" size={20} />
                     </button>
                     <button type="button" className="px-1 text-fg-2 hover:text-danger" title="Hapus" onClick={() => remove(h)}>
-                      <span className="material-symbols-outlined">delete</span>
+                      <Icon name="delete" size={20} />
                     </button>
                   </td>
                 </tr>

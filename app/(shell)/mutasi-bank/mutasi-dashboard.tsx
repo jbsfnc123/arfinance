@@ -7,7 +7,9 @@ import { mutasiRaw } from "@/lib/modules/mutasi/compute";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel, rupiah } from "@/lib/format";
 import { buildMutasi, type MutasiRaw } from "@/lib/modules/mutasi/dashboard";
-import { Chart, CHART_GRID } from "@/components/chart";
+import { Chart } from "@/components/chart";
+import { chartTheme, seriesColors } from "@/lib/ui/palette";
+import { useResolvedTheme } from "@/lib/ui/prefs";
 import { card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
@@ -27,14 +29,16 @@ export function MutasiDashboard() {
   [month, today, mutasi.data, erp.data, targets.data]);
 
   const v = raw ? buildMutasi(raw, today) : null;
+  const theme = useResolvedTheme();
+  const sc = seriesColors(theme), ct = chartTheme();
   const days = v?.daily.map((d) => String(Number(d.date.slice(8)))) ?? [];
 
   const lineBase = (series: EChartsOption["series"]): EChartsOption => ({
     grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
     tooltip: { trigger: "axis", valueFormatter: (x) => (x == null ? "-" : `${Number(x).toLocaleString("id-ID")} jt`) },
-    legend: { top: 0, textStyle: { color: "#9aa0a6" } },
+    legend: { top: 0, textStyle: { color: ct.text } },
     xAxis: { type: "category", data: days, boundaryGap: false },
-    yAxis: { type: "value", name: "Juta", splitLine: { lineStyle: { color: CHART_GRID } } },
+    yAxis: { type: "value", name: "Juta", splitLine: { lineStyle: { color: ct.grid } } },
     series,
   });
 
@@ -63,9 +67,9 @@ export function MutasiDashboard() {
           <section className={`${card} p-4`}>
             <h2 className="text-sm font-medium">Kumulatif Total vs Allocated vs Allocated in Target (juta)</h2>
             <Chart height={300} option={lineBase([
-              { name: "Total uang masuk", type: "line", symbolSize: 4, data: v.daily.map((d) => juta(d.cumTotal)), itemStyle: { color: "#8ab4f8" } },
-              { name: "Allocated", type: "line", symbolSize: 4, data: v.daily.map((d) => juta(d.cumAlloc)), itemStyle: { color: "#81c995" } },
-              { name: "Allocated in Target", type: "line", symbolSize: 4, data: v.daily.map((d) => juta(d.cumAllocT)), itemStyle: { color: "#fdd663" } },
+              { name: "Total uang masuk", type: "line", symbolSize: 4, data: v.daily.map((d) => juta(d.cumTotal)), itemStyle: { color: sc.accent } },
+              { name: "Allocated", type: "line", symbolSize: 4, data: v.daily.map((d) => juta(d.cumAlloc)), itemStyle: { color: sc.success } },
+              { name: "Allocated in Target", type: "line", symbolSize: 4, data: v.daily.map((d) => juta(d.cumAllocT)), itemStyle: { color: sc.warning } },
             ])} />
           </section>
 

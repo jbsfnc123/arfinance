@@ -20,7 +20,7 @@ export function MutasiView() {
   const [version, setVersion] = useState(0);
   return (
     <div className="w-full">
-      <h1 className="text-2xl font-medium">Mutasi Bank vs Realisasi</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Mutasi Bank vs Realisasi</h1>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
         {tab === "dash" && <MutasiDashboard />}

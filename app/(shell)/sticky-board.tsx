@@ -7,19 +7,22 @@ import { fmtTimestamp } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnPrimary } from "@/components/ui";
 import { sortNotes } from "@/lib/modules/sticky";
+import { Icon } from "@/components/icons";
 
 type Note = Tables<"sticky_notes">;
 
 export const MAX_NOTES = 10;
 const SAVE_DELAY = 800;
 
-// Warna transparan di atas permukaan kartu: terbaca di tema gelap maupun terang.
+// Warna catatan = token tema (--note-*, app/globals.css), dicampur transparan di atas permukaan kartu sehingga
+// terbaca di tema gelap maupun terang. Kunci warna yang tersimpan di database tidak berubah.
+const note = (v: string) => ({ bg: `color-mix(in srgb, var(${v}) 16%, transparent)`, border: `color-mix(in srgb, var(${v}) 55%, transparent)`, dot: `var(${v})` });
 const COLORS: Record<string, { bg: string; border: string; dot: string }> = {
-  yellow: { bg: "rgba(253,214,99,.16)", border: "rgba(253,214,99,.55)", dot: "#fdd663" },
-  green:  { bg: "rgba(129,201,149,.16)", border: "rgba(129,201,149,.55)", dot: "#81c995" },
-  blue:   { bg: "rgba(138,180,248,.16)", border: "rgba(138,180,248,.55)", dot: "#8ab4f8" },
-  pink:   { bg: "rgba(242,139,130,.16)", border: "rgba(242,139,130,.55)", dot: "#f28b82" },
-  purple: { bg: "rgba(197,138,249,.16)", border: "rgba(197,138,249,.55)", dot: "#c58af9" },
+  yellow: note("--note-yellow"),
+  green: note("--note-green"),
+  blue: note("--note-blue"),
+  pink: note("--note-pink"),
+  purple: note("--note-purple"),
 };
 
 
@@ -136,7 +139,7 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
         <span className="text-xs text-fg-2">{notes.length}/{MAX_NOTES} sticky notes</span>
         <button type="button" className={`${btnPrimary} ml-auto`} onClick={add} disabled={full || adding}
           title={full ? `Maksimal ${MAX_NOTES} sticky notes — hapus salah satu untuk menambah` : "Tambah sticky note"}>
-          <span className="material-symbols-outlined">add</span>
+          <Icon name="add" size={20} />
           Note
         </button>
       </div>
@@ -144,7 +147,7 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
       {notes.length === 0 ? (
         <button type="button" onClick={add} disabled={adding}
           className="mt-10 flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed border-line py-16 text-sm text-fg-2 hover:bg-surface-2">
-          <span className="material-symbols-outlined !text-4xl">sticky_note_2</span>
+          <Icon name="sticky_note_2" size={36} />
           Belum ada sticky note. Klik untuk menambah.
         </button>
       ) : (
@@ -156,7 +159,7 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
                 style={{ background: c.bg, borderColor: c.border }}>
                 <button type="button" onClick={() => togglePin(n)} title={n.pinned_at ? "Lepas pin" : "Pin (selalu teratas)"}
                   className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-2 ${n.pinned_at ? "text-accent" : "text-fg-2"}`}>
-                  <span className="material-symbols-outlined !text-lg" style={{ fontVariationSettings: n.pinned_at ? "'FILL' 1" : undefined }}>push_pin</span>
+                  <Icon name="push_pin" filled={!!n.pinned_at} size={18} />
                 </button>
                 <textarea
                   value={n.body}
@@ -175,7 +178,7 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
                   ))}
                   <button type="button" onClick={() => remove(n)} title="Hapus note"
                     className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-danger">
-                    <span className="material-symbols-outlined !text-lg">delete</span>
+                    <Icon name="delete" size={18} />
                   </button>
                 </div>
                 <div className="mt-1 truncate text-[11px] text-fg-2" title={`Dibuat ${n.created_by_name ?? "-"} · ${fmtTimestamp(n.created_at)}`}>

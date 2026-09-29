@@ -10,6 +10,7 @@ import { downloadXlsx } from "@/lib/xlsx-client";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
+import { Icon } from "@/components/icons";
 
 const money = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 2 });
 const BADGE: Record<ReconStatus, string> = {
@@ -112,7 +113,7 @@ export function UploadPo({ casesVersion, onArchived }: { casesVersion: number; o
             key={category} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} className={`${inputCls} mt-1`} />
         </label>
         <button type="button" className={btnPrimary} disabled={!files.length || !!busy} onClick={process}>
-          <span className="material-symbols-outlined">compare_arrows</span>{busy ?? "Upload & Proses"}
+          <Icon name="compare_arrows" size={20} />{busy ?? "Upload & Proses"}
         </button>
       </div>
 
@@ -127,7 +128,7 @@ export function UploadPo({ casesVersion, onArchived }: { casesVersion: number; o
               </button>
             ))}
             <button type="button" className={`${btnGhost} ml-auto`} onClick={exportExcel}>
-              <span className="material-symbols-outlined">download</span>Export Excel
+              <Icon name="download" size={20} />Export Excel
             </button>
           </div>
           <div>

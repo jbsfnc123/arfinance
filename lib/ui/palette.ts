@@ -13,11 +13,16 @@ export const agingColors = (theme?: Theme) => pick(AGING_DARK, AGING_LIGHT, them
 /** Kompatibilitas: nilai gelap (dipakai halaman yang belum memakai agingColors()). */
 export const AGING_COLOR = AGING_DARK;
 
-const SERIES_DARK = { collected: "#2c9a6c", promise: "#79c6b8", bar: "#6690d6", success: "#7fc796", warning: "#e5c261", danger: "#e2877f", accent: "#8ab4f8" };
-const SERIES_LIGHT = { collected: "#1d8a5c", promise: "#3fa89a", bar: "#3f72d0", success: "#1f8a55", warning: "#c08b12", danger: "#cf4a42", accent: "#2563eb" };
+const SERIES_DARK = { collected: "#2c9a6c", promise: "#79c6b8", bar: "#5a8ee0", success: "#5fc98a", warning: "#e5c261", danger: "#ec8a80", accent: "#409cff" };
+const SERIES_LIGHT = { collected: "#1d8a5c", promise: "#3fa89a", bar: "#2f6fd6", success: "#23945a", warning: "#b38310", danger: "#c94a40", accent: "#0066d6" };
 export const seriesColors = (theme?: Theme) => pick(SERIES_DARK, SERIES_LIGHT, theme);
 /** Kompatibilitas: nilai gelap. */
 export const SERIES = SERIES_DARK;
+
+/** Kategori tanpa urutan makna (marketplace, toko, dsb.). Indeks 0 = oranye marketplace (Shopee). */
+const CAT_DARK: readonly string[] = ["#f0643f", "#6aa7f8", "#5fc98a", "#e5c261", "#b48cf2", "#5fcfe0", "#ec8a80", "#9fd3b2", "#a1a1a6", "#f5a764"];
+const CAT_LIGHT: readonly string[] = ["#e0492a", "#2f6fd6", "#23945a", "#b38310", "#7e4fd0", "#16889a", "#c94a40", "#4f9a70", "#6e6e73", "#d17420"];
+export const categoryColors = (theme?: Theme) => pick(CAT_DARK, CAT_LIGHT, theme);
 
 /** Warna pencapaian: ≥80 hijau, ≥50 kuning, sisanya merah. */
 export const pctColor = (pct: number, theme?: Theme) => {
@@ -27,8 +32,8 @@ export const pctColor = (pct: number, theme?: Theme) => {
 
 /** Warna teks/grid/sisa-donat chart dari token tema aktif (fallback gelap untuk render server). */
 export function chartTheme() {
-  if (typeof document === "undefined") return { text: "#9ea3ad", grid: "rgba(255,255,255,.07)", track: "#393b41", label: "#e8e9ec" };
+  if (typeof document === "undefined") return { text: "#aeaeb2", grid: "rgba(255,255,255,.07)", track: "#3a3a3c", label: "#f5f5f7", surface: "#242426" };
   const s = getComputedStyle(document.documentElement);
   const v = (name: string, fb: string) => s.getPropertyValue(name).trim() || fb;
-  return { text: v("--text-2", "#9ea3ad"), grid: v("--chart-grid", "rgba(255,255,255,.07)"), track: v("--chart-track", "#393b41"), label: v("--text", "#e8e9ec") };
+  return { text: v("--text-2", "#aeaeb2"), grid: v("--chart-grid", "rgba(255,255,255,.07)"), track: v("--chart-track", "#3a3a3c"), label: v("--text", "#f5f5f7"), surface: v("--surface", "#242426") };
 }

@@ -6,6 +6,7 @@ import type { Tables } from "@/lib/database.types";
 import { btnGhost, card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 const PAGE = 50;
 
@@ -43,11 +44,11 @@ export function MasterView() {
         <span>{total.toLocaleString("id-ID")} baris SO</span>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari Document No, No PO, BP, status…" className={`${inputCls} ml-auto !w-72`} />
         <button type="button" className={btnGhost} disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Halaman sebelumnya">
-          <span className="material-symbols-outlined">chevron_left</span>
+          <Icon name="chevron_left" size={20} />
         </button>
         <span className="text-xs text-fg-2">{page + 1} / {pages}</span>
         <button type="button" className={btnGhost} disabled={page + 1 >= pages} onClick={() => setPage(page + 1)} aria-label="Halaman berikutnya">
-          <span className="material-symbols-outlined">chevron_right</span>
+          <Icon name="chevron_right" size={20} />
         </button>
       </div>
       <div>

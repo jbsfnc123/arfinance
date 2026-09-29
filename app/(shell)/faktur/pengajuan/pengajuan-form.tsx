@@ -7,6 +7,7 @@ import { fmtDate } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
 import { InvoiceLookup } from "../invoice-lookup";
+import { Icon } from "@/components/icons";
 
 type Item = InvoiceFields & { tax_no: string; request: string; reason: string; keterangan: string };
 
@@ -67,10 +68,10 @@ export function PengajuanForm() {
         <textarea value={keterangan} onChange={(e) => setKeterangan(e.target.value)} rows={3} placeholder="Keterangan *" className={inputCls} />
         <div className="flex flex-wrap gap-2">
           <button type="button" className={btnGhost} onClick={addToQueue}>
-            <span className="material-symbols-outlined">playlist_add</span>Tambah invoice lain
+            <Icon name="playlist_add" size={20} />Tambah invoice lain
           </button>
           <button type="button" className={btnPrimary} onClick={submit} disabled={busy}>
-            <span className="material-symbols-outlined">send</span>
+            <Icon name="send" size={20} />
             {busy ? "Mengirim…" : `Kirim pengajuan${queue.length ? ` (${queue.length + (valid(current) ? 1 : 0)} invoice)` : ""}`}
           </button>
         </div>
@@ -85,7 +86,7 @@ export function PengajuanForm() {
                 <div className="text-xs text-fg-2">{q.bp_value} · Tax {q.tax_no} · {q.request} · {q.reason}</div>
               </div>
               <button type="button" className="text-fg-2 hover:text-danger" onClick={() => setQueue(queue.filter((_, j) => j !== i))} aria-label="Hapus dari daftar">
-                <span className="material-symbols-outlined">close</span>
+                <Icon name="close" size={20} />
               </button>
             </div>
           ))}

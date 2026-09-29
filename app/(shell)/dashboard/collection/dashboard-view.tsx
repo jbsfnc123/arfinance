@@ -16,6 +16,7 @@ import { useResolvedTheme } from "@/lib/ui/prefs";
 import { btnGhost, card, cardTitle, chip, inputCls, tableCls, td, th } from "@/components/ui";
 import { Skeleton, SkeletonChart } from "@/components/skeleton";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 // Dashboard Collection — halaman referensi desain Fase 39. Hanya lapisan tampilan yang berubah: semua angka tetap
 // dihitung di browser oleh spvSummaryOf / allocationSeries / reconcileCollected (tidak disentuh).
@@ -61,10 +62,10 @@ export function DashboardView() {
             ))}
           </select>
           <span className="flex items-center gap-1 px-1 text-xs text-fg-2">
-            <span className="material-symbols-outlined !text-[15px]">cloud_done</span>Diperbarui {fmtTimestamp(data?.lastTagihanUpdate)}
+            <Icon name="cloud_done" size={15} />Diperbarui {fmtTimestamp(data?.lastTagihanUpdate)}
           </span>
           <button type="button" className={`${btnGhost} !rounded-[10px]`} onClick={reload} disabled={loading}>
-            <span className={`material-symbols-outlined !text-base ${loading ? "animate-spin" : ""}`}>refresh</span>Refresh
+            <Icon name="refresh" size={16} className={`${loading ? "animate-spin" : ""}`} />Refresh
           </button>
         </div>
       </header>
@@ -177,7 +178,7 @@ function DonutCard({ title, d, kind, className }: { title: string; d: SpvSummary
     series: [{
       type: "pie", radius: ["66%", "84%"], center: ["50%", "50%"], silent: true, label: { show: false },
       animationDuration: 500, animationEasing: "cubicOut",
-      data: values.map((v) => ({ value: v.value, itemStyle: { color: v.color, borderRadius: 4, borderColor: theme === "dark" ? "#232428" : "#ffffff", borderWidth: 2 } })),
+      data: values.map((v) => ({ value: v.value, itemStyle: { color: v.color, borderRadius: 4, borderColor: t.surface, borderWidth: 2 } })),
     }],
   };
   const legend = kind === "pencapaian"
@@ -311,10 +312,10 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
       <div className="px-4 pt-4">
         <CardHead title="Rincian Pencapaian" sub="Target, terkumpul, sisa & janji bayar per kelompok"
           right={
-            <div className="flex gap-0.5 rounded-xl bg-surface-2/70 p-0.5">
+            <div className="flex gap-0.5 rounded-[10px] bg-fill-3 p-[3px]">
               {TABS.map((t) => (
                 <button key={t.key} type="button" onClick={() => setTab(t.key)} aria-pressed={tab === t.key}
-                  className={`rounded-lg px-3 py-1 text-xs ${tab === t.key ? "bg-surface text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
+                  className={`rounded-[8px] px-3 py-1 text-xs transition-colors ${tab === t.key ? "bg-surface font-medium text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
                   {t.label}
                 </button>
               ))}
@@ -421,7 +422,7 @@ function ReconCard({ r, className }: { r: ReturnType<typeof reconcileCollected>;
                 ],
                 rows: c.rows,
               })}>
-              <td className={td}><span className="flex items-center gap-2"><span className="material-symbols-outlined !text-base text-fg-2">chevron_right</span>{c.label}</span></td>
+              <td className={td}><span className="flex items-center gap-2"><Icon name="chevron_right" size={16} className="text-fg-2" />{c.label}</span></td>
               <td className={`${td} text-right tabular-nums`}>{c.count.toLocaleString("id-ID")}</td>
               <td className={`${td} text-right tabular-nums`}>{rupiah(c.selisih)}</td>
             </tr>

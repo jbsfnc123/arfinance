@@ -16,6 +16,7 @@ import { Dashboard } from "./dashboard";
 import { ErpView } from "./erp-view";
 import type { Json } from "@/lib/database.types";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 export type ReportMeta = { report_id: string; platform: "shopee" | "tiktok"; username: string; dari: string; ke: string };
 
@@ -199,18 +200,18 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
     <div className="mx-auto max-w-[1800px] space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
-          <h1 className="text-2xl font-medium">Dashboard Penghasilan Marketplace</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight">Dashboard Penghasilan Marketplace</h1>
           <p className="text-sm text-fg-2">
             {R ? `${PLATFORMS[R.meta.platform].label} · Toko: ${R.meta.username} · Periode ${R.meta.dari} s/d ${R.meta.ke}` : "Belum ada data — silakan upload file Excel."}
           </p>
         </div>
         <label className={`${btnPrimary} cursor-pointer`}>
-          <span className="material-symbols-outlined">upload_file</span>{busy ?? "Upload Excel"}
+          <Icon name="upload_file" size={20} />{busy ?? "Upload Excel"}
           <input type="file" accept=".xlsx,.xls" className="hidden" disabled={!!busy}
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onReportFile(f); }} />
         </label>
         <label className={`${btnGhost} cursor-pointer`}>
-          <span className="material-symbols-outlined">receipt_long</span>Import ERP
+          <Icon name="receipt_long" size={20} />Import ERP
           <input type="file" accept=".xlsx,.xls" className="hidden" disabled={!!busy}
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onErpFile(f); }} />
         </label>
@@ -223,10 +224,10 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
               <option key={m.report_id} value={m.report_id}>{PLATFORMS[m.platform]?.label ?? "Shopee"} · {m.username} · {m.dari} s/d {m.ke}</option>
             ))}
           </select>
-          <button type="button" className={`${btnGhost} text-danger`} onClick={remove}><span className="material-symbols-outlined">delete</span>Hapus periode</button>
+          <button type="button" className={`${btnGhost} text-danger`} onClick={remove}><Icon name="delete" size={20} />Hapus periode</button>
           <form onSubmit={search} className="ml-auto flex gap-2">
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari No. Pesanan…" className={`${inputCls} !w-60`} />
-            <button type="submit" className={btnGhost}><span className="material-symbols-outlined">search</span></button>
+            <button type="submit" className={btnGhost}><Icon name="search" size={20} /></button>
           </form>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampPanelX, dockSizes } from "./dock-math";
+import { clampPanelX, dockFitBase, dockSizes } from "./dock-math";
 
 describe("Dock: pembesaran", () => {
   const centers = [22, 70, 118, 166, 214]; // jarak antar-pusat 48px
@@ -26,5 +26,20 @@ describe("Dock: posisi submenu", () => {
   it("dijepit di tepi kiri & kanan", () => {
     expect(clampPanelX(40, 280, 1366)).toBe(12);
     expect(clampPanelX(1350, 280, 1366)).toBe(1366 - 280 - 12);
+  });
+});
+
+describe("Dock: muat di layar sempit", () => {
+  it("ukuran dasar tetap bila muat", () => {
+    expect(dockFitBase(11, 1440, 44)).toBe(44);
+    expect(dockFitBase(11, 768, 38)).toBe(38);
+  });
+  it("mengecil bila tidak muat & total lebar ≤ viewport", () => {
+    const b = dockFitBase(11, 500, 44);
+    expect(b).toBeLessThan(44);
+    expect(11 * b + 10 * 4 + 21 + 24).toBeLessThanOrEqual(500);
+  });
+  it("tidak lebih kecil dari batas minimum", () => {
+    expect(dockFitBase(11, 200, 44)).toBe(30);
   });
 });

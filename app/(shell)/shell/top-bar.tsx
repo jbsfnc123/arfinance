@@ -1,15 +1,22 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { findMenuByHref, type MenuGroup } from "@/lib/menu";
 import { Popover } from "@/components/popover";
-import { plateStyle, toolbarBtn } from "@/components/ui";
+import { toolbarBtn } from "@/components/ui";
 import { useTheme, type ThemeMode } from "@/lib/ui/prefs";
 import { ControlCenter } from "./control-center";
+import { AppIcon, Icon } from "@/components/icons";
+import { workspaceIcon } from "@/lib/ui/app-icons";
 
 // Menu bar tipis (kaca tipis + hairline): kiri = identitas workspace + grup › halaman aktif; kanan = cari, refresh,
 // jam, Control Center, profil. Logout memakai form /auth/signout existing (onSubmit dari ShellChrome membersihkan cache).
+
+// Petunjuk pintasan: ⌘K di Mac/iPad, Ctrl K di lainnya. Snapshot server = "Ctrl K" → tanpa hydration mismatch.
+const noSub = () => () => {};
+const isApple = () => /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
+export const useShortcutLabel = () => useSyncExternalStore(noSub, () => (isApple() ? "⌘K" : "Ctrl K"), () => "Ctrl K");
 
 export function TopBar({ title, icon, menu, portalHref, user, onSearch, onRefresh, refreshing, signOut }: {
   title: string; icon: string; menu: MenuGroup[]; portalHref?: string | null;
@@ -22,33 +29,32 @@ export function TopBar({ title, icon, menu, portalHref, user, onSearch, onRefres
   const group = menu.find((g) => g.children.some((c) => c.href === pathname));
   const pageTitle = pathname === "/" ? "Beranda" : found?.item.label ?? "";
   const [panel, setPanel] = useState<"cc" | "me" | null>(null);
+  const kbd = useShortcutLabel();
   return (
-    <header className="glass-soft sticky top-0 z-40 flex h-[var(--topbar-h)] shrink-0 items-center gap-2 border-x-0 border-t-0 px-3 text-[13px]">
-      <span className="flex h-6 w-6 items-center justify-center rounded-[7px]" style={plateStyle("dashboard")}>
-        <span className="material-symbols-outlined !text-[16px]">{icon}</span>
-      </span>
-      <span className="font-semibold">{title}</span>
+    <header className="glass-soft sticky top-0 z-(--z-topbar) flex h-[var(--topbar-h)] shrink-0 items-center gap-2 border-x-0 border-t-0 px-3 text-[13px]">
+      <AppIcon spec={{ ...workspaceIcon("ar"), glyph: icon }} size={22} />
+      <span className="font-semibold tracking-tight">{title}</span>
       {(group || pageTitle) && (
         <nav aria-label="Lokasi" className="ml-2 hidden min-w-0 items-center gap-1 text-fg-2 sm:flex">
-          {group && <><span className="truncate">{group.label}</span><span className="material-symbols-outlined !text-[15px] opacity-60">chevron_right</span></>}
+          {group && <><span className="truncate">{group.label}</span><Icon name="chevron_right" size={15} className="opacity-60" /></>}
           <span className="truncate font-medium text-fg">{pageTitle}</span>
         </nav>
       )}
 
       <div className="ml-auto flex items-center gap-0.5">
-        <button type="button" onClick={onSearch} aria-label="Cari (Ctrl+K)" title="Cari (Ctrl+K)"
-          className="mr-1 hidden h-7 w-44 items-center gap-1.5 rounded-lg border border-hairline bg-fg/5 px-2 text-xs text-fg-2 transition-colors hover:bg-fg/8 hover:text-fg sm:flex">
-          <span className="material-symbols-outlined !text-[16px]">search</span>Cari
-          <kbd className="ml-auto rounded-[5px] border border-hairline px-1 font-sans text-[10px]">Ctrl K</kbd>
+        <button type="button" onClick={onSearch} aria-label={`Cari (${kbd})`} title={`Cari (${kbd})`} aria-keyshortcuts="Meta+K Control+K"
+          className="mr-1 hidden h-7 w-44 items-center gap-1.5 rounded-[8px] border border-hairline bg-fg/5 px-2 text-xs text-fg-2 transition-colors hover:bg-fg/8 hover:text-fg sm:flex">
+          <Icon name="search" size={15} />Cari
+          <kbd className="ml-auto rounded-[5px] border border-hairline px-1 font-sans text-[10px]">{kbd}</kbd>
         </button>
-        <button type="button" onClick={onSearch} aria-label="Cari" className={`${toolbarBtn} sm:hidden`}><span className="material-symbols-outlined !text-[18px]">search</span></button>
+        <button type="button" onClick={onSearch} aria-label="Cari" className={`${toolbarBtn} sm:hidden`}><Icon name="search" size={18} /></button>
         <button type="button" onClick={onRefresh} disabled={refreshing} aria-label="Refresh data" title="Refresh data" className={toolbarBtn}>
-          <span className={`material-symbols-outlined !text-[18px] ${refreshing ? "animate-spin" : ""}`}>refresh</span>
+          <Icon name="refresh" size={18} className={refreshing ? "animate-spin" : ""} />
         </button>
         <span className="relative">
           <button type="button" data-popover-anchor aria-label="Pusat kontrol" title="Pusat kontrol" aria-expanded={panel === "cc"}
             onClick={() => setPanel(panel === "cc" ? null : "cc")} className={`${toolbarBtn} ${panel === "cc" ? "!bg-fg/12 !text-fg" : ""}`}>
-            <span className="material-symbols-outlined !text-[18px]">toggle_on</span>
+            <Icon name="toggle_on" size={18} />
           </button>
           <ControlCenter open={panel === "cc"} onClose={() => setPanel(null)} onRefresh={onRefresh} refreshing={refreshing} />
         </span>
@@ -92,7 +98,7 @@ function ProfileMenu({ open, onClose, user, portalHref, signOut }: {
   signOut: (e: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const [theme, setTheme] = useTheme();
-  const item = "flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-accent hover:text-on-accent";
+  const item = "flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-accent-fill hover:text-on-accent";
   return (
     <Popover open={open} onClose={onClose} label="Menu akun" className="right-0 top-full mt-1.5 w-64 p-1.5">
       <div className="flex items-center gap-3 px-2.5 py-2">
@@ -113,9 +119,9 @@ function ProfileMenu({ open, onClose, user, portalHref, signOut }: {
         </span>
       </div>
       <div className="mx-2 my-1 border-t border-hairline" />
-      {portalHref && <a href={portalHref} className={item}><span className="material-symbols-outlined !text-[17px]">apps</span>Ganti workspace</a>}
+      {portalHref && <a href={portalHref} className={item}><Icon name="apps" size={17} />Ganti workspace</a>}
       <form action="/auth/signout" method="post" onSubmit={signOut}>
-        <button type="submit" className={item}><span className="material-symbols-outlined !text-[17px]">logout</span>Keluar</button>
+        <button type="submit" className={item}><Icon name="logout" size={17} />Keluar</button>
       </form>
     </Popover>
   );

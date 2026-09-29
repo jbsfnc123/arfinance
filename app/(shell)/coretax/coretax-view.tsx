@@ -15,6 +15,7 @@ import { DeleteListModal } from "./delete-list-modal";
 import { HistoryView } from "./history-view";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 function download(content: string, name: string, mime: string) {
   const a = document.createElement("a");
@@ -142,24 +143,24 @@ export function CoretaxView() {
     <div className="w-full space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
-          <h1 className="text-2xl font-medium">XML CoreTax</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight">XML CoreTax</h1>
           <p className="text-sm text-fg-2">{loaded ? `${file} · NPWP penjual ${tin || "—"}` : "Muat file XML bulk faktur pajak dari CoreTax."}</p>
         </div>
         <label className={`${btnPrimary} cursor-pointer`}>
-          <span className="material-symbols-outlined">upload_file</span>Pilih XML
+          <Icon name="upload_file" size={20} />Pilih XML
           <input type="file" accept=".xml" className="hidden" onChange={(e) => { onFile(e.target.files?.[0] ?? null); e.target.value = ""; }} />
         </label>
         <button type="button" className={btnGhost} disabled={!loaded} onClick={() => setAutoOpen(true)}>
-          <span className="material-symbols-outlined">auto_delete</span>Hapus Otomatis
+          <Icon name="auto_delete" size={20} />Hapus Otomatis
         </button>
         <button type="button" className={btnGhost} disabled={!loaded} onClick={exportXml}>
-          <span className="material-symbols-outlined">code</span>Export XML
+          <Icon name="code" size={20} />Export XML
         </button>
         <button type="button" className={btnGhost} disabled={!loaded} onClick={exportExcel}>
-          <span className="material-symbols-outlined">table_view</span>Export Excel
+          <Icon name="table_view" size={20} />Export Excel
         </button>
         <button type="button" className={btnGhost} disabled={!loaded || saving} onClick={saveToDb}>
-          <span className="material-symbols-outlined">save</span>{saving ? "Menyimpan…" : "Simpan ke Database"}
+          <Icon name="save" size={20} />{saving ? "Menyimpan…" : "Simpan ke Database"}
         </button>
       </div>
 
@@ -230,7 +231,7 @@ export function CoretaxView() {
                           <td className={td} onClick={(e) => e.stopPropagation()}>
                             {!inv.deleted && (
                               <button type="button" className="text-fg-2 hover:text-danger" title="Hapus faktur" onClick={() => setPendingDel(inv)}>
-                                <span className="material-symbols-outlined">delete</span>
+                                <Icon name="delete" size={20} />
                               </button>
                             )}
                           </td>

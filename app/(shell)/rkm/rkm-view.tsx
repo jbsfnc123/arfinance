@@ -136,7 +136,7 @@ export function RkmView() {
   return (
     <div className="w-full">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-medium">RKM Tukar Faktur</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">RKM Tukar Faktur</h1>
         <span className="text-sm text-fg-2">Tax Name: {m.taxName}</span>
         {m.error && <span className="text-sm text-danger">Gagal memuat: {m.error.message}</span>}
       </div>

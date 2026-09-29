@@ -7,10 +7,11 @@ import {
 } from "@/lib/modules/marketplace/analysis";
 import { AUDIT_COLS, auditForTable, orderTableCols, RECON_COLS, withGroups } from "@/lib/modules/marketplace/tables";
 import type { TableSpec } from "@/components/data-table-modal";
-import { Chart, CHART_GRID } from "@/components/chart";
+import { Chart } from "@/components/chart";
+import { categoryColors, chartTheme, seriesColors } from "@/lib/ui/palette";
+import { useResolvedTheme } from "@/lib/ui/prefs";
 import { card, inputCls } from "@/components/ui";
 
-const PALETTE = ["#ee4d2d", "#8ab4f8", "#81c995", "#fdd663", "#c58af9", "#78d9ec", "#f28b82", "#a8dab5", "#9aa0a6", "#fcad70"];
 const fmtShort = (n: number) => {
   const a = Math.abs(n), s = n < 0 ? "-" : "";
   if (a >= 1e9) return s + (a / 1e9).toFixed(2).replace(".", ",") + " M";
@@ -201,6 +202,9 @@ export function Dashboard(props: { R: Report; audit: AuditRow[]; auditLimit: num
 function Charts({ R, show, drillOrders }: { R: Report; show: Show; drillOrders: (t: string, rows: Row[]) => void }) {
   const P = platformOf(R);
   const O = R.Orders;
+  // Warna mengikuti tema aktif (dibangun ulang saat tema berganti). Kategori[0] = oranye marketplace.
+  const theme = useResolvedTheme();
+  const PALETTE = categoryColors(theme) as string[], sc = seriesColors(theme), grid = chartTheme().grid;
   const groupTotal = (g: string) => {
     const s = P.groups[g].summary;
     return s !== undefined && R.summary[s] !== undefined ? R.summary[s] : O.reduce((a, r) => a + groupSum(R, r, g), 0);
@@ -246,7 +250,7 @@ function Charts({ R, show, drillOrders }: { R: Report; show: Show; drillOrders: 
   const f2 = key2 === "statusRefund" ? statusRefund : (r: Row) => String(r[key2] || "(kosong)");
   const dist2 = countBy(O, f2);
 
-  const axis = { axisLabel: { formatter: (v: number) => fmtShort(v) }, splitLine: { lineStyle: { color: CHART_GRID } } };
+  const axis = { axisLabel: { formatter: (v: number) => fmtShort(v) }, splitLine: { lineStyle: { color: grid } } };
 
   const charts: { title: string; option: EChartsOption; onClick: (i: number) => void; wide?: boolean }[] = [
     { title: "Alur Dana", wide: true, onClick: (i) => flow[i].go(), option: {
@@ -254,7 +258,7 @@ function Charts({ R, show, drillOrders }: { R: Report; show: Show; drillOrders: 
       tooltip: { trigger: "axis", valueFormatter: (v) => fmt(Number(v)) },
       xAxis: { type: "category", data: flow.map((f) => f.l), axisLabel: { interval: 0, fontSize: 10 } },
       yAxis: { type: "value", ...axis },
-      series: [{ type: "bar", data: flow.map((f) => ({ value: f.v, itemStyle: { color: f.total ? "#8ab4f8" : f.v < 0 ? "#f28b82" : "#81c995", borderRadius: 4 } })) }],
+      series: [{ type: "bar", data: flow.map((f) => ({ value: f.v, itemStyle: { color: f.total ? sc.accent : f.v < 0 ? sc.danger : sc.success, borderRadius: 4 } })) }],
     } },
     { title: "Rincian Pengeluaran", onClick: (i) => drillGroup(fee[i].g), option: {
       tooltip: { trigger: "item", formatter: (p) => { const x = p as { name: string; value: number }; return `${x.name}: ${fmt(x.value)} (${((x.value / feeTotal) * 100).toFixed(1)}%)`; } },
@@ -266,8 +270,8 @@ function Charts({ R, show, drillOrders }: { R: Report; show: Show; drillOrders: 
       xAxis: { type: "category", data: days.map((d) => d.slice(5)) },
       yAxis: [{ type: "value", ...axis }, { type: "value", splitLine: { show: false } }],
       series: [
-        { name: "Penghasilan", type: "line", smooth: true, areaStyle: { opacity: 0.15 }, data: days.map((d) => daysMap.get(d)!.v), color: "#ee4d2d" },
-        { name: "Jumlah pesanan", type: "line", smooth: true, yAxisIndex: 1, data: days.map((d) => daysMap.get(d)!.n), color: "#8ab4f8" },
+        { name: "Penghasilan", type: "line", smooth: true, areaStyle: { opacity: 0.15 }, data: days.map((d) => daysMap.get(d)!.v), color: PALETTE[0] },
+        { name: "Jumlah pesanan", type: "line", smooth: true, yAxisIndex: 1, data: days.map((d) => daysMap.get(d)!.n), color: sc.accent },
       ],
     } },
     { title: P.labels.dist1, onClick: (i) => drillOrders(`${P.labels.dist1}: ${pay[i][0]}`, O.filter((r) => String(r.metodeBayar || "(kosong)") === pay[i][0])), option: {
@@ -284,13 +288,13 @@ function Charts({ R, show, drillOrders }: { R: Report; show: Show; drillOrders: 
       grid: { left: 8, right: 16, top: 8, bottom: 8, containLabel: true }, tooltip: { trigger: "axis", valueFormatter: (v) => fmt(Number(v)) },
       xAxis: { type: "value", ...axis },
       yAxis: { type: "category", data: [...top].reverse().map((t) => t[0].replace(/^Penguin\s+/i, "").slice(0, 40)), axisLabel: { fontSize: 10 } },
-      series: [{ type: "bar", data: [...top].reverse().map((t) => t[1].v), itemStyle: { color: "#ee4d2d", borderRadius: 4 } }],
+      series: [{ type: "bar", data: [...top].reverse().map((t) => t[1].v), itemStyle: { color: PALETTE[0], borderRadius: 4 } }],
     } },
     { title: P.labels.dist2, onClick: (i) => drillOrders(`${P.labels.dist2}: ${dist2[i][0]}`, O.filter((r) => f2(r) === dist2[i][0])), option: {
       grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true }, tooltip: { trigger: "axis" },
       xAxis: { type: "category", data: dist2.map((d) => d[0]), axisLabel: { interval: 0, rotate: 30, fontSize: 10 } },
-      yAxis: { type: "value", splitLine: { lineStyle: { color: CHART_GRID } } },
-      series: [{ type: "bar", data: dist2.map((d) => d[1]), itemStyle: { color: "#8ab4f8", borderRadius: 4 } }],
+      yAxis: { type: "value", splitLine: { lineStyle: { color: grid } } },
+      series: [{ type: "bar", data: dist2.map((d) => d[1]), itemStyle: { color: sc.accent, borderRadius: 4 } }],
     } },
   ];
 

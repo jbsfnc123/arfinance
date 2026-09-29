@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { loginWithPin, type LoginState } from "./actions";
 import { PIN_LENGTH } from "@/lib/auth/constants";
+import { Icon } from "@/components/icons";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
@@ -66,7 +67,7 @@ export function PinForm({ initialError, name, noPin, next, onChangeName }: {
       {!usePin && (
         <>
           <button type="submit" disabled={pending}
-            className="h-12 w-full rounded-xl bg-accent text-base font-medium text-on-accent hover:bg-accent-strong disabled:opacity-60">
+            className="h-12 w-full rounded-xl bg-accent-fill text-base font-medium text-on-accent hover:bg-accent-fill-hover disabled:opacity-60">
             {pending ? "Memeriksa…" : "Masuk"}
           </button>
           <p className="mt-3 min-h-5 text-sm text-danger" role="alert">{pending ? "" : error}</p>
@@ -78,8 +79,8 @@ export function PinForm({ initialError, name, noPin, next, onChangeName }: {
         {Array.from({ length: PIN_LENGTH }, (_, i) => (
           <div
             key={i}
-            className={`flex h-12 w-10 items-center justify-center rounded-lg border text-2xl ${
-              i === pin.length && !pending ? "border-accent" : "border-line"
+            className={`flex h-12 w-10 items-center justify-center rounded-[10px] border text-2xl transition-colors ${
+              i === pin.length && !pending ? "border-accent-tint shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent-tint)_22%,transparent)]" : "border-line"
             } bg-surface-2`}
           >
             {i < pin.length ? "•" : ""}
@@ -102,9 +103,9 @@ export function PinForm({ initialError, name, noPin, next, onChangeName }: {
               onClick={() => press(key)}
               disabled={pending}
               aria-label={key === "⌫" ? "Hapus" : key}
-              className="h-14 rounded-xl bg-surface-2 text-xl font-medium hover:bg-line active:bg-pill disabled:opacity-50"
+              className="h-14 rounded-[14px] bg-fg/[0.07] text-xl font-medium tabular-nums transition-colors hover:bg-fg/[0.11] active:bg-fg/[0.18] disabled:opacity-50"
             >
-              {key === "⌫" ? <span className="material-symbols-outlined">backspace</span> : key}
+              {key === "⌫" ? <Icon name="backspace" size={20} /> : key}
             </button>
           ),
         )}

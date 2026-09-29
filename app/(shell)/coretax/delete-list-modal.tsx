@@ -7,6 +7,7 @@ import { fmtDate } from "@/lib/format";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 // Pengganti sheet "Hapus": daftar No Referensi disimpan di database dan bisa diubah di sini.
 export function DeleteListModal(props: {
@@ -70,7 +71,7 @@ export function DeleteListModal(props: {
 
       {result.found.length > 0 && (
         <div className="mt-4">
-          <div className="text-sm font-medium text-success">✓ Akan dihapus ({result.found.length} faktur)</div>
+          <div className="flex items-center gap-1.5 text-sm font-medium text-success"><Icon name="check_circle" size={16} />Akan dihapus ({result.found.length} faktur)</div>
           <ul className="mt-1 max-h-48 overflow-y-auto text-xs">
             {result.found.map((i) => (
               <li key={i.id} className="flex gap-3 border-b border-line py-1">
@@ -83,7 +84,7 @@ export function DeleteListModal(props: {
       )}
       {result.notFound.length > 0 && (
         <div className="mt-4">
-          <div className="text-sm font-medium text-warning">⚠ Tidak ditemukan ({result.notFound.length} referensi)</div>
+          <div className="flex items-center gap-1.5 text-sm font-medium text-warning"><Icon name="error" size={16} />Tidak ditemukan ({result.notFound.length} referensi)</div>
           <p className="mt-1 max-h-24 overflow-y-auto font-mono text-xs text-fg-2">{result.notFound.join(", ")}</p>
         </div>
       )}

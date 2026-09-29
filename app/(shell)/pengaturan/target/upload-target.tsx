@@ -10,6 +10,7 @@ import { monthLabel, rupiah } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnPrimary, card, inputCls } from "@/components/ui";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type Parsed = ReturnType<typeof parseTarget>;
 
@@ -107,7 +108,7 @@ export function UploadTarget() {
       )}
 
       <button type="button" className={btnPrimary} disabled={!parsed?.rows.length || busy} onClick={upload}>
-        <span className="material-symbols-outlined">upload</span>
+        <Icon name="upload" size={20} />
         {busy ? "Menyimpan…" : `Simpan target ${monthLabel(month)}`}
       </button>
     </div>

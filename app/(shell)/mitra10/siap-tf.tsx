@@ -2,6 +2,7 @@
 
 import { useViewState } from "@/lib/ui/view-state";
 import { btnGhost } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 // Tombol "Siap Tukar Faktur" di Kertas Kerja (Mitra10 & RKM): GR Done + Tukar Faktur Pending.
 // Menulis/membaca state filter LocalTable yang sama (`table:<stateKey>:f`), jadi tombol menyala selama filter itu aktif —
@@ -23,7 +24,7 @@ export function SiapTfButton({ stateKey }: { stateKey: string }) {
     <button type="button" onClick={toggle} aria-pressed={active}
       title="GR sudah Done, Tukar Faktur masih Pending"
       className={`${btnGhost} ${active ? "border-accent bg-accent/15 text-accent" : ""}`}>
-      <span className="material-symbols-outlined !text-base">task_alt</span>Siap Tukar Faktur
+      <Icon name="task_alt" size={16} />Siap Tukar Faktur
     </button>
   );
 }

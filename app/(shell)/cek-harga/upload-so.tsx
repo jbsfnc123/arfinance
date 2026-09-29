@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { parseSo } from "@/lib/modules/cekharga/cekharga";
 import { useToast } from "@/components/toast";
 import { btnPrimary, card, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 const CHUNK = 2000;
 
@@ -60,7 +61,7 @@ export function UploadSo() {
         <input value={status} onChange={(e) => setStatus(e.target.value)} placeholder="mis. Completed" className={`${inputCls} mt-1`} />
       </label>
       <button type="button" className={btnPrimary} disabled={!file || !!busy} onClick={upload}>
-        <span className="material-symbols-outlined">upload</span>{busy ?? "Upload & Proses ke MASTER"}
+        <Icon name="upload" size={20} />{busy ?? "Upload & Proses ke MASTER"}
       </button>
     </div>
   );

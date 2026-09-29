@@ -12,6 +12,7 @@ import { Modal } from "@/components/modal";
 import { TableBox } from "@/components/table-box";
 import { btnGhost, card, td, th } from "@/components/ui";
 import { useToast } from "@/components/toast";
+import { Icon } from "@/components/icons";
 
 export type PayHistTarget = { kind: "bp"; key: string; name: string } | { kind: "group"; name: string };
 
@@ -120,7 +121,7 @@ export function PaymentHistoryModal({ target, onClose }: { target: PayHistTarget
                   <tbody>
                     {row.months.map((m) => (
                       <tr key={m.month} className="border-t border-line/60">
-                        <td className={td}>{monthLabel(m.month)}{!covMap.get(m.month) && <span className="ml-2 text-xs text-danger" title="Data pembayaran bulan ini belum di-upload">✖ belum ada data</span>}</td>
+                        <td className={td}>{monthLabel(m.month)}{!covMap.get(m.month) && <span className="ml-2 text-xs text-danger" title="Data pembayaran bulan ini belum di-upload">belum ada data</span>}</td>
                         <td className={`${td} text-right tabular-nums`}>{m.count}</td>
                         <td className={`${td} text-right tabular-nums`}>{Math.round(m.paid).toLocaleString("id-ID")}</td>
                         <td className={`${td} text-right tabular-nums ${lamaCls(m.avgLama)}`}>{lamaTxt(m.avgLama)}</td>
@@ -166,7 +167,7 @@ export function PaymentHistoryModal({ target, onClose }: { target: PayHistTarget
               <div className="flex items-center gap-2 px-3 pt-3">
                 <h3 className="font-medium">Semua transaksi ({row.tx.length})</h3>
                 <button type="button" className={`${btnGhost} ml-auto`} onClick={exportTx}>
-                  <span className="material-symbols-outlined !text-base">download</span>Excel
+                  <Icon name="download" size={16} />Excel
                 </button>
               </div>
               <TableBox bare fill={false} maxHeight="max-h-[35vh]" className="mt-2">

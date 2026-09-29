@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { InvoiceFields } from "@/lib/modules/faktur/constants";
 import { btnGhost, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 // Cari No Invoice → isi otomatis BP_Value, Invoice Date, No SJ (port lookupInvoice).
 // Bila tidak ditemukan, semua kolom tetap bisa diisi manual.
@@ -35,7 +36,7 @@ export function InvoiceLookup({ value, onChange }: { value: InvoiceFields; onCha
           className={inputCls}
         />
         <button type="button" className={btnGhost} onClick={lookup} disabled={status === "loading"}>
-          <span className="material-symbols-outlined">search</span>Cari
+          <Icon name="search" size={20} />Cari
         </button>
       </div>
       {status === "found" && <p className="text-xs text-success">Data invoice ditemukan dan diisi otomatis.</p>}

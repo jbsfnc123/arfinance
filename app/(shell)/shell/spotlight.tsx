@@ -6,7 +6,9 @@ import type { MenuGroup } from "@/lib/menu";
 import { useLoadedDataset } from "@/lib/local/store";
 import { EMPTY_FILTERS } from "@/lib/modules/collection/view-model";
 import { writeViewState } from "@/lib/ui/view-state";
-import { plateStyle } from "@/components/ui";
+import { AppIcon, Icon } from "@/components/icons";
+import { useDialog } from "@/components/use-dialog";
+import { groupIcon, itemIcon } from "@/lib/ui/app-icons";
 
 // Pencarian global (Ctrl/Cmd+K), gaya command palette. Sumber: menu/submenu yang boleh diakses (selalu), dan — hanya
 // bila akun punya Daftar Tagihan dan dataset aging sudah dimuat di browser — Business Partner & No Invoice dari aging
@@ -24,13 +26,15 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
   const [idx, setIdx] = useState(0);
   const aging = useLoadedDataset("aging");
   const listRef = useRef<HTMLUListElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => { setQ(""); setIdx(0); onClose(); }, [onClose]);
+  useDialog(open, close, dialogRef);
   const type = (v: string) => { setQ(v); setIdx(0); };
 
   const menuHits = useMemo<Hit[]>(() => {
-    const items: Hit[] = showHome ? [{ key: "home", kind: "menu", title: "Beranda", sub: "Halaman utama", icon: "home", group: "home", go: () => router.push("/") }] : [];
+    const items: Hit[] = showHome ? [{ key: "home", kind: "menu", title: "Beranda", sub: "Halaman utama", icon: itemIcon("home", "home").glyph, group: "home", go: () => router.push("/") }] : [];
     for (const g of menu) for (const c of g.children) {
-      items.push({ key: c.id, kind: "menu", title: c.label, sub: g.label, meta: c.external ? "Tautan luar" : undefined, icon: g.icon, group: g.id,
+      items.push({ key: c.id, kind: "menu", title: c.label, sub: g.label, meta: c.external ? "Tautan luar" : undefined, icon: itemIcon(g.id, c.id).glyph, group: g.id,
         go: () => { if (c.external) window.open(c.href, "_blank", "noreferrer"); else router.push(c.href); } });
     }
     return items;
@@ -72,16 +76,15 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
     if (e.key === "ArrowDown") { e.preventDefault(); setIdx((i) => Math.min(hits.length - 1, i + 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setIdx((i) => Math.max(0, i - 1)); }
     else if (e.key === "Enter") { e.preventDefault(); if (hits[idx]) pick(hits[idx]); }
-    else if (e.key === "Escape") close();
   };
   const dataNote = canTagihan ? (aging.data ? "Ketik ≥3 huruf untuk BP / No Invoice" : "Buka Daftar Tagihan dulu untuk mencari BP / invoice") : null;
   return (
-    <div className="fade-in fixed inset-0 z-50 flex items-start justify-center bg-black/25 p-4 pt-[16vh]" onMouseDown={close}>
-      <div role="dialog" aria-modal="true" aria-label="Pencarian" onMouseDown={(e) => e.stopPropagation()} onKeyDown={onKey}
+    <div className="fade-in fixed inset-0 z-(--z-overlay) flex items-start justify-center bg-black/25 p-4 pt-[16vh]" onMouseDown={close}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Pencarian" onMouseDown={(e) => e.stopPropagation()} onKeyDown={onKey}
         className="glass-strong pop-in w-full max-w-[640px] overflow-hidden rounded-[20px]">
         <div className="flex items-center gap-3 px-4 py-3">
-          <span className="material-symbols-outlined !text-[24px] text-fg-2">search</span>
-          <input autoFocus value={q} onChange={(e) => type(e.target.value)} placeholder="Cari menu, Business Partner, No Invoice…" aria-label="Cari"
+          <Icon name="search" size={24} className="text-fg-2" />
+          <input data-autofocus value={q} onChange={(e) => type(e.target.value)} placeholder="Cari menu, Business Partner, No Invoice…" aria-label="Cari"
             className="w-full bg-transparent text-[20px] font-light tracking-tight outline-none placeholder:text-fg-2/70 no-ring" role="combobox" aria-expanded aria-controls="spotlight-list" aria-activedescendant={hits[idx] ? `spot-${idx}` : undefined} />
         </div>
         {hits.length > 0 || q ? <div className="border-t border-hairline" /> : null}
@@ -92,10 +95,8 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
                 <div className="px-2.5 pb-1 pt-2 text-[11px] font-semibold text-fg-2">{q ? KIND_LABEL[h.kind] : "Menu yang sering dibuka"}</div>
               )}
               <div id={`spot-${i}`} data-i={i} role="option" aria-selected={i === idx} onMouseMove={() => idx !== i && setIdx(i)} onClick={() => pick(h)}
-                className={`flex cursor-pointer items-center gap-3 rounded-[10px] px-2.5 py-1.5 ${i === idx ? "bg-accent text-on-accent" : ""}`}>
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]" style={plateStyle(h.group)}>
-                  <span className="material-symbols-outlined !text-[17px]">{h.icon}</span>
-                </span>
+                className={`flex cursor-pointer items-center gap-3 rounded-[10px] px-2.5 py-1.5 ${i === idx ? "bg-accent-fill text-on-accent" : ""}`}>
+                <AppIcon spec={{ ...groupIcon(h.group), glyph: h.icon }} size={28} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium">{h.title}</span>
                   <span className={`block truncate text-[11px] ${i === idx ? "opacity-80" : "text-fg-2"}`}>{h.sub}</span>

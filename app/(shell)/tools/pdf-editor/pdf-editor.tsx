@@ -14,6 +14,7 @@ import { TabMerge, type MergeState } from "./tab-merge";
 import { TabImg2Pdf, type ImgState } from "./tab-img2pdf";
 import { TabCompress } from "./tab-compress";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 const TABS = [
   { key: "move", label: "1 · Pindah Halaman Terakhir ke Depan", icon: "low_priority" },
@@ -107,13 +108,13 @@ function Editor() {
   return (
     <div className="mx-auto max-w-[1600px]">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-medium">PDF Editor</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">PDF Editor</h1>
         <span className="flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">
-          <span className="material-symbols-outlined !text-sm">lock</span>Diproses di browser — file tidak dikirim ke server
+          <Icon name="lock" size={14} />Diproses di browser — file tidak dikirim ke server
         </span>
         <button type="button" onClick={() => setHelp(true)} title="Bantuan & pintasan keyboard"
           className="ml-auto flex h-9 w-9 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-fg">
-          <span className="material-symbols-outlined">help</span>
+          <Icon name="help" size={20} />
         </button>
       </div>
 

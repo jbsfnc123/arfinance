@@ -4,6 +4,7 @@ import { downloadBytes, downloadZip } from "@/lib/modules/pdf/browser";
 import { formatBytes, uniqueNames } from "@/lib/modules/pdf/ops";
 import { btnGhost, card } from "@/components/ui";
 import { Dropzone, type Docs } from "./shared";
+import { Icon } from "@/components/icons";
 
 // Panel Dokumen: upload sekali, semua alat memakai dokumen yang sama. Hasil alat bisa "Terapkan
 // ke dokumen" lalu dilanjutkan ke alat berikutnya. Semua hanya di memori browser.
@@ -12,7 +13,7 @@ export function DocPanel({ d, onFiles }: { d: Docs; onFiles: (files: File[]) => 
   return (
     <section className={`${card} space-y-3 p-4`}>
       <div className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-accent">folder_open</span>
+        <Icon name="folder_open" size={20} className="text-accent" />
         <h2 className="flex-1 font-medium">Dokumen</h2>
         <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-fg-2">{d.docs.length} dokumen</span>
       </div>
@@ -27,16 +28,16 @@ export function DocPanel({ d, onFiles }: { d: Docs; onFiles: (files: File[]) => 
               <div role="button" tabIndex={0} onClick={() => d.setActiveId(x.id)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); d.setActiveId(x.id); } }}
                 className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${x.id === d.activeId ? "bg-pill text-pill-fg" : "hover:bg-surface-2"}`}>
-                <span className="material-symbols-outlined !text-lg">picture_as_pdf</span>
+                <Icon name="picture_as_pdf" size={18} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate" title={x.name}>{x.name}</span>
                   <span className="text-xs opacity-75">{x.pageCount} hal. · {formatBytes(x.size)}</span>
                 </span>
                 <button type="button" title="Unduh" onClick={(e) => { e.stopPropagation(); downloadBytes(x.bytes, x.name); }} className="rounded p-0.5 hover:bg-surface">
-                  <span className="material-symbols-outlined !text-lg">download</span>
+                  <Icon name="download" size={18} />
                 </button>
                 <button type="button" title="Hapus dari daftar" onClick={(e) => { e.stopPropagation(); d.remove(x.id); }} className="rounded p-0.5 hover:bg-surface hover:text-danger">
-                  <span className="material-symbols-outlined !text-lg">close</span>
+                  <Icon name="close" size={18} />
                 </button>
               </div>
             </li>
@@ -53,18 +54,18 @@ export function DocPanel({ d, onFiles }: { d: Docs; onFiles: (files: File[]) => 
 
       <div className="flex flex-wrap gap-2">
         <button type="button" className={btnGhost} disabled={!a?.prev} onClick={() => a && d.undo(a)}>
-          <span className="material-symbols-outlined !text-base">undo</span>Batalkan langkah terakhir
+          <Icon name="undo" size={16} />Batalkan langkah terakhir
         </button>
         <button type="button" className={btnGhost} disabled={!d.docs.length}
           onClick={() => {
             const names = uniqueNames(d.docs.map((x) => x.name));
             void downloadZip(d.docs.map((x, i) => ({ name: names[i], bytes: x.bytes })), "dokumen-pdf.zip");
           }}>
-          <span className="material-symbols-outlined !text-base">folder_zip</span>Unduh semua (ZIP)
+          <Icon name="folder_zip" size={16} />Unduh semua (ZIP)
         </button>
         <button type="button" className={`${btnGhost} hover:text-danger`} disabled={!d.docs.length}
           onClick={() => { if (window.confirm("Kosongkan semua dokumen dari daftar?")) d.clear(); }}>
-          <span className="material-symbols-outlined !text-base">delete_sweep</span>Kosongkan
+          <Icon name="delete_sweep" size={16} />Kosongkan
         </button>
       </div>
     </section>

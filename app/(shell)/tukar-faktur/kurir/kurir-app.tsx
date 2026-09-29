@@ -8,6 +8,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { fmtDate, rupiah } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 type Inv = { invoice_no: string; business_partner: string; payment_group: string; invoice_date: string | null; open_amt: number };
 
@@ -127,14 +128,14 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
 
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="text-xl font-medium">📦 Tukar Faktur Kurir</h1>
+      <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight"><Icon name="local_shipping" size={22} className="text-accent" />Tukar Faktur Kurir</h1>
       <p className="text-sm text-fg-2">{kurir ? `Kurir: ${kurir}` : "Pilih nama kurir"}{date && ` · Jadwal ${fmtDate(date)}`}</p>
 
       <ol className="mt-4 flex items-center gap-2">
         {steps.map((s, i) => (
           <li key={s} className="flex flex-1 items-center gap-2">
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-              step === i + 1 ? "bg-accent text-on-accent" : step > i + 1 ? "bg-success text-bg" : "bg-surface-2 text-fg-2"}`}>
+              step === i + 1 ? "bg-accent-fill text-on-accent" : step > i + 1 ? "bg-success text-bg" : "bg-surface-2 text-fg-2"}`}>
               {i + 1}
             </span>
             <span className="hidden text-xs text-fg-2 sm:inline">{s}</span>
@@ -179,7 +180,7 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
             {pgs.length > 1 && (
               <div>
                 <div className="mb-2 text-sm text-fg-2">Payment Group <span className="text-xs">(opsional, untuk menyaring toko)</span></div>
-                {pgs.length > 8 && <input value={qPg} onChange={(e) => setQPg(e.target.value)} placeholder="🔍 Cari Payment Group…" className={`${inputCls} mb-2`} />}
+                {pgs.length > 8 && <input value={qPg} onChange={(e) => setQPg(e.target.value)} placeholder="Cari Payment Group…" aria-label="Cari Payment Group" className={`${inputCls} mb-2`} />}
                 <div className="flex flex-wrap gap-2">
                   {pgs.filter((p) => p.toLowerCase().includes(qPg.toLowerCase())).map((p) => (
                     <button key={p} type="button" aria-pressed={pgFilter.has(p)} onClick={() => toggle(pgFilter, p, setPgFilter)}
@@ -192,7 +193,7 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
             )}
             <div>
               <div className="mb-2 text-sm text-fg-2">Pilih toko yang dikunjungi</div>
-              {tokoList.length > 8 && <input value={qToko} onChange={(e) => setQToko(e.target.value)} placeholder="🔍 Cari nama toko…" className={`${inputCls} mb-2`} />}
+              {tokoList.length > 8 && <input value={qToko} onChange={(e) => setQToko(e.target.value)} placeholder="Cari nama toko…" aria-label="Cari nama toko" className={`${inputCls} mb-2`} />}
               <div className="divide-y divide-line rounded-xl border border-line">
                 {tokoList.filter(([t]) => t.toLowerCase().includes(qToko.toLowerCase())).map(([t, n]) => (
                   <label key={t} className="flex min-h-12 items-center gap-3 px-3 py-2 text-sm active:bg-surface-2">

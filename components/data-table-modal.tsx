@@ -7,6 +7,7 @@ import { btnGhost, inputCls } from "@/components/ui";
 import { compareCells } from "@/lib/local/table";
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { useToast } from "@/components/toast";
+import { Icon } from "@/components/icons";
 
 export type Col = { k: string; l: string; n?: boolean; link?: boolean; erpLink?: boolean };
 export type TableRow = Record<string, unknown> & { sec?: boolean };
@@ -78,7 +79,7 @@ export function DataTableModal(props: {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari…" aria-label="Cari" className={`${inputCls} !w-64`} />
         <span className="ml-auto text-xs text-fg-2">{rows.length.toLocaleString("id-ID")} baris</span>
-        <button type="button" className={btnGhost} onClick={exportXlsx}><span className="material-symbols-outlined !text-base">download</span>Excel</button>
+        <button type="button" className={btnGhost} onClick={exportXlsx}><Icon name="download" size={16} />Excel</button>
       </div>
       <div ref={scrollRef} className="max-h-[65vh] overflow-auto rounded-xl border border-hairline bg-surface">
         <table className="w-full border-separate border-spacing-0 text-xs">
@@ -86,8 +87,12 @@ export function DataTableModal(props: {
             <tr>
               {spec.cols.map((c) => (
                 <th key={c.k} onClick={() => setSort({ k: c.k, dir: sort?.k === c.k ? (-sort.dir as 1 | -1) : 1 })}
-                  className={`cursor-pointer whitespace-nowrap border-b border-line px-2 py-2 font-medium text-fg-2 ${c.n ? "text-right" : "text-left"}`}>
-                  {c.l}{sort?.k === c.k ? (sort.dir > 0 ? " ▲" : " ▼") : ""}
+                  aria-sort={sort?.k === c.k ? (sort.dir > 0 ? "ascending" : "descending") : undefined}
+                  className={`cursor-pointer whitespace-nowrap border-b border-hairline px-2 py-2 font-medium text-fg-2 hover:text-fg ${c.n ? "text-right" : "text-left"}`}>
+                  <button type="button" aria-label={`Urutkan menurut ${c.l}`} className="inline-flex items-center gap-0.5 rounded-[4px] font-medium"
+                    onClick={(e) => { e.stopPropagation(); setSort({ k: c.k, dir: sort?.k === c.k ? (-sort.dir as 1 | -1) : 1 }); }}>
+                    {c.l}{sort?.k === c.k && <Icon name={sort.dir > 0 ? "expand_less" : "expand_more"} size={12} strokeWidth={2.25} className="text-accent" />}
+                  </button>
                 </th>
               ))}
             </tr>

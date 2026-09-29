@@ -13,6 +13,7 @@ import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 const EDIT_CATEGORIES = ["Case", "Administratif", "Reminder", "No Respon"];
 
@@ -110,7 +111,7 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
                       className={`cursor-pointer border-t border-line hover:bg-surface-2 ${late ? "bg-danger/5 shadow-[inset_3px_0_0_var(--danger)]" : ""}`}
                     >
                       <td className={`${td} max-w-40 truncate`} title={g.collections.join(", ")}>
-                        <span className="material-symbols-outlined !text-base align-middle">{open === g.key ? "expand_less" : "expand_more"}</span>{" "}
+                        <Icon name={open === g.key ? "expand_less" : "expand_more"} size={16} className="align-middle" />{" "}
                         {g.collections.join(", ")}
                       </td>
                       <td className={`${td} max-w-96 truncate`} title={g.bp}>
@@ -123,24 +124,24 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
                       <td className={`${td} max-w-96 whitespace-normal`}>
                         {g.isi || <span className="text-fg-2">—</span>}
                         {g.done && g.closedAt && (
-                          <div className="text-[11px] text-success">✓ {g.closedBy ?? ""} · {fmtTimestamp(g.closedAt)}</div>
+                          <div className="flex items-center gap-1 text-[11px] text-success"><Icon name="check" size={12} strokeWidth={2.25} />{g.closedBy ?? ""} · {fmtTimestamp(g.closedAt)}</div>
                         )}
                       </td>
                       <td className={`${td} text-right`} onClick={(e) => e.stopPropagation()}>
                         <button type="button" title={g.done ? "Batalkan selesai" : "Tandai selesai"} onClick={() => toggleDone(g)} className="px-1 text-fg-2 hover:text-success">
-                          <span className="material-symbols-outlined">{g.done ? "undo" : "check_circle"}</span>
+                          <Icon name={g.done ? "undo" : "check_circle"} size={20} />
                         </button>
                         <button type="button" title="Ubah" onClick={() => { setEditing(g); setDraft({ kategori: g.kategori, isi: g.isi }); }} className="px-1 text-fg-2 hover:text-fg">
-                          <span className="material-symbols-outlined">edit</span>
+                          <Icon name="edit" size={20} />
                         </button>
                         <button type="button" title="Hapus" onClick={() => remove(g)} className="px-1 text-fg-2 hover:text-danger">
-                          <span className="material-symbols-outlined">delete</span>
+                          <Icon name="delete" size={20} />
                         </button>
                       </td>
                     </tr>
                     {open === g.key && g.items.map((n) => (
                       <tr key={n.invoice_no} className={`text-xs text-fg-2 ${n.invoice_date && n.invoice_date.slice(0, 7) < todayJakarta().slice(0, 7) ? "bg-danger/5" : ""}`}>
-                        <td className={`${td} pl-10`} colSpan={2}>🧾 {n.invoice_no} · 📅 {fmtDate(n.invoice_date)}</td>
+                        <td className={`${td} pl-10`} colSpan={2}><span className="inline-flex items-center gap-1.5"><Icon name="receipt_long" size={14} className="text-fg-2" />{n.invoice_no}<span className="text-fg-2">·</span><Icon name="event" size={14} className="text-fg-2" />{fmtDate(n.invoice_date)}</span></td>
                         <td className={`${td} text-right`}>{rupiah(n.nominal)}</td>
                         <td className={td} colSpan={2}>{n.no_po || n.no_sj ? `PO: ${n.no_po ?? "—"} · SJ: ${n.no_sj ?? "—"}` : "—"}</td>
                       </tr>

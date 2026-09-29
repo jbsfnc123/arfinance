@@ -6,9 +6,12 @@ import { rupiah } from "@/lib/format";
 import { cellText, COLUMN_DEFS, type CollectionRow, type CollectionSort, type ColumnKey } from "@/lib/modules/collection/view-model";
 import { useFillHeight } from "@/lib/ui/fill-height";
 import { useScrollMemory } from "@/lib/ui/view-state";
+import { useDensity } from "@/lib/ui/prefs";
+import { rowHeight } from "@/lib/ui/density";
 import { btnGhost, card } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
-const ROW_HEIGHT = 40;
+const ROW_HEIGHT = 40; // Nyaman; Padat → rowHeight() (lib/ui/density.ts)
 
 const WIDTH: Partial<Record<ColumnKey, number>> = {
   business_partner: 260, invoice_no: 170, payment_group: 200, marketing: 170,
@@ -43,13 +46,18 @@ export function RowsTable(props: {
   useFillHeight(scrollRef, { reserve: 48, min: 280 });
   useScrollMemory(scrollRef, props.scrollKey ?? "collection:scroll", !props.loading && rows.length > 0); // 48 = baris status di bawah tabel + tepi kartu
 
+  const [density] = useDensity();
+  const rowH = rowHeight(density, ROW_HEIGHT);
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowH,
     overscan: 15,
     getItemKey: (i) => rows[i].invoice_no,
   });
+
+  // Kepadatan berubah → ukur ulang agar posisi virtual tidak meleset.
+  useEffect(() => { virtualizer.measure(); }, [rowH, virtualizer]);
 
   useEffect(() => {
     const end = () => { drag.current = null; };
@@ -102,14 +110,19 @@ export function RowsTable(props: {
                     title={props.onSort ? "Klik untuk mengurutkan" : undefined}
                     className={`group relative whitespace-nowrap border-b border-hairline py-2 text-xs font-medium text-fg-2 ${props.onHide ? "pl-3 pr-7" : "px-3"} ${props.onSort ? "cursor-pointer select-none hover:text-fg" : ""} ${c.money ? "text-right" : "text-left"}`}
                   >
-                    {c.label}
-                    {active === 1 && " ▲"}
-                    {active === -1 && " ▼"}
+                    {props.onSort ? (
+                      // Tombol agar urutkan bisa lewat keyboard (Enter/Spasi); klik area header tetap berfungsi.
+                      <button type="button" onClick={(e) => { e.stopPropagation(); props.onSort!(c.key); }} aria-label={`Urutkan menurut ${c.label}`}
+                        className="inline-flex items-center gap-0.5 rounded-[4px] font-medium">
+                        {c.label}
+                        {active !== 0 && <Icon name={active === 1 ? "expand_less" : "expand_more"} size={13} strokeWidth={2.25} className="text-accent" />}
+                      </button>
+                    ) : c.label}
                     {props.onHide && cols.length > 1 && (
                       <button type="button" title={`Sembunyikan kolom ${c.label}`} aria-label={`Sembunyikan kolom ${c.label}`}
                         onClick={(e) => { e.stopPropagation(); props.onHide!(c.key); }}
                         className="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100">
-                        <span className="material-symbols-outlined !text-sm">visibility_off</span>
+                        <Icon name="visibility_off" size={14} />
                       </button>
                     )}
                   </th>
@@ -127,8 +140,8 @@ export function RowsTable(props: {
                   key={v.key}
                   data-index={v.index}
                   ref={virtualizer.measureElement}
-                  style={{ height: ROW_HEIGHT }}
-                  className={`select-none ${isSel ? "bg-accent/12" : "hover:bg-fg/[0.04]"}`}
+                  style={{ height: rowH }}
+                  className={`select-none ${isSel ? "bg-selection hover:bg-selection-hover" : "hover:bg-fg/[0.04]"}`}
                   onMouseDown={(e) => {
                     if ((e.target as HTMLElement).closest("a,button")) return;
                     drag.current = !isSel;
@@ -139,7 +152,8 @@ export function RowsTable(props: {
                   }}
                 >
                   <td className="border-b border-hairline px-3">
-                    <input type="checkbox" checked={isSel} readOnly aria-label={`Pilih ${r.invoice_no}`} className="pointer-events-none" />
+                    {/* Mouse: pilih lewat baris (termasuk seret); keyboard: Tab ke kotak centang lalu Spasi. */}
+                    <input type="checkbox" checked={isSel} onChange={() => setChecked(r.invoice_no, !isSel)} aria-label={`Pilih ${r.invoice_no}`} className="pointer-events-none" />
                   </td>
                   {cols.map((c) => (
                     <td
@@ -168,7 +182,7 @@ export function RowsTable(props: {
         Menampilkan {rows.length.toLocaleString("id-ID")} baris (sesuai filter)
         <button type="button" className={`${btnGhost} !py-0.5 ${wrap ? "border-accent text-accent" : ""}`} aria-pressed={wrap}
           title="Tampilkan teks panjang secara utuh" onClick={() => setWrap(!wrap)}>
-          <span className="material-symbols-outlined !text-base">wrap_text</span>Teks penuh
+          <Icon name="wrap_text" size={16} />Teks penuh
         </button>
         {selection.length > 0 && (
           <button type="button" className="text-danger hover:underline" onClick={() => setSelection(() => [])}>

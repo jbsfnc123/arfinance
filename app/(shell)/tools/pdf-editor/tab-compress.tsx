@@ -6,6 +6,7 @@ import { COMPRESS_PRESETS, compressLossless, formatBytes, withSuffix, type Quali
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { Actions, Hint, previewOf, useBusy, type Doc, type Docs } from "./shared";
+import { Icon } from "@/components/icons";
 
 // 5. Kompres PDF: "Aman" (teks utuh, simpan ulang ringkas) atau "Kuat" (halaman jadi gambar JPEG).
 type Method = "lossless" | "raster";
@@ -63,8 +64,8 @@ export function TabCompress({ d, setSave }: { d: Docs; setSave: (fn: (() => void
           : <span className="text-warning">Kuat: setiap halaman diubah menjadi gambar — ukuran jauh lebih kecil, tetapi teks tidak bisa dipilih/dicari lagi.</span>}
       </p>
       <Actions>
-        <button type="button" className={btnPrimary} onClick={apply}><span className="material-symbols-outlined !text-base">check</span>Terapkan ke dokumen</button>
-        <button type="button" className={btnGhost} onClick={download}><span className="material-symbols-outlined !text-base">download</span>Unduh hasil kompresi</button>
+        <button type="button" className={btnPrimary} onClick={apply}><Icon name="check" size={16} />Terapkan ke dokumen</button>
+        <button type="button" className={btnGhost} onClick={download}><Icon name="download" size={16} />Unduh hasil kompresi</button>
       </Actions>
       {result && result.docId === a.id && (
         <div className="rounded-lg bg-success/10 p-3 text-sm text-success">

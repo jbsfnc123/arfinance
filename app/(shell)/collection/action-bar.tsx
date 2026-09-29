@@ -14,6 +14,7 @@ import { exportExcel, printRows } from "./export";
 import {
   ContactsModal, FotoModal, NoteModal, readDeviceTemplate, ResiModal, TukarModal, WaEditModal, type Contact,
 } from "./modals";
+import { Icon } from "@/components/icons";
 
 type ModalName = "note" | "tukar" | "contacts" | "wa" | "foto" | "resi" | null;
 
@@ -169,19 +170,19 @@ export function ActionBar(props: {
               <b>{selected.length}</b> dipilih · <b>{rupiah(total)}</b>
             </div>
             <button type="button" className={btnGhost} disabled={!foto} onClick={() => setModal("foto")}>
-              <span className="material-symbols-outlined">photo</span>Foto
+              <Icon name="photo" size={20} />Foto
             </button>
             <button type="button" className={btnGhost} disabled={!ekspedisi} onClick={() => setModal("resi")}>
-              <span className="material-symbols-outlined">local_shipping</span>Resi
+              <Icon name="local_shipping" size={20} />Resi
             </button>
             <button type="button" className={btnGhost} onClick={() => setModal("note")}>
-              <span className="material-symbols-outlined">edit_note</span>Catatan
+              <Icon name="edit_note" size={20} />Catatan
             </button>
             <button type="button" className={btnGhost} onClick={editKeterangan} title="Keterangan invoice (sama dengan Mitra10 & Hold Faktur Pajak)">
-              <span className="material-symbols-outlined">sticky_note_2</span>Keterangan
+              <Icon name="sticky_note_2" size={20} />Keterangan
             </button>
             <button type="button" className={btnGhost} onClick={() => setModal("tukar")}>
-              <span className="material-symbols-outlined">swap_horiz</span>Tukar Faktur
+              <Icon name="swap_horiz" size={20} />Tukar Faktur
             </button>
             {props.history !== undefined && (() => {
               const h = props.history;
@@ -195,7 +196,7 @@ export function ActionBar(props: {
                       if (h.group) setHistMenu(!histMenu);
                       else props.onHistory?.({ kind: "bp", key: h.bpKey, name: h.bp });
                     }}>
-                    <span className="material-symbols-outlined">history</span>Lihat History Pembayaran
+                    <Icon name="history" size={20} />Lihat History Pembayaran
                   </button>
                   {ok && h.group && histMenu && (
                     <div className="absolute bottom-full mb-1 w-72 rounded-xl border border-line bg-surface p-1 shadow-lg" onMouseLeave={() => setHistMenu(false)}>
@@ -214,7 +215,7 @@ export function ActionBar(props: {
             })()}
             <div className="relative">
               <button type="button" className={btnGhost} onClick={() => setExportMenu(!exportMenu)}>
-                <span className="material-symbols-outlined">download</span>Export
+                <Icon name="download" size={20} />Export
               </button>
               {exportMenu && (
                 <div className="absolute bottom-full mb-1 w-44 rounded-xl border border-line bg-surface p-1 shadow-lg" onMouseLeave={() => setExportMenu(false)}>
@@ -235,17 +236,17 @@ export function ActionBar(props: {
                 <span className="pl-3 text-sm text-fg-2">+</span>
                 <input value={phone} onChange={(e) => setManualPhone(e.target.value)} placeholder="62…" className={`${inputCls} !w-40 border-0 bg-transparent`} aria-label="Nomor WA" />
                 <button type="button" className="px-2 text-fg-2 hover:text-fg" onClick={() => setModal("contacts")} title="Pilih kontak">
-                  <span className="material-symbols-outlined">contacts</span>
+                  <Icon name="contacts" size={20} />
                 </button>
               </div>
               <button type="button" className={btnPrimary} onClick={sendWa}>
-                <span className="material-symbols-outlined">send</span>Kirim WA
+                <Icon name="send" size={20} />Kirim WA
               </button>
               <button type="button" className={btnGhost} onClick={() => setModal("wa")} title="Edit Pesan WA">
-                <span className="material-symbols-outlined">tune</span>
+                <Icon name="tune" size={20} />
               </button>
               <button type="button" className="text-fg-2 hover:text-danger" onClick={clear} aria-label="Batal pilih">
-                <span className="material-symbols-outlined">close</span>
+                <Icon name="close" size={20} />
               </button>
             </div>
           </div>

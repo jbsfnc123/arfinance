@@ -11,6 +11,7 @@ import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { LtkpPreview } from "../ltkp-preview";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type Req = {
   id: number; created_at: string; created_by_name: string | null; bp_value: string; invoice_date: string | null;
@@ -101,7 +102,7 @@ export function PengajuanList({ myName }: { myName: string }) {
   return (
     <div className="w-full space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto text-2xl font-medium">Daftar Pengajuan Pembatalan &amp; Revisi</h1>
+        <h1 className="mr-auto text-[22px] font-semibold tracking-tight">Daftar Pengajuan Pembatalan &amp; Revisi</h1>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari invoice, BP, tax no, LTKP…" className={`${inputCls} !w-64`} />
         <div className="flex gap-1">
           {([["open", "Belum diproses"], ["done", "Sudah diproses"], ["all", "Semua"]] as const).map(([k, l]) => (
@@ -110,7 +111,7 @@ export function PengajuanList({ myName }: { myName: string }) {
           ))}
         </div>
         <button type="button" className={btnPrimary} disabled={!selected.size} onClick={() => setLtkpOpen(true)}>
-          <span className="material-symbols-outlined">upload_file</span>Upload LTKP ({selected.size})
+          <Icon name="upload_file" size={20} />Upload LTKP ({selected.size})
         </button>
       </div>
 

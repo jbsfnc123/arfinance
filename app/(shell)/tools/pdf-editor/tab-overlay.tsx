@@ -6,6 +6,7 @@ import { applyOverlays, clamp, type ImageAsset } from "@/lib/modules/pdf/ops";
 import { btnGhost, btnPrimary } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { Actions, Hint, previewOf, uid, useBusy, type Doc, type Docs } from "./shared";
+import { Icon } from "@/components/icons";
 
 // 2. Tempel Gambar: klik halaman → Ctrl+V / Pilih foto / seret foto ke halaman. Geser & ubah ukuran
 // (rasio terkunci, Shift = bebas), panah untuk menggeser, Delete untuk menghapus. Posisi disimpan
@@ -166,14 +167,14 @@ function OverlayEditor({ doc, d, setSave, onPdfFiles }: { doc: Doc; d: Docs; set
     <div className="space-y-4">
       <Hint>Klik halaman tujuan, lalu tempel gambar dengan <b>Ctrl+V</b>, <b>Pilih foto</b>, atau seret foto langsung ke titik di halaman. Geser untuk memindah, tarik sudut kanan bawah untuk ubah ukuran (rasio terkunci, tahan <b>Shift</b> untuk bebas).</Hint>
       <Actions>
-        <button type="button" className={btnPrimary} onClick={apply} disabled={!total}><span className="material-symbols-outlined !text-base">check</span>Terapkan ke dokumen</button>
-        <button type="button" className={btnGhost} onClick={download}><span className="material-symbols-outlined !text-base">download</span>Unduh hasil</button>
+        <button type="button" className={btnPrimary} onClick={apply} disabled={!total}><Icon name="check" size={16} />Terapkan ke dokumen</button>
+        <button type="button" className={btnGhost} onClick={download}><Icon name="download" size={16} />Unduh hasil</button>
         <button type="button" className={btnGhost} onClick={() => (selPage === null ? toast("Klik dulu halaman tujuan.", "warning") : photoInput.current?.click())}>
-          <span className="material-symbols-outlined !text-base">add_photo_alternate</span>Pilih foto
+          <Icon name="add_photo_alternate" size={16} />Pilih foto
         </button>
         <button type="button" className={btnGhost} disabled={selPage === null || !(overlays[selPage]?.length)}
           onClick={() => selPage !== null && setOverlays((o) => ({ ...o, [selPage]: [] }))}>
-          <span className="material-symbols-outlined !text-base">hide_image</span>Hapus gambar di halaman ini
+          <Icon name="hide_image" size={16} />Hapus gambar di halaman ini
         </button>
         <span className="text-xs text-fg-2">
           {selPage === null ? "Belum ada halaman dipilih" : `Halaman aktif: ${selPage + 1}`} · {total} gambar
@@ -287,7 +288,7 @@ function OverlayBox({ ov, selected, layer, onPick, onChange, onRemove }: {
         <>
           <button type="button" title="Hapus gambar (Delete)" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onRemove(); }}
             className="absolute -right-3 -top-3 flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white shadow">
-            <span className="material-symbols-outlined !text-sm">close</span>
+            <Icon name="close" size={14} />
           </button>
           <span onPointerDown={(e) => start(e, "resize")} title="Tarik untuk ubah ukuran (Shift = bebas)"
             className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize rounded-sm border-2 border-white bg-accent" />

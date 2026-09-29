@@ -25,7 +25,7 @@ export default async function AkunPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-2xl font-medium">Akun &amp; PIN</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Akun &amp; PIN</h1>
       <p className="mt-1 text-sm text-fg-2">
         Setiap akun masuk dengan nama &amp; PIN 6 digit. PIN tidak pernah ditampilkan ulang; gunakan &quot;Reset PIN&quot; bila lupa.
         Akun yang dicentang &quot;Login tanpa PIN&quot; cukup memilih nama (tidak berlaku untuk Super Admin).

@@ -7,6 +7,7 @@ import {
   type CollectionRow, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
 import { btnGhost, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 
 export function FilterBar(props: {
@@ -56,31 +57,31 @@ export function FilterBar(props: {
   };
 
   return (
-    <div className="sticky top-0 z-10 -mx-6 mt-4 border-b border-line bg-bg/95 px-6 py-3 backdrop-blur">
+    <div className="sticky top-0 z-10 -mx-4 mt-4 border-b border-separator bg-bg/90 px-4 py-2.5 backdrop-blur-xl md:-mx-6 md:px-6">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1">
-          <span className="material-symbols-outlined absolute left-2.5 top-2 text-fg-2">search</span>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari invoice, BP, catatan…" className={`${inputCls} pl-9`} />
+        <div className="relative w-full min-w-56 flex-1 sm:w-auto">
+          <Icon name="search" size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-2" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari invoice, BP, catatan…" aria-label="Cari invoice, BP, catatan" className={`${inputCls} pl-8`} />
         </div>
-        <select value={filters.pg} onChange={(e) => setFilters({ ...filters, pg: e.target.value })} className={`${inputCls} !w-auto max-w-56`}>
+        <select value={filters.pg} onChange={(e) => setFilters({ ...filters, pg: e.target.value })} className={`${inputCls} max-w-none sm:!w-auto sm:max-w-56`} aria-label="Payment Group">
           <option value="">Semua Payment Group ({pgOptions.length})</option>
           {pgOptions.map(([v, n]) => <option key={v} value={v}>{v} ({n})</option>)}
         </select>
-        <select value={filters.bp} onChange={(e) => setFilters({ ...filters, bp: e.target.value })} className={`${inputCls} !w-auto max-w-64`}>
+        <select value={filters.bp} onChange={(e) => setFilters({ ...filters, bp: e.target.value })} className={`${inputCls} max-w-none sm:!w-auto sm:max-w-64`} aria-label="Business Partner">
           <option value="">Semua Business Partner ({bpOptions.length})</option>
           {bpOptions.map(([v, n]) => <option key={v} value={v}>{v} ({n})</option>)}
         </select>
         <input type="date" value={filters.dateFrom} onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })} className={`${inputCls} !w-auto`} title="Invoice date dari" />
         <input type="date" value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} className={`${inputCls} !w-auto`} title="Invoice date sampai" />
         <div className="relative">
-          <button type="button" className={btnGhost} onClick={() => setColMenu(!colMenu)}>
-            <span className="material-symbols-outlined">view_column</span>
+          <button type="button" className={btnGhost} onClick={() => setColMenu(!colMenu)} aria-expanded={colMenu}>
+            <Icon name="view_column" size={16} />
             Kolom
           </button>
           {colMenu && (
-            <div className="absolute right-0 z-20 mt-1 w-60 rounded-xl border border-line bg-surface p-2 shadow-lg" onMouseLeave={() => setColMenu(false)}>
+            <div className="glass drop-in absolute right-0 z-(--z-popover) mt-1 w-60 rounded-[14px] p-1.5" onMouseLeave={() => setColMenu(false)}>
               {COLUMN_DEFS.map((c) => (
-                <label key={c.key} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-surface-2">
+                <label key={c.key} className="flex items-center gap-2 rounded-[8px] px-2 py-1 text-[13px] hover:bg-fg/8">
                   <input type="checkbox" checked={props.columns.includes(c.key)} onChange={() => toggleColumn(c.key)} />
                   {c.label}
                 </label>
@@ -99,7 +100,7 @@ export function FilterBar(props: {
             <span key={c.label} className="inline-flex items-center gap-1 rounded-full bg-pill px-3 py-1 text-xs text-pill-fg">
               {c.label}
               <button type="button" onClick={() => setFilters({ ...filters, ...c.clear })} aria-label={`Hapus filter ${c.label}`}>
-                <span className="material-symbols-outlined !text-sm">close</span>
+                <Icon name="close" size={14} />
               </button>
             </span>
           ))}

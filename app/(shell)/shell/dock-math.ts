@@ -19,3 +19,12 @@ export function clampPanelX(anchorX: number, width: number, viewport: number, ma
   const left = anchorX - width / 2;
   return Math.max(margin, Math.min(left, viewport - width - margin));
 }
+
+/**
+ * Ukuran dasar ikon agar Dock (count ikon + pemisah + padding) muat di viewport dengan margin; tidak pernah melebihi
+ * `base` dan tidak kurang dari `min`. Pembesaran kursor ikut diskalakan dari hasil ini oleh pemanggil.
+ */
+export function dockFitBase(count: number, viewport: number, base: number, { gap = 4, chrome = 12 + 9, margin = 24, min = 30 } = {}): number {
+  const avail = viewport - margin - chrome - gap * Math.max(0, count - 1);
+  return Math.max(min, Math.min(base, Math.floor(avail / Math.max(1, count))));
+}

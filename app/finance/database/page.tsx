@@ -43,7 +43,7 @@ export default async function DatabasePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <h1 className="text-2xl font-medium">Database</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">Database</h1>
         <p className="mt-1 text-sm text-fg-2">Supabase project arfinance · isi tabel utama dan riwayat import.</p>
       </div>
 

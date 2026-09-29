@@ -11,6 +11,7 @@ import { TableBox } from "@/components/table-box";
 import { Tabs } from "@/components/tabs";
 import { useViewState } from "@/lib/ui/view-state";
 import { LaporanHarian } from "./laporan-harian";
+import { Icon } from "@/components/icons";
 
 const TABS = [
   { key: "jadwal", label: "Jadwal", icon: "event" },
@@ -55,17 +56,17 @@ export function JadwalView() {
 
   return (
     <div className="w-full space-y-4">
-      <h1 className="text-2xl font-medium">Laporan &amp; Jadwal Kolektor</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Laporan &amp; Jadwal Kolektor</h1>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       {tab === "laporan" ? <LaporanHarian /> : (<>
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-auto text-sm text-fg-2">Tanggal kirim</span>
         <button type="button" className={btnGhost} disabled={!prev} onClick={() => prev && setDate(prev)} aria-label="Tanggal sebelumnya">
-          <span className="material-symbols-outlined">chevron_left</span>
+          <Icon name="chevron_left" size={20} />
         </button>
         <span className="min-w-28 text-center font-medium">{fmtDate(date)}</span>
         <button type="button" className={btnGhost} disabled={!next} onClick={() => next && setDate(next)} aria-label="Tanggal berikutnya">
-          <span className="material-symbols-outlined">chevron_right</span>
+          <Icon name="chevron_right" size={20} />
         </button>
         <button type="button" className={btnGhost} onClick={() => setDate(todayJakarta())}>Hari ini</button>
       </div>
@@ -81,7 +82,7 @@ export function JadwalView() {
                 <Fragment key={g.bp}>
                   <tr className="cursor-pointer border-t border-line hover:bg-surface-2" onClick={() => setOpen(open === g.bp ? null : g.bp)}>
                     <td className={td}>
-                      <span className="material-symbols-outlined !text-base align-middle">{open === g.bp ? "expand_less" : "expand_more"}</span> {g.bp}
+                      <Icon name={open === g.bp ? "expand_less" : "expand_more"} size={16} className="align-middle" /> {g.bp}
                     </td>
                     <td className={`${td} text-right`}>{g.total}</td>
                     <td className={td}>
@@ -99,7 +100,7 @@ export function JadwalView() {
                     <tr key={i.invoice_no} className="text-xs text-fg-2">
                       <td className={`${td} pl-10`}>{i.invoice_no}</td>
                       <td className={`${td} text-right`}>{fmtDate(i.invoice_date)}</td>
-                      <td className={td}>{i.tukar ? "✓ Sudah" : "Belum"}</td>
+                      <td className={td}>{i.tukar ? <span className="inline-flex items-center gap-1 text-success"><Icon name="check" size={13} strokeWidth={2.25} />Sudah</span> : "Belum"}</td>
                       <td className={td}>{i.kolektor ?? ""}</td>
                     </tr>
                   ))}

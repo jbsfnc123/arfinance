@@ -52,7 +52,7 @@ function ManualNameStep({ onPick }: { onPick: (name: string) => void }) {
       <input id="login-manual" autoFocus autoComplete="off" spellCheck={false} value={v} onChange={(e) => setV(e.target.value)}
         className={`${inputCls} mt-1 h-12 text-base`} />
       <button type="submit" disabled={!v.trim()}
-        className="mt-3 h-12 w-full rounded-xl bg-accent text-base font-medium text-on-accent hover:bg-accent-strong disabled:opacity-60">
+        className="mt-3 h-12 w-full rounded-xl bg-accent-fill text-base font-medium text-on-accent hover:bg-accent-fill-hover disabled:opacity-60">
         Lanjut
       </button>
     </form>

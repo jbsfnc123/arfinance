@@ -784,3 +784,29 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   (DataTableModal) & History Pembayaran; modal form tetap header biasa.
 - Tabel: `tableCls` (header sticky semi-transparan, hairline, hover), dipakai Dashboard Collection; LocalTable,
   TableBox, Daftar Tagihan hanya diganti kelas. Palet chart punya varian gelap/terang (`seriesColors`, `agingColors`).
+
+## Penyempurnaan UI macOS 27 "Golden Gate" (Fase 41, 2026-09-30)
+- Hanya presentasi; API/RPC/DB/perhitungan/auth/ACL/`lib/menu.ts`/`lib/modules` tidak berubah, tanpa dependency baru.
+  Angka Dashboard Collection (48 nilai Rp + 19 persen), hitungan filter Daftar Tagihan, dan export Excel rincian
+  Dashboard TF (1702 baris, hash sama) identik dengan main pada hari yang sama.
+- **Ikon SVG lokal**: font Material Symbols dihapus. `components/icons/` = registry glyph (turunan Lucide, ISC) berkunci
+  nama Material lama + `<Icon>` + `<AppIcon>` (squircle bergradien). Peta warna/glyph grup, submenu & workspace di
+  `lib/ui/app-icons.ts`. Tes `glyphs.test.ts` memeriksa semua nama ikon di source ada di registry.
+- **Token**: palet #F2F2F7/#FFFFFF/#1D1D1F (terang) & #1C1C1E/#242426/#F5F5F7 (gelap). Aksen dipisah agar kontras
+  ≥ 4.5:1: `--accent` (teks), `--accent-fill` (tombol, teks putih), `--accent-tint` (fokus/indikator); `--selection`
+  untuk baris terpilih; `--separator`, `--fill-tertiary`, `--control-h`; lapisan `--z-dock` 40 < topbar 45 < popover 60
+  < overlay 70 < modal 80 < toast 90 (pakai `z-(--z-*)`). Font sistem (SF Pro / Segoe UI), Inter hanya cadangan.
+- **Kurangi transparansi** (Control Center, `prefs:transparency`, diterapkan pre-paint) & fallback tanpa
+  backdrop-filter → kaca jadi solid.
+- **Overlay**: `components/use-dialog.ts` — tumpukan Escape (hanya teratas), kurungan Tab, fokus kembali ke pemicu,
+  latar `inert` (toast dikecualikan), kunci scroll. Dipakai Modal, Spotlight, Launcher, Popover (non-modal).
+- **Shell**: Top bar 38px dengan AppIcon workspace & label ⌘K/Ctrl K; Dock/Launcher/Spotlight memakai AppIcon, Dock
+  mengecil otomatis bila tidak muat (`dockFitBase`); bottom nav HP bergaya tab bar (44px).
+- **Tabel**: kepadatan mengatur tinggi baris virtual (`lib/ui/density.ts`: LocalTable 34/28, Daftar Tagihan 40/32,
+  virtualizer diukur ulang); header punya tombol urutkan (Enter/Spasi) + `aria-sort`; centang baris lewat keyboard.
+- `Tabs` otomatis segmented (≤3) atau strip bergulir; chart kpi-panel/mutasi/marketplace memakai
+  `seriesColors`/`categoryColors`/`chartTheme` per tema (`CHART_GRID`/`CHART_TEXT`, `plateStyle`/`tintOf` dihapus).
+- Login/PIN, Finance, AP, Kolektor & placeholder memakai kartu kaca + AppIcon. Presentasi: frame mengisi area shell di
+  atas Dock dan membuka deck dengan `?theme=` aktif; `window.ARDeckBridge` tidak berubah.
+- Diuji: 27 route × 6 ukuran (1440×900 … 320, 720×450 = zoom 200%), ACL akun non-SA, overlay/fokus/keyboard, tema
+  gelap & terang. Keterbatasan: SF Pro belum diuji di Mac asli; ganti tema aplikasi memuat ulang iframe Presentasi.
