@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { optimistic } from "@/lib/local/store";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import type { Gr, Kwitansi, Schedule } from "@/lib/local/datasets";
-import type { GrRow, KwRow, WorksheetRow } from "@/lib/modules/m10/compute";
+import { invoicesByUsername, type GrRow, type KwRow, type WorksheetRow } from "@/lib/modules/m10/compute";
 import { Tabs } from "@/components/tabs";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
@@ -15,6 +15,7 @@ import { M10Upload } from "./m10-upload";
 import { useM10 } from "./use-m10";
 import { setRemarks } from "@/lib/modules/remarks";
 import { useViewState } from "@/lib/ui/view-state";
+import { SiapTfButton } from "./siap-tf";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -98,6 +99,9 @@ export function Mitra10View() {
   // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
   const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
     (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user)), [c, from, to, user]);
+  // KPI di samping judul: invoice yang sedang tampil di tabel Kertas Kerja (ikut cari/filter), per Username.
+  const [shown, setShown] = useState<WorksheetRow[]>([]);
+  const kpi = useMemo(() => invoicesByUsername(shown), [shown]);
 
   function editRow(table: "gr" | "kwitansi", id: number, key: string, value: unknown) {
     const fn = table === "gr" ? "m10_gr_save" : "m10_kw_save";
@@ -136,8 +140,20 @@ export function Mitra10View() {
 
   return (
     <div className="w-full">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-medium">Mitra10 Tukar Faktur</h1>
+        {tab === "kk" && !m.loading && (
+          <div className="flex flex-wrap items-center gap-1.5" aria-label="Invoice tampil per Username">
+            <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-medium text-accent tabular-nums">
+              {kpi.total.toLocaleString("id-ID")} invoice
+            </span>
+            {kpi.users.map((u) => (
+              <span key={u.username} className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs tabular-nums">
+                <span className="text-fg-2">{u.username}</span> · {u.invoices.toLocaleString("id-ID")}
+              </span>
+            ))}
+          </div>
+        )}
         {m.error && <span className="text-sm text-danger">Gagal memuat: {m.error.message}</span>}
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
@@ -145,6 +161,7 @@ export function Mitra10View() {
         {tab === "dash" && <M10Dashboard stateKey="mitra10" m={m} />}
         {tab === "kk" && (
           <LocalTable title="Kertas Kerja" hideKey="m10-kk" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
+            onRowsChange={setShown}
             search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan"]}
             filters={[
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
@@ -153,6 +170,7 @@ export function Mitra10View() {
             onEdit={(r, _k, v) => setKeterangan([r], String(v ?? ""))}
             toolbar={(
               <span className="flex flex-wrap items-center gap-2 text-sm">
+                <SiapTfButton stateKey="m10-kk" />
                 <span className="text-fg-2">Invoice Date</span>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} !w-auto`} />
                 <span className="text-fg-2">s/d</span>

@@ -15,6 +15,7 @@ import { M10Dashboard } from "../mitra10/m10-dashboard";
 import { RkmUpload } from "./rkm-upload";
 import { useRkm } from "./use-rkm";
 import { useViewState } from "@/lib/ui/view-state";
+import { SiapTfButton } from "../mitra10/siap-tf";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -152,6 +153,7 @@ export function RkmView() {
             onEdit={(r, _k, v) => setKeterangan([r], String(v ?? ""))}
             toolbar={(
               <span className="flex flex-wrap items-center gap-2 text-sm">
+                <SiapTfButton stateKey="rkm-kk" />
                 <span className="text-fg-2">Invoice Date</span>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} !w-auto`} />
                 <span className="text-fg-2">s/d</span>

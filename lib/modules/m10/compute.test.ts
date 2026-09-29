@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeM10, m10AgingLines, m10Dashboard, m10Usernames, scopeM10, usernameOf } from "./compute";
+import { computeM10, invoicesByUsername, m10AgingLines, m10Dashboard, m10Usernames, scopeM10, usernameOf } from "./compute";
 import type { AgingLine, Gr, Kwitansi, Worksheet } from "@/lib/local/datasets";
 
 const line = (p: Partial<AgingLine>): AgingLine => ({
@@ -107,5 +107,24 @@ describe("Mitra10 BP ringkas", () => {
   it("kolom Business Partner = teks setelah ' - '", () => {
     const c = computeM10({ worksheet: [ws({ business_partner: "Catur Mitra Sejati Sentosa - Batam", no_sj: "SJ/9" })], gr: [], kwitansi: [], schedule: [], aging: [] });
     expect(c.worksheet[0].bp_short).toBe("Batam");
+  });
+});
+
+describe("KPI invoice per Username (Kertas Kerja)", () => {
+  it("invoice unik per username, terbanyak dulu, total unik", () => {
+    const k = invoicesByUsername([
+      { username: "Pengu403", invoice_no: "A" }, { username: "Pengu403", invoice_no: "A" }, // SJ ganda, invoice sama
+      { username: "Pengu403", invoice_no: "B" }, { username: "Pengu338", invoice_no: "C" },
+      { username: "Pengu338", invoice_no: "D" }, { username: "Pengu614", invoice_no: "E" },
+      { username: "", invoice_no: "F" }, { username: "Pengu614", invoice_no: null },
+    ]);
+    expect(k.total).toBe(6);
+    expect(k.users).toEqual([
+      { username: "Pengu338", invoices: 2 }, { username: "Pengu403", invoices: 2 },
+      { username: "(tanpa username)", invoices: 1 }, { username: "Pengu614", invoices: 1 },
+    ]);
+  });
+  it("kosong", () => {
+    expect(invoicesByUsername([])).toEqual({ total: 0, users: [] });
   });
 });
