@@ -27,8 +27,9 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
   const aging = useLoadedDataset("aging");
   const listRef = useRef<HTMLUListElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => { setQ(""); setIdx(0); onClose(); }, [onClose]);
-  useDialog(open, close, dialogRef);
+  useDialog(open, close, dialogRef, { kind: "overlay", layerRef });
   const type = (v: string) => { setQ(v); setIdx(0); };
 
   const menuHits = useMemo<Hit[]>(() => {
@@ -79,7 +80,7 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
   };
   const dataNote = canTagihan ? (aging.data ? "Ketik ≥3 huruf untuk BP / No Invoice" : "Buka Daftar Tagihan dulu untuk mencari BP / invoice") : null;
   return (
-    <div className="fade-in fixed inset-0 z-(--z-overlay) flex items-start justify-center bg-black/25 p-4 pt-[16vh]" onMouseDown={close}>
+    <div ref={layerRef} className="fade-in fixed inset-0 z-(--z-overlay) flex items-start justify-center bg-black/25 p-4 pt-[16vh]" onMouseDown={close}>
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Pencarian" onMouseDown={(e) => e.stopPropagation()} onKeyDown={onKey}
         className="glass-strong pop-in w-full max-w-[640px] overflow-hidden rounded-[20px]">
         <div className="flex items-center gap-3 px-4 py-3">

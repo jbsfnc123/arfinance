@@ -19,13 +19,14 @@ export function Modal(props: {
 }) {
   const { open, onClose } = props;
   const ref = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
   // Fokus terkurung, Escape hanya menutup overlay teratas, latar inert & tak ter-scroll, fokus kembali ke pemicu.
-  useDialog(open, onClose, ref);
+  useDialog(open, onClose, ref, { kind: "modal", layerRef });
 
   if (!open) return null;
   const win = props.variant === "window";
   return (
-    <div className="fade-in fixed inset-0 z-(--z-modal) flex items-center justify-center bg-black/35 p-4 backdrop-blur-[4px]" onMouseDown={onClose}>
+    <div ref={layerRef} className="fade-in fixed inset-0 z-(--z-modal) flex items-center justify-center bg-black/35 p-4 backdrop-blur-[4px]" onMouseDown={onClose}>
       <div
         ref={ref}
         role="dialog"

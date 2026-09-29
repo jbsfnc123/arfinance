@@ -13,8 +13,9 @@ export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; 
   const [q, setQ] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => { setQ(""); onClose(); }, [onClose]);
-  useDialog(open, close, dialogRef);
+  useDialog(open, close, dialogRef, { kind: "overlay", layerRef });
   const groups = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const all = [...(showHome ? [{ id: "home", label: "Beranda", icon: "home", children: [{ id: "home", label: "Beranda", href: "/" }] } as MenuGroup] : []), ...menu];
@@ -42,7 +43,7 @@ export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; 
   };
 
   return (
-    <div className="fade-in fixed inset-0 z-(--z-overlay) flex items-start justify-center bg-black/30 p-4 pt-[7vh] backdrop-blur-[3px]" onMouseDown={close}>
+    <div ref={layerRef} className="fade-in fixed inset-0 z-(--z-overlay) flex items-start justify-center bg-black/30 p-4 pt-[7vh] backdrop-blur-[3px]" onMouseDown={close}>
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Semua aplikasi" onMouseDown={(e) => e.stopPropagation()}
         className="glass-strong pop-in relative flex max-h-[82vh] w-full max-w-5xl flex-col rounded-[var(--panel-radius)]">
         <div className="flex items-center gap-2 px-5 pb-3 pt-4">

@@ -11,6 +11,7 @@ import { TopBar } from "./shell/top-bar";
 import { Dock, MobileNav } from "./shell/dock";
 import { AppLauncher } from "./shell/app-launcher";
 import { Spotlight } from "./shell/spotlight";
+import { useCommandK } from "./shell/use-command-k";
 
 // Kerangka halaman AR Workspace (Fase 39, macOS-inspired): Top bar kaca + Dock mengambang (desktop) / bottom nav
 // (HP) + App Launcher + Spotlight (Ctrl/Cmd+K). Konten memakai hampir seluruh lebar; ruang bawah dicadangkan
@@ -50,14 +51,9 @@ export function ShellChrome({ title, icon, portalHref, menu, showHome, user, chi
     return () => clearTimeout(t);
   }, [menu, showHome, router]);
 
-  // Ctrl/Cmd+K → Spotlight.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setOverlay((o) => (o === "spotlight" ? null : "spotlight")); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [setOverlay]);
+  // Ctrl/Cmd+K → Spotlight (diabaikan selama dialog form/data halaman masih terbuka, lihat use-command-k.ts).
+  const toggleSpotlight = useCallback(() => setOverlay((o) => (o === "spotlight" ? null : "spotlight")), [setOverlay]);
+  useCommandK(toggleSpotlight);
 
   const closeOverlay = useCallback(() => setOverlay(null), [setOverlay]);
   // Refresh: muat ulang dataset yang sedang dipakai + render ulang komponen server.
