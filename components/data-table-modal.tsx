@@ -6,6 +6,7 @@ import { Modal } from "@/components/modal";
 import { btnGhost, inputCls } from "@/components/ui";
 import { compareCells } from "@/lib/local/table";
 import { downloadXlsx } from "@/lib/xlsx-client";
+import { useToast } from "@/components/toast";
 
 export type Col = { k: string; l: string; n?: boolean; link?: boolean; erpLink?: boolean };
 export type TableRow = Record<string, unknown> & { sec?: boolean };
@@ -21,6 +22,7 @@ export function DataTableModal(props: {
   onLink?: (no: string) => void;
   onErpLink?: (no: string) => void;
 }) {
+  const toast = useToast();
   const { spec } = props;
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<{ k: string; dir: 1 | -1 } | null>(null);
@@ -51,11 +53,16 @@ export function DataTableModal(props: {
   const padBottom = virt.getTotalSize() - (items.at(-1)?.end ?? 0);
   const span = spec.cols.length;
 
+  // Nama file & sheet dibersihkan di downloadXlsx; error ditampilkan (tidak diam).
   async function exportXlsx() {
-    await downloadXlsx(`${spec!.title.replace(/[\\/:*?"<>|]+/g, "_")}.xlsx`, spec!.title.replace(/[\\/:*?[\]]+/g, " ").slice(0, 31), [
-      spec!.cols.map((c) => c.l),
-      ...rows.map((r) => (r.sec ? [String(r.f ?? "")] : spec!.cols.map((c) => (r[c.k] as unknown) ?? ""))),
-    ]);
+    try {
+      await downloadXlsx(`${spec!.title}.xlsx`, spec!.title, [
+        spec!.cols.map((c) => c.l),
+        ...rows.map((r) => (r.sec ? [String(r.f ?? "")] : spec!.cols.map((c) => (r[c.k] as unknown) ?? ""))),
+      ]);
+    } catch (e) {
+      toast(`Gagal mengunduh Excel: ${(e as Error).message}`, "danger");
+    }
   }
 
   const cell = (r: TableRow, c: Col) => {

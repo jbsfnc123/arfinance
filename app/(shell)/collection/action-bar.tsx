@@ -223,7 +223,7 @@ export function ActionBar(props: {
                     Print / PDF
                   </button>
                   <button type="button" className="block w-full rounded px-3 py-2 text-left text-sm hover:bg-surface-2"
-                    onClick={() => { setExportMenu(false); exportExcel(collection, selected, props.columns); }}>
+                    onClick={() => { setExportMenu(false); exportExcel(collection, selected, props.columns).catch((e: Error) => toast(`Gagal mengunduh Excel: ${e.message}`, "danger")); }}>
                     Excel
                   </button>
                 </div>

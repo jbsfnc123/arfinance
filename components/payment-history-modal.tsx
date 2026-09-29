@@ -11,6 +11,7 @@ import { downloadXlsx } from "@/lib/xlsx-client";
 import { Modal } from "@/components/modal";
 import { TableBox } from "@/components/table-box";
 import { btnGhost, card, td, th } from "@/components/ui";
+import { useToast } from "@/components/toast";
 
 export type PayHistTarget = { kind: "bp"; key: string; name: string } | { kind: "group"; name: string };
 
@@ -34,6 +35,7 @@ export function usePaymentHistory() {
 // Ringkasan history pembayaran satu BP atau satu Payment Group (3 bulan terakhir, BP ber-tempo).
 export function PaymentHistoryModal({ target, onClose }: { target: PayHistTarget | null; onClose: () => void }) {
   const h = usePaymentHistory();
+  const toast = useToast();
   const row: HistoryRow | null = useMemo(() => {
     if (!target) return null;
     return target.kind === "bp"
@@ -54,12 +56,17 @@ export function PaymentHistoryModal({ target, onClose }: { target: PayHistTarget
   const title = `${target.kind === "group" ? "Group" : "BP"} · ${target.name}`;
   const covMap = new Map(h.cov.map((c) => [c.month, c.payments]));
 
+  // Nama sheet bukan "History" (nama cadangan Excel — SheetJS menolak & tombol dulu tampak tidak bereaksi).
   async function exportTx() {
     if (!row) return;
-    await downloadXlsx(`History Pembayaran ${target!.name}.xlsx`.replace(/[\\/:*?"<>|]+/g, "_"), "History", [
-      ["Business Partner", "Invoice", "Invoice Date", "Due Date", "Payment Date", "Lama (hari)", "Dibayar", "Term"],
-      ...row.tx.map((t) => [t.bp, t.invoice_no, t.invoice_date ?? "", t.due_date, t.payment_date, t.lama, t.amount, t.term]),
-    ]);
+    try {
+      await downloadXlsx(`History Pembayaran ${target!.name}.xlsx`, "Transaksi", [
+        ["Business Partner", "Invoice", "Invoice Date", "Due Date", "Payment Date", "Lama (hari)", "Dibayar", "Term"],
+        ...row.tx.map((t) => [t.bp, t.invoice_no, t.invoice_date ?? "", t.due_date, t.payment_date, t.lama, t.amount, t.term]),
+      ]);
+    } catch (e) {
+      toast(`Gagal mengunduh Excel: ${(e as Error).message}`, "danger");
+    }
   }
 
   const stat = (label: string, value: React.ReactNode, cls = "") => (
