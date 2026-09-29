@@ -195,3 +195,22 @@ export function scopeM10(c: ReturnType<typeof computeM10>, aging: AgingLine[], s
     schedule: schedule.filter((s) => kw.has(s.no_kw)),
   };
 }
+
+/**
+ * KPI Kertas Kerja (Fase 38): jumlah invoice unik per Username dari baris yang sedang tampil di tabel.
+ * Diurutkan terbanyak → nama; username kosong ditampilkan sebagai "(tanpa username)".
+ */
+export function invoicesByUsername(rows: { username: string | null; invoice_no: string | null }[]) {
+  const per = new Map<string, Set<string>>();
+  const all = new Set<string>();
+  for (const r of rows) {
+    const inv = (r.invoice_no ?? "").trim();
+    if (!inv) continue;
+    const u = (r.username ?? "").trim() || "(tanpa username)";
+    (per.get(u) ?? per.set(u, new Set()).get(u)!).add(inv);
+    all.add(inv);
+  }
+  const users = [...per].map(([username, s]) => ({ username, invoices: s.size }))
+    .sort((a, b) => b.invoices - a.invoices || a.username.localeCompare(b.username, "id"));
+  return { total: all.size, users };
+}
