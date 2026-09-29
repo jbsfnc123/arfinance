@@ -49,7 +49,7 @@ export type SpvSummary = {
 };
 
 // Warna pencapaian lama: >= 80 hijau, >= 50 kuning, sisanya merah.
-export const pctColor = (pct: number) => (pct >= 80 ? "#23ad7a" : pct >= 50 ? "#eebb3c" : "#e25b5b");
+export { pctColor } from "@/lib/ui/palette";
 
 export const round1 = (x: number) => Math.round(x * 10) / 10;
 

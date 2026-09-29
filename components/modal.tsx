@@ -22,13 +22,13 @@ export function Modal(props: {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onMouseDown={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={props.title}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`flex max-h-[90vh] w-full flex-col rounded-2xl border border-line bg-surface ${props.xl ? "max-w-[min(96vw,1600px)]" : props.wide ? "max-w-3xl" : "max-w-lg"}`}
+        className={`glass flex max-h-[90vh] w-full flex-col rounded-3xl ${props.xl ? "max-w-[min(96vw,1600px)]" : props.wide ? "max-w-3xl" : "max-w-lg"}`}
       >
         <div className="flex items-center gap-2 border-b border-line px-5 py-3">
           <h2 className="font-medium">{props.title}</h2>

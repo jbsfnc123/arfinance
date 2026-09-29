@@ -101,6 +101,16 @@ function subscribe(name: DatasetName, fn: () => void) {
   return () => { s!.delete(fn); };
 }
 
+/** Baca dataset TANPA memicu pemuatan (mis. "Data per" di Top bar; aging berat tidak diunduh hanya untuk itu). */
+export function useLoadedDataset<K extends DatasetName>(name: K) {
+  return useSyncExternalStore((fn) => subscribe(name, fn), () => getEntry(name), () => SERVER_EMPTY as Entry<K>) as Entry<K>;
+}
+
+/** Muat ulang semua dataset yang sudah ada di memori (tombol Refresh di Top bar / Control Center). */
+export function reloadLoaded() {
+  return Promise.all([...entries.keys()].map((n) => ensure(n, { force: true })));
+}
+
 export function useDataset<K extends DatasetName>(name: K) {
   const entry = useSyncExternalStore(
     (fn) => subscribe(name, fn),

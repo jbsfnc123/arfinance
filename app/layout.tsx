@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
+import { Inter } from "next/font/google";
+import { PREFS_SCRIPT } from "@/lib/ui/prefs-script";
 import "./globals.css";
 import { currentWorkspace } from "@/lib/workspace-server";
 import { WORKSPACES } from "@/lib/workspace";
 
-const roboto = Roboto({
-  variable: "--font-roboto",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  display: "swap",
 });
 
 // Judul tab mengikuti workspace (host): Finance / AR / AP Workspace.
@@ -18,8 +19,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="id" className={`${roboto.variable} h-full antialiased`}>
+    <html lang="id" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
+        {/* Tema & kepadatan dari localStorage sebelum paint pertama (tanpa kedip); atribut <html> diatur skrip ini. */}
+        <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
         {/* display=block disengaja: font ikon tidak boleh tampil sebagai teks nama ikon saat memuat. */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font, @next/next/google-font-display */}
         <link
