@@ -21,7 +21,7 @@
   --surface-2: #2c2c2e;
   --surface-glass-soft: rgba(36, 36, 38, 0.64);
   --surface-glass: rgba(44, 44, 46, 0.93);
-  --surface-glass-strong: rgba(40, 40, 43, 0.66);
+  --surface-glass-strong: rgba(40, 40, 43, 0.84); /* ≥4.5:1 teks sekunder walau di atas konten terang */
   --surface-solid: #2c2c2e;
   --border: #38383a;
   --border-strong: #48484a;
@@ -34,7 +34,7 @@
   --accent: #409cff;
   --accent-strong: #6cb2ff;
   --accent-fill: #0a6fe0;
-  --accent-fill-hover: #1a7df0;
+  --accent-fill-hover: #0a64d0; /* 5.6:1 dengan teks putih (sebelumnya #1a7df0 = 4.0:1) */
   --accent-tint: #0a84ff;
   --on-accent: #ffffff;
   --selection: rgba(10, 132, 255, 0.24);
@@ -99,7 +99,7 @@
   --surface-2: #f5f5f7;
   --surface-glass-soft: rgba(246, 246, 250, 0.68);
   --surface-glass: rgba(252, 252, 254, 0.94);
-  --surface-glass-strong: rgba(250, 250, 252, 0.66);
+  --surface-glass-strong: rgba(250, 250, 252, 0.88); /* ≥4.5:1 teks sekunder walau di atas konten gelap */
   --surface-solid: #fbfbfd;
   --border: #e0e0e5;
   --border-strong: #c7c7cc;
@@ -146,6 +146,14 @@
 }
 :root:not([data-density="compact"]) {
   --control-h: 30px;
+}
+/* Layar sentuh (pointer kasar): target sentuh ≥ 44×44 untuk kontrol & Top bar lebih tinggi; desktop tetap ringkas. */
+@media (pointer: coarse) {
+  :root,
+  :root:not([data-density="compact"]) {
+    --topbar-h: 48px;
+    --control-h: 44px;
+  }
 }
 
 @theme inline {

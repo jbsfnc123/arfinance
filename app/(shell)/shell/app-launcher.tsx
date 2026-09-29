@@ -52,7 +52,7 @@ export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; 
             <input data-autofocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="Cari aplikasi" aria-label="Cari aplikasi"
               className="w-full bg-transparent text-[13px] outline-none placeholder:text-fg-2 no-ring" />
           </div>
-          <button type="button" onClick={close} aria-label="Tutup" className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full text-fg-2 hover:bg-fg/8 hover:text-fg">
+          <button type="button" onClick={close} aria-label="Tutup" className="absolute right-4 top-4 flex h-7 w-7 pointer-coarse:right-2 pointer-coarse:top-2 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full text-fg-2 hover:bg-fg/8 hover:text-fg">
             <Icon name="close" size={18} />
           </button>
         </div>

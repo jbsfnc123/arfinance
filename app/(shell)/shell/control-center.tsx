@@ -20,7 +20,7 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
     <div className="flex gap-1 rounded-[10px] bg-fg/6 p-[3px]">
       {options.map((o) => (
         <button key={o.v} type="button" aria-pressed={value === o.v} onClick={() => onChange(o.v)}
-          className={`flex flex-1 flex-col items-center gap-0.5 rounded-[8px] py-1.5 text-[11px] transition-colors ${value === o.v ? "bg-surface text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
+          className={`flex flex-1 flex-col items-center justify-center gap-0.5 rounded-[8px] py-1.5 text-[11px] transition-colors pointer-coarse:min-h-11 ${value === o.v ? "bg-surface text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
           <Icon name={o.i} size={18} />{o.l}
         </button>
       ))}

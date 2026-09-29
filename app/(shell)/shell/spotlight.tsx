@@ -86,7 +86,7 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
         <div className="flex items-center gap-3 px-4 py-3">
           <Icon name="search" size={24} className="text-fg-2" />
           <input data-autofocus value={q} onChange={(e) => type(e.target.value)} placeholder="Cari menu, Business Partner, No Invoice…" aria-label="Cari"
-            className="w-full bg-transparent text-[20px] font-light tracking-tight outline-none placeholder:text-fg-2/70 no-ring" role="combobox" aria-expanded aria-controls="spotlight-list" aria-activedescendant={hits[idx] ? `spot-${idx}` : undefined} />
+            className="w-full bg-transparent text-[20px] font-light tracking-tight outline-none placeholder:text-fg-2 no-ring" role="combobox" aria-expanded aria-controls="spotlight-list" aria-activedescendant={hits[idx] ? `spot-${idx}` : undefined} />
         </div>
         {hits.length > 0 || q ? <div className="border-t border-hairline" /> : null}
         <ul ref={listRef} id="spotlight-list" role="listbox" className="max-h-[52vh] overflow-y-auto px-2 pb-2 pt-1">
@@ -96,13 +96,13 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
                 <div className="px-2.5 pb-1 pt-2 text-[11px] font-semibold text-fg-2">{q ? KIND_LABEL[h.kind] : "Menu yang sering dibuka"}</div>
               )}
               <div id={`spot-${i}`} data-i={i} role="option" aria-selected={i === idx} onMouseMove={() => idx !== i && setIdx(i)} onClick={() => pick(h)}
-                className={`flex cursor-pointer items-center gap-3 rounded-[10px] px-2.5 py-1.5 ${i === idx ? "bg-accent-fill text-on-accent" : ""}`}>
+                className={`flex cursor-pointer items-center gap-3 rounded-[10px] px-2.5 py-1.5 pointer-coarse:min-h-11 ${i === idx ? "bg-accent-fill text-on-accent" : ""}`}>
                 <AppIcon spec={{ ...groupIcon(h.group), glyph: h.icon }} size={28} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium">{h.title}</span>
-                  <span className={`block truncate text-[11px] ${i === idx ? "opacity-80" : "text-fg-2"}`}>{h.sub}</span>
+                  <span className={`block truncate text-[11px] ${i === idx ? "text-on-accent" : "text-fg-2"}`}>{h.sub}</span>
                 </span>
-                {h.meta && <span className={`hidden max-w-40 truncate text-[11px] sm:inline ${i === idx ? "opacity-80" : "text-fg-2"}`}>{h.meta}</span>}
+                {h.meta && <span className={`hidden max-w-40 truncate text-[11px] sm:inline ${i === idx ? "text-on-accent" : "text-fg-2"}`}>{h.meta}</span>}
                 {i === idx && <kbd className="rounded-[5px] border border-current/30 px-1 font-sans text-[10px]">↵</kbd>}
               </div>
             </li>
