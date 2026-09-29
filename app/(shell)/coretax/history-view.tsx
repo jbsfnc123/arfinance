@@ -48,7 +48,7 @@ export function HistoryView() {
     downloadXlsxSheets(`${name}_simpan-${b.id}.xlsx`, [
       { name: "TaxInvoices", rows: [DETAIL_HEADERS, ...detail] },
       { name: "Tax per Invoice", rows: [PIVOT_HEADERS, ...pivot] },
-    ]);
+    ]).catch((e: Error) => toast(`Gagal mengunduh Excel: ${e.message}`, "danger"));
   }
 
   return (

@@ -49,7 +49,7 @@ export function MutasiUpload({ version, onDone }: { version: number; onDone: () 
     <div className={`${card} space-y-3 p-4`}>
       <div className="flex items-center gap-2">
         <h2 className="font-medium">{title}</h2>
-        <button type="button" className={`${btnGhost} ml-auto !text-xs`} onClick={() => downloadXlsx(`Template ${title}.xlsx`, "Template", TEMPLATES[TEMPLATE_OF[b]])}>
+        <button type="button" className={`${btnGhost} ml-auto !text-xs`} onClick={() => downloadXlsx(`Template ${title}.xlsx`, "Template", TEMPLATES[TEMPLATE_OF[b]]).catch((e: Error) => toast(`Gagal mengunduh Excel: ${e.message}`, "danger"))}>
           <span className="material-symbols-outlined !text-base">download</span>Template
         </button>
       </div>

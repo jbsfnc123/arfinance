@@ -101,7 +101,7 @@ export function CoretaxView() {
     downloadXlsxSheets(`${base}${suffix}_${today}.xlsx`, [
       { name: "TaxInvoices", rows: [DETAIL_HEADERS, ...detailRows(exportable)] },
       { name: "Tax per Invoice", rows: [PIVOT_HEADERS, ...pivotRows(exportable)] },
-    ]);
+    ]).catch((e: Error) => toast(`Gagal mengunduh Excel: ${e.message}`, "danger"));
   }
 
   async function saveToDb() {

@@ -93,7 +93,7 @@ export function UploadPo({ casesVersion, onArchived }: { casesVersion: number; o
       ["Status", "Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status", "Total PO", "Total SO", "Selisih"],
       ...visible.map((r) => [RECON_STATUS_TEXT[r.status], r.document_no, r.date_po, r.po_customer, r.business_partner, r.price_list,
         r.document_status, r.total_po, r.hasSO ? r.total_so : "", r.hasSO ? r.selisih : ""]),
-    ]);
+    ]).catch((e: Error) => toast(`Gagal mengunduh Excel: ${e.message}`, "danger"));
   }
 
   return (
