@@ -1,16 +1,22 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { findMenuByHref, type MenuGroup } from "@/lib/menu";
 import { Popover } from "@/components/popover";
-import { plateStyle, toolbarBtn } from "@/components/ui";
+import { toolbarBtn } from "@/components/ui";
 import { useTheme, type ThemeMode } from "@/lib/ui/prefs";
 import { ControlCenter } from "./control-center";
-import { Icon } from "@/components/icons";
+import { AppIcon, Icon } from "@/components/icons";
+import { workspaceIcon } from "@/lib/ui/app-icons";
 
 // Menu bar tipis (kaca tipis + hairline): kiri = identitas workspace + grup › halaman aktif; kanan = cari, refresh,
 // jam, Control Center, profil. Logout memakai form /auth/signout existing (onSubmit dari ShellChrome membersihkan cache).
+
+// Petunjuk pintasan: ⌘K di Mac/iPad, Ctrl K di lainnya. Snapshot server = "Ctrl K" → tanpa hydration mismatch.
+const noSub = () => () => {};
+const isApple = () => /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
+export const useShortcutLabel = () => useSyncExternalStore(noSub, () => (isApple() ? "⌘K" : "Ctrl K"), () => "Ctrl K");
 
 export function TopBar({ title, icon, menu, portalHref, user, onSearch, onRefresh, refreshing, signOut }: {
   title: string; icon: string; menu: MenuGroup[]; portalHref?: string | null;
@@ -23,12 +29,11 @@ export function TopBar({ title, icon, menu, portalHref, user, onSearch, onRefres
   const group = menu.find((g) => g.children.some((c) => c.href === pathname));
   const pageTitle = pathname === "/" ? "Beranda" : found?.item.label ?? "";
   const [panel, setPanel] = useState<"cc" | "me" | null>(null);
+  const kbd = useShortcutLabel();
   return (
     <header className="glass-soft sticky top-0 z-(--z-topbar) flex h-[var(--topbar-h)] shrink-0 items-center gap-2 border-x-0 border-t-0 px-3 text-[13px]">
-      <span className="flex h-6 w-6 items-center justify-center rounded-[7px]" style={plateStyle("dashboard")}>
-        <Icon name={icon} size={16} />
-      </span>
-      <span className="font-semibold">{title}</span>
+      <AppIcon spec={{ ...workspaceIcon("ar"), glyph: icon }} size={22} />
+      <span className="font-semibold tracking-tight">{title}</span>
       {(group || pageTitle) && (
         <nav aria-label="Lokasi" className="ml-2 hidden min-w-0 items-center gap-1 text-fg-2 sm:flex">
           {group && <><span className="truncate">{group.label}</span><Icon name="chevron_right" size={15} className="opacity-60" /></>}
@@ -37,14 +42,14 @@ export function TopBar({ title, icon, menu, portalHref, user, onSearch, onRefres
       )}
 
       <div className="ml-auto flex items-center gap-0.5">
-        <button type="button" onClick={onSearch} aria-label="Cari (Ctrl+K)" title="Cari (Ctrl+K)"
-          className="mr-1 hidden h-7 w-44 items-center gap-1.5 rounded-lg border border-hairline bg-fg/5 px-2 text-xs text-fg-2 transition-colors hover:bg-fg/8 hover:text-fg sm:flex">
-          <Icon name="search" size={16} />Cari
-          <kbd className="ml-auto rounded-[5px] border border-hairline px-1 font-sans text-[10px]">Ctrl K</kbd>
+        <button type="button" onClick={onSearch} aria-label={`Cari (${kbd})`} title={`Cari (${kbd})`} aria-keyshortcuts="Meta+K Control+K"
+          className="mr-1 hidden h-7 w-44 items-center gap-1.5 rounded-[8px] border border-hairline bg-fg/5 px-2 text-xs text-fg-2 transition-colors hover:bg-fg/8 hover:text-fg sm:flex">
+          <Icon name="search" size={15} />Cari
+          <kbd className="ml-auto rounded-[5px] border border-hairline px-1 font-sans text-[10px]">{kbd}</kbd>
         </button>
         <button type="button" onClick={onSearch} aria-label="Cari" className={`${toolbarBtn} sm:hidden`}><Icon name="search" size={18} /></button>
         <button type="button" onClick={onRefresh} disabled={refreshing} aria-label="Refresh data" title="Refresh data" className={toolbarBtn}>
-          <Icon name="refresh" size={18} className={`${refreshing ? "animate-spin" : ""}`} />
+          <Icon name="refresh" size={18} className={refreshing ? "animate-spin" : ""} />
         </button>
         <span className="relative">
           <button type="button" data-popover-anchor aria-label="Pusat kontrol" title="Pusat kontrol" aria-expanded={panel === "cc"}

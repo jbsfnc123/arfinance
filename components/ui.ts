@@ -1,5 +1,3 @@
-import type { CSSProperties } from "react";
-
 // Kelas Tailwind bersama (token tema di app/globals.css; gelap & terang).
 // Tinggi kontrol seragam lewat --control-h (28px Padat / 30px Nyaman). Input 16px di layar sempit agar iOS tidak zoom.
 export const inputCls =
@@ -20,19 +18,3 @@ export const td = "whitespace-nowrap px-3 py-2";
 /** Tabel data ringkas: header sticky semi-transparan, pemisah tipis, hover lembut, angka rata. */
 export const tableCls =
   "w-full text-[13px] tabular-nums [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-[1] [&_thead]:bg-surface/90 [&_thead]:backdrop-blur [&_thead_th]:border-b [&_thead_th]:border-hairline [&_tbody_tr]:border-t [&_tbody_tr]:border-hairline [&_tbody_tr:first-child]:border-t-0 [&_tbody_tr:hover]:bg-fg/[0.04]";
-
-/** Plate ikon ber-tint per grup menu (identitas modul di Dock, Launcher, Spotlight). Id grup dari lib/menu.ts. */
-const TINT: Record<string, string> = {
-  home: "#7c93b8", dashboard: "#4f8df0", collection: "#3fae74", tukar: "#e39a3b", invoicing: "#9a73e0",
-  billing: "#2fb4c8", rekon: "#d8b43a", tools: "#6f86a6", set: "#8b909a", launcher: "#8b909a",
-};
-export const tintOf = (groupId: string) => TINT[groupId] ?? TINT.set;
-/** Latar tint lembut + warna ikon tint; color-mix menjaga keterbacaan di tema gelap & terang. */
-export const plateStyle = (groupId: string): CSSProperties => {
-  const c = tintOf(groupId);
-  return {
-    background: `linear-gradient(180deg, color-mix(in srgb, ${c} 30%, var(--surface-elevated)), color-mix(in srgb, ${c} 17%, var(--surface-elevated)))`,
-    color: `color-mix(in srgb, ${c} 82%, var(--text-primary))`,
-    boxShadow: "inset 0 1px 0 var(--highlight), 0 1px 2px rgba(0,0,0,.12)",
-  };
-};

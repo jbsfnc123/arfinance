@@ -29,14 +29,14 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([t
 const focusables = (root: HTMLElement) =>
   [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !el.closest("[inert]") && el.getClientRects().length > 0);
 
-/** Buat saudara di sepanjang jalur node → body menjadi inert; kembalikan fungsi pemulih. */
+/** Buat saudara di sepanjang jalur node → body menjadi inert (kecuali [data-inert-exempt], mis. toast); kembalikan pemulih. */
 function inertOthers(node: HTMLElement) {
   const changed: HTMLElement[] = [];
   for (let el: HTMLElement | null = node; el && el !== document.body; el = el.parentElement) {
     const parent: HTMLElement | null = el.parentElement;
     if (!parent) break;
     for (const sib of Array.from(parent.children) as Element[]) {
-      if (sib === el || !(sib instanceof HTMLElement) || sib.inert || sib.tagName === "SCRIPT") continue;
+      if (sib === el || !(sib instanceof HTMLElement) || sib.inert || sib.tagName === "SCRIPT" || sib.hasAttribute("data-inert-exempt")) continue;
       sib.inert = true;
       changed.push(sib);
     }
@@ -47,7 +47,12 @@ function inertOthers(node: HTMLElement) {
 /** Kunci scroll dokumen & leluhur yang bisa di-scroll (mis. <main>) tanpa menggeser layout. */
 function lockScroll(node: HTMLElement) {
   const saved: [HTMLElement, string, string][] = [];
-  const lock = (el: HTMLElement) => { saved.push([el, el.style.overflow, el.style.scrollbarGutter]); el.style.scrollbarGutter = "stable"; el.style.overflow = "hidden"; };
+  // Gutter "stable" hanya untuk elemen yang saat ini punya scrollbar (agar lebar konten tidak berubah).
+  const lock = (el: HTMLElement) => {
+    saved.push([el, el.style.overflow, el.style.scrollbarGutter]);
+    if (el.scrollHeight > el.clientHeight) el.style.scrollbarGutter = "stable";
+    el.style.overflow = "hidden";
+  };
   for (let el = node.parentElement; el && el !== document.body; el = el.parentElement) {
     const oy = getComputedStyle(el).overflowY;
     if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight) lock(el);
