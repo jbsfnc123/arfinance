@@ -86,9 +86,9 @@ export function RowsTable(props: {
     <div className={`${card} mt-3 overflow-hidden`}>
       <div ref={scrollRef} className="overflow-auto">
         <table className="w-full border-separate border-spacing-0 text-sm">
-          <thead className="sticky top-0 z-[1] bg-surface">
+          <thead className="sticky top-0 z-[1] bg-surface/90 backdrop-blur">
             <tr>
-              <th className="w-12 border-b border-line px-3 py-2 text-left">
+              <th className="w-12 border-b border-hairline px-3 py-2 text-left">
                 <input type="checkbox" checked={allChecked} onChange={toggleAll} aria-label="Pilih semua baris" />
               </th>
               {cols.map((c) => {
@@ -100,7 +100,7 @@ export function RowsTable(props: {
                     onClick={props.onSort ? () => props.onSort!(c.key) : undefined}
                     aria-sort={active === 1 ? "ascending" : active === -1 ? "descending" : undefined}
                     title={props.onSort ? "Klik untuk mengurutkan" : undefined}
-                    className={`group relative whitespace-nowrap border-b border-line py-2 text-xs font-medium text-fg-2 ${props.onHide ? "pl-3 pr-7" : "px-3"} ${props.onSort ? "cursor-pointer select-none hover:text-fg" : ""} ${c.money ? "text-right" : "text-left"}`}
+                    className={`group relative whitespace-nowrap border-b border-hairline py-2 text-xs font-medium text-fg-2 ${props.onHide ? "pl-3 pr-7" : "px-3"} ${props.onSort ? "cursor-pointer select-none hover:text-fg" : ""} ${c.money ? "text-right" : "text-left"}`}
                   >
                     {c.label}
                     {active === 1 && " ▲"}
@@ -128,7 +128,7 @@ export function RowsTable(props: {
                   data-index={v.index}
                   ref={virtualizer.measureElement}
                   style={{ height: ROW_HEIGHT }}
-                  className={`select-none ${isSel ? "bg-pill/40" : "hover:bg-surface-2"}`}
+                  className={`select-none ${isSel ? "bg-accent/12" : "hover:bg-fg/[0.04]"}`}
                   onMouseDown={(e) => {
                     if ((e.target as HTMLElement).closest("a,button")) return;
                     drag.current = !isSel;
@@ -138,13 +138,13 @@ export function RowsTable(props: {
                     if (drag.current !== null) setChecked(r.invoice_no, drag.current);
                   }}
                 >
-                  <td className="border-b border-line px-3">
+                  <td className="border-b border-hairline px-3">
                     <input type="checkbox" checked={isSel} readOnly aria-label={`Pilih ${r.invoice_no}`} className="pointer-events-none" />
                   </td>
                   {cols.map((c) => (
                     <td
                       key={c.key}
-                      className={`border-b border-line px-3 ${wrap ? "max-w-md whitespace-normal break-words py-1.5" : "max-w-80 truncate"} ${c.money ? "text-right tabular-nums" : ""}`}
+                      className={`border-b border-hairline px-3 ${wrap ? "max-w-md whitespace-normal break-words py-1.5" : "max-w-80 truncate"} ${c.money ? "text-right tabular-nums" : ""}`}
                       title={c.key === "keterangan" ? `${cellText(r, c.key)}${props.onEditKeterangan ? " — klik dua kali untuk mengubah" : ""}` : wrap || c.money ? undefined : cellText(r, c.key) || undefined}
                       onDoubleClick={c.key === "keterangan" && props.onEditKeterangan ? () => props.onEditKeterangan!(r) : undefined}
                     >
@@ -164,7 +164,7 @@ export function RowsTable(props: {
         )}
         {props.loading && <p className="px-4 py-8 text-center text-sm text-fg-2">Memuat data…</p>}
       </div>
-      <div className="flex items-center gap-3 border-t border-line px-4 py-2 text-xs text-fg-2">
+      <div className="flex items-center gap-3 border-t border-hairline px-4 py-2 text-xs text-fg-2">
         Menampilkan {rows.length.toLocaleString("id-ID")} baris (sesuai filter)
         <button type="button" className={`${btnGhost} !py-0.5 ${wrap ? "border-accent text-accent" : ""}`} aria-pressed={wrap}
           title="Tampilkan teks panjang secara utuh" onClick={() => setWrap(!wrap)}>

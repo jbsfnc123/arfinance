@@ -89,7 +89,7 @@ export function PaymentHistoryModal({ target, onClose }: { target: PayHistTarget
   const isGroup = target.kind === "group";
 
   return (
-    <Modal open onClose={onClose} title={`History Pembayaran — ${title}`} xl>
+    <Modal open onClose={onClose} title={`History Pembayaran — ${title}`} xl variant="window">
       <div className="space-y-4 text-sm">
         <p className="text-fg-2">Periode payment date <b className="text-fg">{periodTxt}</b> · hanya invoice ber-tempo · lama = payment date − due date</p>
         {h.loading ? <p className="text-fg-2">Memuat data…</p> : !row ? (

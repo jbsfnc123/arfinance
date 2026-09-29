@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MenuGroup } from "@/lib/menu";
-import { inputCls } from "@/components/ui";
+import { plateStyle } from "@/components/ui";
 
-// App Launcher: semua modul yang boleh diakses dalam grid per grup + pencarian. Esc / klik latar menutup.
+// App Launcher: semua modul yang boleh diakses (menu ACL existing) sebagai grid ubin per grup + pencarian di atas.
+// Keyboard: panah menggeser fokus antar-ubin (mengikuti jumlah kolom grid), Enter membuka, Esc menutup.
 export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; onClose: () => void; menu: MenuGroup[]; showHome: boolean }) {
   const [q, setQ] = useState("");
+  const gridRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => { setQ(""); onClose(); }, [onClose]);
   useEffect(() => {
     if (!open) return;
@@ -22,39 +24,64 @@ export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; 
     return all.map((g) => ({ ...g, children: g.children.filter((c) => `${g.label} ${c.label}`.toLowerCase().includes(needle)) })).filter((g) => g.children.length);
   }, [menu, showHome, q]);
   if (!open) return null;
+
+  // Navigasi panah: kolom dihitung dari posisi ubin (grid responsif), bukan konstanta.
+  const tiles = () => [...(gridRef.current?.querySelectorAll<HTMLElement>("[data-tile]") ?? [])];
+  const onGridKey = (e: React.KeyboardEvent) => {
+    if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) return;
+    const list = tiles();
+    const i = list.indexOf(document.activeElement as HTMLElement);
+    if (i < 0) { list[0]?.focus(); e.preventDefault(); return; }
+    const top = list[i].getBoundingClientRect().top;
+    const cols = Math.max(1, list.filter((t) => Math.abs(t.getBoundingClientRect().top - top) < 4).length);
+    const next = e.key === "ArrowRight" ? i + 1 : e.key === "ArrowLeft" ? i - 1 : e.key === "ArrowDown" ? i + cols : i - cols;
+    list[Math.max(0, Math.min(list.length - 1, next))]?.focus();
+    e.preventDefault();
+  };
+  const onSearchKey = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") { tiles()[0]?.focus(); e.preventDefault(); }
+    if (e.key === "Enter") { tiles()[0]?.click(); e.preventDefault(); }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[8vh] backdrop-blur-sm" onMouseDown={close}>
+    <div className="fade-in fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 pt-[7vh] backdrop-blur-[3px]" onMouseDown={close}>
       <div role="dialog" aria-modal="true" aria-label="Semua aplikasi" onMouseDown={(e) => e.stopPropagation()}
-        className="glass pop-in flex max-h-[80vh] w-full max-w-4xl flex-col rounded-3xl p-5">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-fg-2">search</span>
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari aplikasi…" aria-label="Cari aplikasi" className={`${inputCls} !bg-transparent !border-0 !px-0 text-base`} />
-          <button type="button" onClick={close} aria-label="Tutup" className="rounded-full p-1 text-fg-2 hover:bg-surface-2"><span className="material-symbols-outlined">close</span></button>
+        className="glass-strong pop-in relative flex max-h-[82vh] w-full max-w-5xl flex-col rounded-[var(--panel-radius)]">
+        <div className="flex items-center gap-2 px-5 pb-3 pt-4">
+          <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-[10px] border border-hairline bg-fg/6 px-3 py-1.5 focus-within:border-accent/60">
+            <span className="material-symbols-outlined !text-[18px] text-fg-2">search</span>
+            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="Cari aplikasi" aria-label="Cari aplikasi"
+              className="w-full bg-transparent text-[13px] outline-none placeholder:text-fg-2 no-ring" />
+          </div>
+          <button type="button" onClick={close} aria-label="Tutup" className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full text-fg-2 hover:bg-fg/8 hover:text-fg">
+            <span className="material-symbols-outlined !text-[18px]">close</span>
+          </button>
         </div>
-        <div className="mt-4 min-h-0 overflow-y-auto">
+        <div ref={gridRef} onKeyDown={onGridKey} className="min-h-0 overflow-y-auto px-5 pb-5">
           {groups.map((g) => (
-            <section key={g.id} className="mb-5">
-              <h2 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-fg-2">
-                <span className="material-symbols-outlined !text-base">{g.icon}</span>{g.label}
-              </h2>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <section key={g.id} className="mb-5 last:mb-0">
+              <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-fg-2">{g.label}</h2>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
                 {g.children.map((c) => {
                   const inner = (
                     <>
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent"><span className="material-symbols-outlined">{g.icon}</span></span>
-                      <span className="min-w-0 flex-1 text-sm leading-tight">{c.label}</span>
-                      {c.external && <span className="material-symbols-outlined !text-base text-fg-2">open_in_new</span>}
+                      <span className="flex h-11 w-11 items-center justify-center rounded-[12px] transition-transform duration-150 group-hover:-translate-y-0.5" style={plateStyle(g.id)}>
+                        <span className="material-symbols-outlined !text-[22px]">{g.icon}</span>
+                      </span>
+                      <span className="line-clamp-2 text-center text-[12px] leading-snug">{c.label}</span>
+                      {c.external && <span className="material-symbols-outlined absolute right-2 top-2 !text-[13px] text-fg-2">open_in_new</span>}
+                      {q && <span className="text-[10px] text-fg-2">{g.label}</span>}
                     </>
                   );
-                  const cls = "flex items-center gap-3 rounded-2xl p-2.5 hover:bg-surface-2";
+                  const cls = "group relative flex flex-col items-center gap-2 rounded-[14px] px-2 py-3 outline-none transition-colors hover:bg-fg/6 focus-visible:bg-fg/8";
                   return c.external
-                    ? <a key={c.id} href={c.href} target="_blank" rel="noreferrer" className={cls} onClick={close}>{inner}</a>
-                    : <Link key={c.id} href={c.href} className={cls} onClick={close}>{inner}</Link>;
+                    ? <a key={c.id} data-tile href={c.href} target="_blank" rel="noreferrer" className={cls} onClick={close}>{inner}</a>
+                    : <Link key={c.id} data-tile href={c.href} className={cls} onClick={close}>{inner}</Link>;
                 })}
               </div>
             </section>
           ))}
-          {!groups.length && <p className="py-8 text-center text-sm text-fg-2">Tidak ada aplikasi yang cocok.</p>}
+          {!groups.length && <p className="py-10 text-center text-[13px] text-fg-2">Tidak ada aplikasi yang cocok.</p>}
         </div>
       </div>
     </div>

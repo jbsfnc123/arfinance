@@ -21,7 +21,7 @@ export function TableBox(props: {
   useFillHeight(ref, { enabled: fill, reserve: props.reserve, min: props.min ?? 240 });
   return (
     <div ref={ref}
-      className={`${props.bare ? "" : card} overflow-auto [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-[1] [&_thead]:bg-surface [&_thead_th]:shadow-[inset_0_-1px_0_var(--color-line)] [&_tfoot]:sticky [&_tfoot]:bottom-0 [&_tfoot]:bg-surface ${fill ? "" : props.maxHeight ?? "max-h-[70vh]"} ${props.className ?? ""}`}>
+      className={`${props.bare ? "" : card} overflow-auto [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-[1] [&_thead]:bg-surface/90 [&_thead]:backdrop-blur [&_thead_th]:shadow-[inset_0_-1px_0_var(--hairline)] [&_tbody_tr:hover]:bg-fg/[0.04] [&_tfoot]:sticky [&_tfoot]:bottom-0 [&_tfoot]:bg-surface ${fill ? "" : props.maxHeight ?? "max-h-[70vh]"} ${props.className ?? ""}`}>
       {props.children}
     </div>
   );

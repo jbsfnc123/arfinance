@@ -74,15 +74,15 @@ export function DataTableModal(props: {
   };
 
   return (
-    <Modal open onClose={props.onClose} title={spec.title} xl>
+    <Modal open onClose={props.onClose} title={spec.title} xl variant="window">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari…" aria-label="Cari" className={`${inputCls} !w-64`} />
         <span className="ml-auto text-xs text-fg-2">{rows.length.toLocaleString("id-ID")} baris</span>
         <button type="button" className={btnGhost} onClick={exportXlsx}><span className="material-symbols-outlined !text-base">download</span>Excel</button>
       </div>
-      <div ref={scrollRef} className="max-h-[65vh] overflow-auto rounded-lg border border-line">
+      <div ref={scrollRef} className="max-h-[65vh] overflow-auto rounded-xl border border-hairline bg-surface">
         <table className="w-full border-separate border-spacing-0 text-xs">
-          <thead className="sticky top-0 z-[1] bg-surface">
+          <thead className="sticky top-0 z-[1] bg-surface/90 backdrop-blur">
             <tr>
               {spec.cols.map((c) => (
                 <th key={c.k} onClick={() => setSort({ k: c.k, dir: sort?.k === c.k ? (-sort.dir as 1 | -1) : 1 })}
@@ -101,7 +101,7 @@ export function DataTableModal(props: {
                   <td colSpan={span} className="border-b border-line bg-surface-2 px-2 py-1.5 font-medium">{String(r.f ?? "")}</td>
                 </tr>
               ) : (
-                <tr key={vi.key} data-index={vi.index} ref={virt.measureElement} className="hover:bg-surface-2">
+                <tr key={vi.key} data-index={vi.index} ref={virt.measureElement} className="hover:bg-fg/[0.04]">
                   {spec.cols.map((c) => (
                     <td key={c.k} className={`border-b border-line/60 px-2 py-1.5 ${c.n ? "whitespace-nowrap text-right tabular-nums" : "max-w-md"} ${c.n && Number(r[c.k]) < 0 ? "text-danger" : ""}`}>{cell(r, c)}</td>
                   ))}
