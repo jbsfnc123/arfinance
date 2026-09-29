@@ -63,7 +63,7 @@ export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; 
                 {g.children.map((c) => {
                   const inner = (
                     <>
-                      <AppIcon spec={itemIcon(g.id, c.id)} size={48} className="drop-shadow-[0_2px_4px_rgba(0,0,0,.18)] transition-transform duration-150 group-hover:-translate-y-0.5" />
+                      <AppIcon spec={itemIcon(g.id, c.id)} size={48} className="drop-shadow-[0_2px_4px_rgba(0,0,0,.18)] motion-safe:transition-transform motion-safe:duration-150 motion-safe:group-hover:-translate-y-0.5" />
                       <span className="line-clamp-2 text-center text-[12px] leading-snug">{c.label}</span>
                       {c.external && <Icon name="open_in_new" size={13} className="absolute right-2 top-2 text-fg-2" />}
                       {q && <span className="text-[10px] text-fg-2">{g.label}</span>}
