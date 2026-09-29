@@ -10,8 +10,8 @@ import { setRemarks, useRemarks } from "@/lib/modules/remarks";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, rupiah } from "@/lib/format";
 import {
-  applyExchange, DEFAULT_COLUMNS, EMPTY_FILTERS, filterRows, withSearch,
-  type CollectionRow, type ColumnKey, type Filters,
+  applyExchange, DEFAULT_COLUMNS, EMPTY_FILTERS, filterRows, sortRows, withSearch,
+  type CollectionRow, type CollectionSort, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
 import type { WaTemplate } from "@/lib/modules/collection/wa-message";
 import { useViewState } from "@/lib/ui/view-state";
@@ -53,6 +53,8 @@ export function CollectionView(props: {
   }, [props.initial, storedColl, setColl]);
   const [filters, setFilters] = useViewState<Filters>(`collection:${coll}:filters`, EMPTY_FILTERS);
   const [columns, setColumns] = useViewState<ColumnKey[]>("collection:columns", DEFAULT_COLUMNS);
+  // Urutan dari header tabel (diingat selama tab terbuka, sama dengan kolom).
+  const [sort, setSort] = useViewState<CollectionSort>("collection:sort", null);
   const [selection, setSelection] = useViewState<string[]>(`collection:${coll}:sel`, []);
 
   // Hitungan dibagi antar halaman (lib/local/derived): tidak diulang saat kembali ke menu ini.
@@ -105,6 +107,9 @@ export function CollectionView(props: {
   }, [coll, supabase, patch]);
 
   const filtered = useMemo(() => filterRows(rows, filters), [rows, filters]);
+  // Kolom yang dipakai untuk urut disembunyikan → kembali ke urutan asli.
+  const activeSort = sort && columns.includes(sort.k) ? sort : null;
+  const sorted = useMemo(() => sortRows(filtered, activeSort), [filtered, activeSort]);
   const byInvoice = useMemo(() => new Map(rows.map((r) => [r.invoice_no, r])), [rows]);
   const selectedRows = useMemo(
     () => selection.map((inv) => byInvoice.get(inv)).filter((r): r is CollectionRow => !!r),
@@ -178,9 +183,12 @@ export function CollectionView(props: {
       <RowsTable
         key={coll}
         scrollKey={`collection:${coll}:scroll`}
-        rows={filtered}
+        rows={sorted}
         columns={columns}
         loading={loading}
+        sort={activeSort}
+        onSort={(k) => setSort(activeSort?.k === k ? (activeSort.dir === 1 ? { k, dir: -1 } : null) : { k, dir: 1 })}
+        onHide={(k) => setColumns(columns.filter((c) => c !== k))}
         selection={selection}
         setSelection={setSelection}
         onEditKeterangan={(row) => {

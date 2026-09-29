@@ -1,5 +1,6 @@
 import { agingOf, AGING_BUCKETS, type AgingBucket } from "./aging";
 import { fmtDate, monthKey } from "@/lib/format";
+import { compareCells } from "@/lib/local/table";
 
 // Logika tampilan halaman Collection, di-port dari Aplikasi Utama/Script.html
 // (renderCollAgingCards, rekap tukar/jatuh tempo, rowPassesOtherFilters, kategori).
@@ -120,6 +121,28 @@ export const COLUMN_DEFS: { key: ColumnKey; label: string; default?: boolean; mo
 ];
 
 export const DEFAULT_COLUMNS = COLUMN_DEFS.filter((c) => c.default).map((c) => c.key);
+
+// ── Urutan dari header tabel (sama dengan LocalTable/Mitra10: naik → turun → normal) ──
+export type CollectionSort = { k: ColumnKey; dir: 1 | -1 } | null;
+const DATE_KEYS = new Set<ColumnKey>(["invoice_date", "due_date", "janji_bayar", "tanggal_tukar"]);
+
+/** Nilai pembanding per kolom: Nominal angka, Aging = hari lewat jatuh tempo, tanggal ISO, lainnya teks tampilan. */
+function sortValue(r: CollectionRow, k: ColumnKey): unknown {
+  if (k === "open_amt") return r.open_amt;
+  if (k === "aging") return r.days;
+  if (DATE_KEYS.has(k)) return r[k as "invoice_date" | "due_date" | "janji_bayar" | "tanggal_tukar"];
+  return cellText(r, k);
+}
+
+/** Urutkan baris; tanpa sort = urutan asli. Kosong selalu di akhir; nilai sama → urutan asli (stabil). */
+export function sortRows(rows: CollectionRow[], sort: CollectionSort): CollectionRow[] {
+  if (!sort) return rows;
+  const numeric = sort.k === "open_amt" || sort.k === "aging";
+  return rows
+    .map((r, i) => ({ r, i, v: sortValue(r, sort.k) }))
+    .sort((a, b) => compareCells(a.v, b.v, numeric, sort.dir) || a.i - b.i)
+    .map((x) => x.r);
+}
 
 export const statusTukar = (r: CollectionRow) => (r.metode_tukar ? "Sudah Tukar Faktur" : "Belum Tukar Faktur");
 export const noResi = (r: CollectionRow) => (r.metode_tukar === "Ekspedisi" ? r.resi || r.ket_tukar : "");

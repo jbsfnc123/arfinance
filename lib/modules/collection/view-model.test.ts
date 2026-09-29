@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agingCards, applyExchange, categoryCounts, dueRecap, EMPTY_FILTERS, enrichRow, filterRows,
-  groupByBp, optionCounts, type RawRow,
+  groupByBp, optionCounts, sortRows, type RawRow,
 } from "./view-model";
 
 const TODAY = "2026-09-25";
@@ -73,5 +73,37 @@ describe("view-model Collection", () => {
       ["Toko A", ["A", "B"], 2000000],
       ["Toko B", ["C"], 1000000],
     ]);
+  });
+});
+
+describe("urut dari header Daftar Tagihan", () => {
+  const data = [
+    raw({ invoice_no: "A", open_amt: 500, due_date: "2026-09-30", business_partner: "Toko B" }),
+    raw({ invoice_no: "B", open_amt: 2000, due_date: "2026-09-10", business_partner: "toko a" }),
+    raw({ invoice_no: "C", open_amt: 900, due_date: "2026-07-01", business_partner: "Toko C" }),
+    raw({ invoice_no: "D", open_amt: 900, due_date: null, business_partner: "" }),
+  ].map((r) => enrichRow(r, TODAY));
+  const ids = (rs: typeof data) => rs.map((r) => r.invoice_no).join("");
+
+  it("tanpa urut = urutan asli (objek sama)", () => {
+    expect(sortRows(data, null)).toBe(data);
+  });
+  it("Nominal angka naik/turun; nilai sama tetap urutan asli", () => {
+    expect(ids(sortRows(data, { k: "open_amt", dir: 1 }))).toBe("ACDB");
+    expect(ids(sortRows(data, { k: "open_amt", dir: -1 }))).toBe("BCDA");
+  });
+  it("Aging berdasarkan hari lewat jatuh tempo, kosong selalu di akhir", () => {
+    expect(ids(sortRows(data, { k: "aging", dir: 1 }))).toBe("ABCD");
+    expect(ids(sortRows(data, { k: "aging", dir: -1 }))).toBe("CBAD");
+  });
+  it("tanggal & teks (kosong di akhir, tanpa beda kapital)", () => {
+    expect(ids(sortRows(data, { k: "due_date", dir: 1 }))).toBe("CBAD");
+    expect(ids(sortRows(data, { k: "business_partner", dir: 1 }))).toBe("BACD");
+    expect(ids(sortRows(data, { k: "business_partner", dir: -1 }))).toBe("CABD");
+  });
+  it("tidak mengubah array asal", () => {
+    const before = ids(data);
+    sortRows(data, { k: "open_amt", dir: -1 });
+    expect(ids(data)).toBe(before);
   });
 });
