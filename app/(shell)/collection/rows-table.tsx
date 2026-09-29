@@ -10,6 +10,7 @@ import { useDensity } from "@/lib/ui/prefs";
 import { rowHeight } from "@/lib/ui/density";
 import { btnGhost, card } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { EmptyState } from "@/components/empty-state";
 
 const ROW_HEIGHT = 40; // Nyaman; Padat → rowHeight() (lib/ui/density.ts)
 
@@ -174,7 +175,7 @@ export function RowsTable(props: {
           </tbody>
         </table>
         {!props.loading && rows.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-fg-2">Tidak ada data yang cocok dengan filter saat ini.</p>
+          <EmptyState icon="filter_alt_off" title="Tidak ada invoice yang cocok" hint="Ubah atau hapus filter/kata cari untuk melihat invoice lain." />
         )}
         {props.loading && <p className="px-4 py-8 text-center text-sm text-fg-2">Memuat data…</p>}
       </div>

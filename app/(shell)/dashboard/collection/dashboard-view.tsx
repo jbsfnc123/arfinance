@@ -13,7 +13,8 @@ import { round1, type GroupRow, type SpvSummary } from "@/lib/modules/collection
 import { Chart } from "@/components/chart";
 import { agingColors, chartTheme, pctColor, seriesColors } from "@/lib/ui/palette";
 import { useResolvedTheme } from "@/lib/ui/prefs";
-import { btnGhost, card, cardTitle, chip, inputCls, tableCls, td, th } from "@/components/ui";
+import { btnGhost, card, cardTitle, chip, emptyTd, inputCls, tableCls, td, th } from "@/components/ui";
+import { EmptyState } from "@/components/empty-state";
 import { Skeleton, SkeletonChart } from "@/components/skeleton";
 import { useViewState } from "@/lib/ui/view-state";
 import { Icon } from "@/components/icons";
@@ -71,7 +72,7 @@ export function DashboardView() {
       </header>
 
       {noData ? (
-        <p className="mt-10 text-center text-sm text-fg-2">Tidak ada data.</p>
+        <EmptyState icon="monitoring" title="Tidak ada data" hint="Belum ada data aging/target untuk ditampilkan. Upload lewat Pengaturan → Pusat Upload Data." />
       ) : !data ? (
         <DashboardSkeleton />
       ) : (
@@ -289,7 +290,7 @@ function TopOverdue({ d, className }: { d: SpvSummary; className?: string }) {
                 <td className={`${td} text-right tabular-nums`}>{rupiah(r.total)}</td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={4}>Tidak ada invoice terbuka.</td></tr>}
+            {rows.length === 0 && <tr><td className={emptyTd} colSpan={4}>Tidak ada invoice terbuka.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -349,7 +350,7 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={6}>Belum ada data.</td></tr>}
+            {rows.length === 0 && <tr><td className={emptyTd} colSpan={6}>Belum ada data.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -427,7 +428,7 @@ function ReconCard({ r, className }: { r: ReturnType<typeof reconcileCollected>;
               <td className={`${td} text-right tabular-nums`}>{rupiah(c.selisih)}</td>
             </tr>
           ))}
-          {!r.categories.length && <tr><td className={`${td} text-fg-2`} colSpan={3}>Tidak ada selisih.</td></tr>}
+          {!r.categories.length && <tr><td className={emptyTd} colSpan={3}>Tidak ada selisih.</td></tr>}
         </tbody>
       </table>
       <DataTableModal spec={spec} onClose={() => setSpec(null)} />

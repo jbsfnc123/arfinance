@@ -6,7 +6,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { fmtDate } from "@/lib/format";
 import { groupJadwal, type JadwalRow } from "@/lib/modules/tukar/dashboard";
 import { useToast } from "@/components/toast";
-import { btnGhost, card, td, th } from "@/components/ui";
+import { btnGhost, card, emptyTd, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { Tabs } from "@/components/tabs";
 import { useViewState } from "@/lib/ui/view-state";
@@ -106,7 +106,7 @@ export function JadwalView() {
                   ))}
                 </Fragment>
               ))}
-              {groups.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={4}>Tidak ada jadwal pada tanggal ini.</td></tr>}
+              {groups.length === 0 && <tr><td className={emptyTd} colSpan={4}>Tidak ada jadwal pada tanggal ini.</td></tr>}
             </tbody>
           </table>
         </TableBox>
@@ -128,7 +128,7 @@ export function JadwalView() {
                   <td className={`${td} text-right`}>{r.invoices}</td>
                 </tr>
               ))}
-              {recent.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={4}>Belum ada data.</td></tr>}
+              {recent.length === 0 && <tr><td className={emptyTd} colSpan={4}>Belum ada data.</td></tr>}
             </tbody>
           </table>
         </TableBox>

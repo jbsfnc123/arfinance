@@ -13,6 +13,15 @@ export const toolbarBtn =
 export const card = "rounded-2xl border border-hairline bg-surface shadow-sm";
 export const cardTitle = "text-[13px] font-semibold";
 export const chip = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums";
+/** Kontrol segmen kecil untuk filter status (satu pilihan): wadah + item; pemanggil tetap memberi aria-pressed. */
+export const segGroup = "inline-flex flex-wrap gap-0.5 rounded-[10px] bg-fill-3 p-[3px]";
+export const segItem = (on: boolean) =>
+  `inline-flex min-h-6 items-center gap-1 rounded-[8px] px-2.5 py-0.5 text-xs transition-colors pointer-coarse:min-h-11 ${on ? "bg-surface font-medium text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`;
+/** Chip toggle multi-pilih (mis. tipe faktur). */
+export const toggleChip = (on: boolean) =>
+  `rounded-full border px-3 py-1 text-xs transition-colors pointer-coarse:min-h-11 ${on ? "border-transparent bg-selection font-medium text-accent" : "border-line text-fg-2 hover:text-fg"}`;
+/** Sel "tidak ada data" di tabel. */
+export const emptyTd = "px-3 py-10 text-center text-[13px] text-fg-2";
 export const th = "whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-fg-2";
 export const td = "whitespace-nowrap px-3 py-2";
 /** Tabel data ringkas: header sticky semi-transparan, pemisah tipis, hover lembut, angka rata. */

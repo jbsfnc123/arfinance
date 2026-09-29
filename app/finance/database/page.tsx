@@ -2,7 +2,7 @@ import { getSession } from "@/lib/session";
 import { NoAccess } from "@/components/no-access";
 import { createClient } from "@/lib/supabase/server";
 import { fmtTimestamp } from "@/lib/format";
-import { card, td, th } from "@/components/ui";
+import { card, emptyTd, td, th } from "@/components/ui";
 import { fmtBytes, QUOTA, quotaState, SUPABASE_PLAN, SUPABASE_USAGE_URL, type UsageReport } from "@/lib/modules/usage";
 import { TableBox } from "@/components/table-box";
 
@@ -79,7 +79,7 @@ export default async function DatabasePage() {
                   <td className={`${td} text-right`}>{l.rows?.toLocaleString("id-ID")}</td>
                 </tr>
               ))}
-              {!log?.length && <tr><td className={`${td} text-fg-2`} colSpan={5}>Belum ada import.</td></tr>}
+              {!log?.length && <tr><td className={emptyTd} colSpan={5}>Belum ada import.</td></tr>}
             </tbody>
           </table>
         </TableBox>
@@ -142,7 +142,7 @@ function UsageSection({ u }: { u: UsageReport }) {
                 <td className={`${td} text-right`}>{fmtBytes(Number(b.bytes))}</td>
               </tr>
             ))}
-            {!u.storage.length && <tr><td className={`${td} text-fg-2`} colSpan={3}>Belum ada bucket.</td></tr>}
+            {!u.storage.length && <tr><td className={emptyTd} colSpan={3}>Belum ada bucket.</td></tr>}
           </tbody>
         </table>
       </div>

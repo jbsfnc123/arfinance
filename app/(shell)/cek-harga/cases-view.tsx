@@ -6,7 +6,7 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 import type { Tables } from "@/lib/database.types";
 import { fmtTimestamp } from "@/lib/format";
 import { useToast } from "@/components/toast";
-import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { btnGhost, btnPrimary, card, emptyTd, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
 
@@ -124,7 +124,7 @@ export function CasesView({ status, version, onChange }: { status: "archived" | 
                   </Fragment>
                 );
               })}
-              {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={13}>{status === "archived" ? "Belum ada data di arsip." : "Belum ada task complete."}</td></tr>}
+              {shown.length === 0 && <tr><td className={emptyTd} colSpan={13}>{status === "archived" ? "Belum ada data di arsip." : "Belum ada task complete."}</td></tr>}
             </tbody>
           </table>
         </TableBox>

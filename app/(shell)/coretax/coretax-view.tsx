@@ -10,7 +10,9 @@ import { downloadXlsxSheets } from "@/lib/xlsx-client";
 import { fmtDate, rupiah } from "@/lib/format";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
-import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { btnGhost, btnPrimary, card, inputCls, td, th, toggleChip } from "@/components/ui";
+import { Tabs } from "@/components/tabs";
+import { EmptyState } from "@/components/empty-state";
 import { DeleteListModal } from "./delete-list-modal";
 import { HistoryView } from "./history-view";
 import { TableBox } from "@/components/table-box";
@@ -182,19 +184,15 @@ export function CoretaxView() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-1 border-b border-line">
-        {([["data", "Data Faktur"], ["xml", "XML Viewer"], ["riwayat", "Riwayat Simpan"]] as const).map(([k, l]) => (
-          <button key={k} type="button" onClick={() => setTab(k)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm ${tab === k ? "border-accent text-accent" : "border-transparent text-fg-2 hover:text-fg"}`}>{l}</button>
-        ))}
-      </div>
+      <Tabs className="!mt-0" value={tab} onChange={setTab}
+        tabs={[{ key: "data", label: "Data Faktur", icon: "table" }, { key: "xml", label: "XML Viewer", icon: "code" }, { key: "riwayat", label: "Riwayat Simpan", icon: "history" }] as const} />
 
       {tab === "data" && loaded && (
         <section className={`${card} overflow-hidden`}>
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
             {types.length > 1 && types.map((t) => (
               <button key={t} type="button" onClick={() => toggleType(t)}
-                className={`rounded-full px-3 py-1 text-xs ${typeOn(t) ? "bg-pill text-pill-fg" : "border border-line text-fg-2"}`}>
+                aria-pressed={typeOn(t)} className={toggleChip(typeOn(t))}>
                 {t} ({invoices.filter((i) => i.type === t && !i.deleted).length})
               </button>
             ))}
@@ -281,7 +279,7 @@ export function CoretaxView() {
       )}
 
       {(tab === "data" || tab === "xml") && !loaded && (
-        <p className={`${card} p-8 text-center text-sm text-fg-2`}>Belum ada file. Klik &quot;Pilih XML&quot; untuk memuat file CoreTax.</p>
+        <EmptyState className={card} icon="code" title="Belum ada file" hint={<>Klik &quot;Pilih XML&quot; untuk memuat file CoreTax.</>} />
       )}
 
       {tab === "riwayat" && <HistoryView key={historyKey} />}

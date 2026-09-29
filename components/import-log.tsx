@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fmtTimestamp } from "@/lib/format";
-import { card, td, th } from "@/components/ui";
+import { card, emptyTd, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 
 type LogRow = { id: number; kind: string; file_name: string | null; months: string[] | null; rows: number | null; at: string };
@@ -36,7 +36,7 @@ export function ImportLog({ module, version, limit = 10 }: { module: string | st
                 <td className={`${td} text-right`}>{(r.rows ?? 0).toLocaleString("id-ID")}</td>
               </tr>
             ))}
-            {!rows.length && <tr><td className={`${td} text-fg-2`} colSpan={5}>Belum ada upload.</td></tr>}
+            {!rows.length && <tr><td className={emptyTd} colSpan={5}>Belum ada upload.</td></tr>}
           </tbody>
         </table>
       </TableBox>

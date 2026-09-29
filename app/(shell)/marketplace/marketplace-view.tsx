@@ -12,6 +12,8 @@ import { erpDetail, orderDetail, orderTableCols, withGroups } from "@/lib/module
 import { DataTableModal, type TableSpec } from "@/components/data-table-modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
+import { Tabs } from "@/components/tabs";
+import { EmptyState } from "@/components/empty-state";
 import { Dashboard } from "./dashboard";
 import { ErpView } from "./erp-view";
 import type { Json } from "@/lib/database.types";
@@ -233,12 +235,8 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
       )}
 
       {hasErp && (
-        <div className="flex gap-1 border-b border-line">
-          {([["dash", "Dashboard"], ["erp", "Rekonsiliasi ERP"]] as const).map(([k, l]) => (
-            <button key={k} type="button" onClick={() => setView(k)}
-              className={`-mb-px border-b-2 px-4 py-2 text-sm ${view === k ? "border-accent text-accent" : "border-transparent text-fg-2 hover:text-fg"}`}>{l}</button>
-          ))}
-        </div>
+        <Tabs className="!mt-0" value={view} onChange={(k) => setView(k)}
+          tabs={[{ key: "dash", label: "Dashboard", icon: "monitoring" }, { key: "erp", label: "Rekonsiliasi ERP", icon: "compare_arrows" }] as const} />
       )}
 
       {R && (view === "erp" && hasErp ? (
@@ -249,10 +247,8 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
       ))}
 
       {!R && !list.length && (
-        <p className={`${card} p-8 text-center text-sm text-fg-2`}>
-          Upload Laporan Penghasilan Shopee (sheet Summary + Penghasilan), Riwayat Saldo Shopee (Transaction Report),
-          atau Laporan TikTok (Laporan + Detail pesanan).
-        </p>
+        <EmptyState className={card} icon="storefront" title="Belum ada laporan marketplace"
+          hint="Upload Laporan Penghasilan Shopee (sheet Summary + Penghasilan), Riwayat Saldo Shopee (Transaction Report), atau Laporan TikTok (Laporan + Detail pesanan)." />
       )}
 
       <DataTableModal spec={table} onClose={() => setTable(null)} onLink={showOrder} onErpLink={(no) => R && setTable(erpDetail(R, no))} />

@@ -119,17 +119,15 @@ function lockScroll(node: HTMLElement) {
 const Z_TOKEN: Record<LayerKind, string> = { modal: "--z-modal", overlay: "--z-overlay", popover: "--z-popover" };
 
 /**
- * @param ref       elemen dialog (role="dialog")
- * @param opts.kind jenis lapisan (bawaan "modal")
- * @param opts.layerRef elemen lapisan terluar (backdrop fixed) yang diberi z-index sesuai urutan tumpukan
+ * @param ref      elemen dialog (role="dialog")
+ * @param kind     jenis lapisan (bawaan "modal")
+ * @param layerRef elemen lapisan terluar (backdrop fixed) yang diberi z-index sesuai urutan tumpukan
  */
 export function useDialog(open: boolean, onClose: () => void, ref: RefObject<HTMLElement | null>,
-  opts: { kind?: LayerKind; modal?: boolean; layerRef?: RefObject<HTMLElement | null> } = {}) {
-  const kind: LayerKind = opts.kind ?? (opts.modal === false ? "popover" : "modal");
+  { kind = "modal", layerRef }: { kind?: LayerKind; layerRef?: RefObject<HTMLElement | null> } = {}) {
   const trapped = kind !== "popover";
   const closeRef = useRef(onClose);
   useEffect(() => { closeRef.current = onClose; });
-  const layerRef = opts.layerRef;
 
   useEffect(() => {
     if (!open) return;
