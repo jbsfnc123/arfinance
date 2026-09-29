@@ -12,6 +12,7 @@ import { UploadChecklist } from "./upload-checklist";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type Item = {
   file: File; sheets?: Sheet[]; kind?: FileKind | null; summary?: Summary; error?: string;
@@ -81,7 +82,7 @@ export function UploadCenter() {
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); add([...e.dataTransfer.files]); }}
         className={`${card} flex cursor-pointer flex-col items-center gap-2 border-dashed p-8 text-center ${over ? "border-accent bg-surface-2" : ""}`}>
-        <span className="material-symbols-outlined !text-4xl text-accent">upload_file</span>
+        <Icon name="upload_file" size={36} className="text-accent" />
         <span className="font-medium">Seret file ke sini atau klik untuk memilih (boleh banyak sekaligus)</span>
         <span className="text-xs text-fg-2">Aging (Blank_A4) · Invoice & Payment Date Comparison · Target bulanan · Mutasi rekening</span>
         <input type="file" multiple accept=".xls,.xlsx,.xlsm,.csv" className="hidden" disabled={busy}
@@ -92,9 +93,7 @@ export function UploadCenter() {
         <section className={`${card} divide-y divide-line`}>
           {items.map((it, i) => (
             <div key={i} className="flex flex-wrap items-start gap-3 p-4 text-sm">
-              <span className={`material-symbols-outlined ${it.status === "gagal" ? "text-danger" : it.status === "selesai" ? "text-success" : "text-fg-2"}`}>
-                {it.status === "gagal" ? "error" : it.status === "selesai" ? "check_circle" : it.status === "memproses" ? "progress_activity" : "description"}
-              </span>
+              <Icon name={it.status === "gagal" ? "error" : it.status === "selesai" ? "check_circle" : it.status === "memproses" ? "progress_activity" : "description"} size={20} className={`${it.status === "gagal" ? "text-danger" : it.status === "selesai" ? "text-success" : "text-fg-2"} ${it.status === "memproses" ? "animate-spin" : ""}`} />
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{it.file.name}</div>
                 {it.kind && <div className="text-xs text-accent">{KIND_INFO[it.kind].label} → {KIND_INFO[it.kind].feeds}</div>}
@@ -104,7 +103,7 @@ export function UploadCenter() {
               </div>
               {it.status !== "memproses" && (
                 <button type="button" className={`${btnGhost} !px-2 !py-1`} disabled={busy} onClick={() => setItems((xs) => xs.filter((x) => x !== it))}>
-                  <span className="material-symbols-outlined !text-base">close</span>
+                  <Icon name="close" size={16} />
                 </button>
               )}
             </div>
@@ -120,7 +119,7 @@ export function UploadCenter() {
           </label>
         )}
         <button type="button" className={btnPrimary} disabled={!pending || busy} onClick={process}>
-          <span className="material-symbols-outlined">cloud_upload</span>
+          <Icon name="cloud_upload" size={20} />
           {busy ? "Memproses…" : `Proses ${pending} file${hasTarget ? ` (target ${monthLabel(month)})` : ""}`}
         </button>
       </div>

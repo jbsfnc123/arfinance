@@ -6,6 +6,7 @@ import { UploadPo } from "./upload-po";
 import { CasesView } from "./cases-view";
 import { MasterView } from "./master-view";
 import { useViewState } from "@/lib/ui/view-state";
+import { Tabs } from "@/components/tabs";
 
 const TABS = [
   { key: "so", label: "Upload SO", icon: "upload_file" },
@@ -26,14 +27,7 @@ export function CekHargaView() {
   return (
     <div className="w-full">
       <h1 className="text-2xl font-medium">Cek Selisih Harga PO vs SO</h1>
-      <div className="mt-4 flex flex-wrap gap-1 border-b border-line">
-        {TABS.map((t) => (
-          <button key={t.key} type="button" onClick={() => setTab(t.key)}
-            className={`-mb-px flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm ${tab === t.key ? "border-accent text-accent" : "border-transparent text-fg-2 hover:text-fg"}`}>
-            <span className="material-symbols-outlined !text-lg">{t.icon}</span>{t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
         {tab === "so" && <UploadSo />}
         <div hidden={tab !== "po"}><UploadPo casesVersion={casesVersion} onArchived={() => setCasesVersion((v) => v + 1)} /></div>

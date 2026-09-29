@@ -7,6 +7,7 @@ import { btnGhost, inputCls } from "@/components/ui";
 import { compareCells } from "@/lib/local/table";
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { useToast } from "@/components/toast";
+import { Icon } from "@/components/icons";
 
 export type Col = { k: string; l: string; n?: boolean; link?: boolean; erpLink?: boolean };
 export type TableRow = Record<string, unknown> & { sec?: boolean };
@@ -78,7 +79,7 @@ export function DataTableModal(props: {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari…" aria-label="Cari" className={`${inputCls} !w-64`} />
         <span className="ml-auto text-xs text-fg-2">{rows.length.toLocaleString("id-ID")} baris</span>
-        <button type="button" className={btnGhost} onClick={exportXlsx}><span className="material-symbols-outlined !text-base">download</span>Excel</button>
+        <button type="button" className={btnGhost} onClick={exportXlsx}><Icon name="download" size={16} />Excel</button>
       </div>
       <div ref={scrollRef} className="max-h-[65vh] overflow-auto rounded-xl border border-hairline bg-surface">
         <table className="w-full border-separate border-spacing-0 text-xs">

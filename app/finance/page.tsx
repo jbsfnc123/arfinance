@@ -4,6 +4,7 @@ import { currentHost } from "@/lib/workspace-server";
 import { WORKSPACES, workspaceUrl, type Workspace } from "@/lib/workspace";
 import { card } from "@/components/ui";
 import { canEnterWorkspace } from "@/lib/menu";
+import { Icon } from "@/components/icons";
 
 // Portal Finance Workspace: pintu ke AR, AP & Aplikasi Kolektor. Ringkasan akun/role hanya untuk Super Admin.
 export default async function FinancePortal() {
@@ -26,11 +27,11 @@ export default async function FinancePortal() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {targets.map((w) => (
           <a key={w} href={workspaceUrl(w, host)} className={`${card} group flex items-start gap-4 p-5 hover:border-accent`}>
-            <span className="material-symbols-outlined !text-4xl text-accent">{WORKSPACES[w].icon}</span>
+            <Icon name={WORKSPACES[w].icon} size={36} className="text-accent" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 font-medium">
                 {WORKSPACES[w].label}
-                <span className="material-symbols-outlined !text-lg text-fg-2 group-hover:text-accent">open_in_new</span>
+                <Icon name="open_in_new" size={18} className="text-fg-2 group-hover:text-accent" />
               </div>
               <div className="mt-1 text-sm text-fg-2">{WORKSPACES[w].desc}</div>
               <div className="mt-2 text-xs text-fg-2">{workspaceUrl(w, host).replace(/^https?:\/\//, "").replace(/\/$/, "")}</div>

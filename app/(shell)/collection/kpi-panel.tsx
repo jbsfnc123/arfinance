@@ -13,6 +13,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { Chart, CHART_GRID } from "@/components/chart";
 import { card, inputCls, td, th } from "@/components/ui";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type Props = { rows: CollectionRow[]; filters: Filters; setFilters: (f: Filters) => void };
 
@@ -40,7 +41,7 @@ export function KpiPanel({ rows, filters, setFilters, loading, collection }: Pro
   return (
     <section className={`${card} mt-4`}>
       <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
-        <span className="material-symbols-outlined">{open ? "expand_less" : "expand_more"}</span>
+        <Icon name={open ? "expand_less" : "expand_more"} size={20} />
         <span className="font-medium">KPI Aging &amp; Rekap</span>
       </button>
       {open && (

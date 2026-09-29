@@ -13,6 +13,7 @@ import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 const EDIT_CATEGORIES = ["Case", "Administratif", "Reminder", "No Respon"];
 
@@ -110,7 +111,7 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
                       className={`cursor-pointer border-t border-line hover:bg-surface-2 ${late ? "bg-danger/5 shadow-[inset_3px_0_0_var(--danger)]" : ""}`}
                     >
                       <td className={`${td} max-w-40 truncate`} title={g.collections.join(", ")}>
-                        <span className="material-symbols-outlined !text-base align-middle">{open === g.key ? "expand_less" : "expand_more"}</span>{" "}
+                        <Icon name={open === g.key ? "expand_less" : "expand_more"} size={16} className="align-middle" />{" "}
                         {g.collections.join(", ")}
                       </td>
                       <td className={`${td} max-w-96 truncate`} title={g.bp}>
@@ -128,13 +129,13 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
                       </td>
                       <td className={`${td} text-right`} onClick={(e) => e.stopPropagation()}>
                         <button type="button" title={g.done ? "Batalkan selesai" : "Tandai selesai"} onClick={() => toggleDone(g)} className="px-1 text-fg-2 hover:text-success">
-                          <span className="material-symbols-outlined">{g.done ? "undo" : "check_circle"}</span>
+                          <Icon name={g.done ? "undo" : "check_circle"} size={20} />
                         </button>
                         <button type="button" title="Ubah" onClick={() => { setEditing(g); setDraft({ kategori: g.kategori, isi: g.isi }); }} className="px-1 text-fg-2 hover:text-fg">
-                          <span className="material-symbols-outlined">edit</span>
+                          <Icon name="edit" size={20} />
                         </button>
                         <button type="button" title="Hapus" onClick={() => remove(g)} className="px-1 text-fg-2 hover:text-danger">
-                          <span className="material-symbols-outlined">delete</span>
+                          <Icon name="delete" size={20} />
                         </button>
                       </td>
                     </tr>

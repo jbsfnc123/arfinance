@@ -8,6 +8,7 @@ import { useToast } from "@/components/toast";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type Row = {
   id: number; account: string; tx_date: string; amount: number; keterangan: string | null; catatan: string | null;
@@ -69,10 +70,10 @@ export function MutasiData() {
           <input list="mutasi-exc-notes" value={note} onChange={(e) => setNote(e.target.value)} className={`${inputCls} !w-56`} placeholder="Alasan" aria-label="Alasan" />
           <datalist id="mutasi-exc-notes">{NOTES.map((x) => <option key={x} value={x} />)}</datalist>
           <button type="button" className={btnPrimary} onClick={() => { mark(sel.map((r) => r.id), true); clear(); }}>
-            <span className="material-symbols-outlined !text-base">block</span>Tidak dihitung ({sel.length})
+            <Icon name="block" size={16} />Tidak dihitung ({sel.length})
           </button>
           <button type="button" className={btnGhost} onClick={() => { mark(sel.map((r) => r.id), false); clear(); }}>
-            <span className="material-symbols-outlined !text-base">undo</span>Hitung kembali
+            <Icon name="undo" size={16} />Hitung kembali
           </button>
         </span>
       )} />

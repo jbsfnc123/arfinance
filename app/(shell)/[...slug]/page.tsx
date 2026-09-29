@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { canAccess, findMenuByHref } from "@/lib/menu";
+import { Icon } from "@/components/icons";
 
 // Placeholder untuk semua menu yang modulnya belum dimigrasi.
 // Setiap modul yang selesai di-port mendapat route sendiri, yang otomatis
@@ -16,7 +17,7 @@ export default async function PendingModulePage({ params }: PageProps<"/[...slug
   if (!canAccess(item, access)) {
     return (
       <div className="mx-auto mt-16 max-w-md text-center">
-        <span className="material-symbols-outlined !text-5xl text-danger">lock</span>
+        <Icon name="lock" size={48} className="text-danger" />
         <h1 className="mt-3 text-xl font-medium">Tidak ada akses</h1>
         <p className="mt-2 text-sm text-fg-2">
           Menu &quot;{item.label}&quot; belum diberikan untuk akun Anda. Hubungi Super Admin.
@@ -27,7 +28,7 @@ export default async function PendingModulePage({ params }: PageProps<"/[...slug
 
   return (
     <div className="mx-auto mt-16 max-w-md text-center">
-      <span className="material-symbols-outlined !text-5xl text-accent">{group.icon}</span>
+      <Icon name={group.icon} size={48} className="text-accent" />
       <h1 className="mt-3 text-xl font-medium">
         {group.label} · {item.label}
       </h1>

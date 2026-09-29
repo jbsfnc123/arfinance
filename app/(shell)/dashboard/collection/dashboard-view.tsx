@@ -16,6 +16,7 @@ import { useResolvedTheme } from "@/lib/ui/prefs";
 import { btnGhost, card, cardTitle, chip, inputCls, tableCls, td, th } from "@/components/ui";
 import { Skeleton, SkeletonChart } from "@/components/skeleton";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 // Dashboard Collection — halaman referensi desain Fase 39. Hanya lapisan tampilan yang berubah: semua angka tetap
 // dihitung di browser oleh spvSummaryOf / allocationSeries / reconcileCollected (tidak disentuh).
@@ -61,10 +62,10 @@ export function DashboardView() {
             ))}
           </select>
           <span className="flex items-center gap-1 px-1 text-xs text-fg-2">
-            <span className="material-symbols-outlined !text-[15px]">cloud_done</span>Diperbarui {fmtTimestamp(data?.lastTagihanUpdate)}
+            <Icon name="cloud_done" size={15} />Diperbarui {fmtTimestamp(data?.lastTagihanUpdate)}
           </span>
           <button type="button" className={`${btnGhost} !rounded-[10px]`} onClick={reload} disabled={loading}>
-            <span className={`material-symbols-outlined !text-base ${loading ? "animate-spin" : ""}`}>refresh</span>Refresh
+            <Icon name="refresh" size={16} className={`${loading ? "animate-spin" : ""}`} />Refresh
           </button>
         </div>
       </header>
@@ -421,7 +422,7 @@ function ReconCard({ r, className }: { r: ReturnType<typeof reconcileCollected>;
                 ],
                 rows: c.rows,
               })}>
-              <td className={td}><span className="flex items-center gap-2"><span className="material-symbols-outlined !text-base text-fg-2">chevron_right</span>{c.label}</span></td>
+              <td className={td}><span className="flex items-center gap-2"><Icon name="chevron_right" size={16} className="text-fg-2" />{c.label}</span></td>
               <td className={`${td} text-right tabular-nums`}>{c.count.toLocaleString("id-ID")}</td>
               <td className={`${td} text-right tabular-nums`}>{rupiah(c.selisih)}</td>
             </tr>

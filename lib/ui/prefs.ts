@@ -2,14 +2,15 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-// Preferensi tampilan per browser (localStorage): tema Dark/Light/System & kepadatan. Diterapkan sebagai atribut
-// `data-theme` / `data-density` di <html>. Skrip inline (PREFS_SCRIPT) menerapkannya sebelum paint pertama agar tidak
+// Preferensi tampilan per browser (localStorage): tema Dark/Light/System, kepadatan & transparansi. Diterapkan sebagai
+// atribut `data-theme` / `data-density` / `data-transparency` di <html>. Skrip inline (PREFS_SCRIPT) menerapkannya sebelum paint pertama agar tidak
 // berkedip; hook di sini untuk mengubah & membaca dari komponen (aman untuk render server: snapshot server = default).
 
 export type ThemeMode = "dark" | "light" | "system";
 export type Density = "comfortable" | "compact";
-export { THEME_KEY, DENSITY_KEY, DEFAULT_THEME } from "./prefs-script";
-import { THEME_KEY, DENSITY_KEY, DEFAULT_THEME } from "./prefs-script";
+export type Transparency = "normal" | "reduced";
+export { THEME_KEY, DENSITY_KEY, TRANSPARENCY_KEY, DEFAULT_THEME } from "./prefs-script";
+import { THEME_KEY, DENSITY_KEY, TRANSPARENCY_KEY, DEFAULT_THEME } from "./prefs-script";
 
 export const isThemeMode = (v: unknown): v is ThemeMode => v === "dark" || v === "light" || v === "system";
 export const isDensity = (v: unknown): v is Density => v === "comfortable" || v === "compact";
@@ -37,6 +38,7 @@ export function applyPrefs() {
   d.setAttribute("data-theme", resolveTheme(mode, matchMedia("(prefers-color-scheme: dark)").matches));
   d.setAttribute("data-theme-mode", mode);
   if (read(DENSITY_KEY) === "compact") d.setAttribute("data-density", "compact"); else d.removeAttribute("data-density");
+  if (read(TRANSPARENCY_KEY) === "reduced") d.setAttribute("data-transparency", "reduced"); else d.removeAttribute("data-transparency");
 }
 
 export function useTheme(): [ThemeMode, (m: ThemeMode) => void] {
@@ -51,6 +53,14 @@ export function useDensity(): [Density, (d: Density) => void] {
   const density = isDensity(raw) ? raw : "comfortable";
   const set = useCallback((d: Density) => { write(DENSITY_KEY, d); applyPrefs(); }, []);
   return [density, set];
+}
+
+/** "Kurangi transparansi": kaca (Top bar, Dock, popover, modal) menjadi permukaan solid. */
+export function useTransparency(): [Transparency, (t: Transparency) => void] {
+  const raw = useSyncExternalStore(subscribe, () => read(TRANSPARENCY_KEY), () => null);
+  const value: Transparency = raw === "reduced" ? "reduced" : "normal";
+  const set = useCallback((t: Transparency) => { write(TRANSPARENCY_KEY, t); applyPrefs(); }, []);
+  return [value, set];
 }
 
 /** Tema efektif saat ini (untuk chart yang butuh warna konkret). */

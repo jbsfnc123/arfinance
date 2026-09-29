@@ -1,15 +1,16 @@
 import type { CSSProperties } from "react";
 
 // Kelas Tailwind bersama (token tema di app/globals.css; gelap & terang).
+// Tinggi kontrol seragam lewat --control-h (28px Padat / 30px Nyaman). Input 16px di layar sempit agar iOS tidak zoom.
 export const inputCls =
-  "w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none transition-colors focus:border-accent";
+  "w-full min-h-[var(--control-h)] rounded-[8px] border border-line bg-surface-2 px-2.5 py-1 text-[13px] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-fg-2/80 focus:border-accent-tint focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent-tint)_22%,transparent)] disabled:opacity-60 max-sm:text-base";
 export const btnPrimary =
-  "inline-flex items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-medium text-on-accent shadow-sm transition-colors hover:bg-accent-strong disabled:opacity-60";
+  "inline-flex h-[var(--control-h)] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-accent-fill px-3.5 text-[13px] font-medium text-on-accent shadow-sm transition-colors duration-150 hover:bg-accent-fill-hover active:brightness-95 disabled:pointer-events-none disabled:opacity-50";
 export const btnGhost =
-  "inline-flex items-center justify-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 py-1.5 text-sm transition-colors hover:bg-surface-2 disabled:opacity-60";
+  "inline-flex h-[var(--control-h)] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-hairline bg-surface px-3 text-[13px] shadow-sm transition-colors duration-150 hover:bg-surface-2 active:bg-fill-3 disabled:pointer-events-none disabled:opacity-50";
 /** Tombol ikon toolbar ala macOS: kecil, tanpa isi, hover tembus pandang. */
 export const toolbarBtn =
-  "inline-flex h-7 min-w-7 items-center justify-center gap-1.5 rounded-lg px-1.5 text-fg-2 transition-colors hover:bg-fg/8 hover:text-fg active:bg-fg/12 disabled:opacity-50";
+  "inline-flex h-7 min-w-7 items-center justify-center gap-1.5 rounded-[8px] px-1.5 text-fg-2 transition-colors duration-150 hover:bg-fg/8 hover:text-fg active:bg-fg/12 disabled:opacity-50";
 /** Kartu data (opak — tanpa blur agar angka & chart tajam). */
 export const card = "rounded-2xl border border-hairline bg-surface shadow-sm";
 export const cardTitle = "text-[13px] font-semibold";

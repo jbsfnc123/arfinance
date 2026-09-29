@@ -11,6 +11,7 @@ import { TableBox } from "@/components/table-box";
 import { Tabs } from "@/components/tabs";
 import { useViewState } from "@/lib/ui/view-state";
 import { LaporanHarian } from "./laporan-harian";
+import { Icon } from "@/components/icons";
 
 const TABS = [
   { key: "jadwal", label: "Jadwal", icon: "event" },
@@ -61,11 +62,11 @@ export function JadwalView() {
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-auto text-sm text-fg-2">Tanggal kirim</span>
         <button type="button" className={btnGhost} disabled={!prev} onClick={() => prev && setDate(prev)} aria-label="Tanggal sebelumnya">
-          <span className="material-symbols-outlined">chevron_left</span>
+          <Icon name="chevron_left" size={20} />
         </button>
         <span className="min-w-28 text-center font-medium">{fmtDate(date)}</span>
         <button type="button" className={btnGhost} disabled={!next} onClick={() => next && setDate(next)} aria-label="Tanggal berikutnya">
-          <span className="material-symbols-outlined">chevron_right</span>
+          <Icon name="chevron_right" size={20} />
         </button>
         <button type="button" className={btnGhost} onClick={() => setDate(todayJakarta())}>Hari ini</button>
       </div>
@@ -81,7 +82,7 @@ export function JadwalView() {
                 <Fragment key={g.bp}>
                   <tr className="cursor-pointer border-t border-line hover:bg-surface-2" onClick={() => setOpen(open === g.bp ? null : g.bp)}>
                     <td className={td}>
-                      <span className="material-symbols-outlined !text-base align-middle">{open === g.bp ? "expand_less" : "expand_more"}</span> {g.bp}
+                      <Icon name={open === g.bp ? "expand_less" : "expand_more"} size={16} className="align-middle" /> {g.bp}
                     </td>
                     <td className={`${td} text-right`}>{g.total}</td>
                     <td className={td}>

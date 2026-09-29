@@ -11,6 +11,7 @@ import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type MonthRow = { month: string; sheets_filled: number; sheets_total: number; complete: boolean; file_name: string | null; uploaded_at: string | null };
 
@@ -106,10 +107,10 @@ export function DataCenter({ open, onClose, onSaved, canDelete }: { open: boolea
             <input type="month" value={month} max={current} onChange={(e) => setMonth(e.target.value || current)} className={`${inputCls} mt-1 !w-auto`} />
           </label>
           <button type="button" className={btnGhost} disabled={busy} onClick={downloadTemplate}>
-            <span className="material-symbols-outlined !text-base">download</span>2. Unduh template {monthLabel(month)}
+            <Icon name="download" size={16} />2. Unduh template {monthLabel(month)}
           </button>
           <button type="button" className={btnPrimary} disabled={busy} onClick={() => fileRef.current?.click()}>
-            <span className="material-symbols-outlined !text-base">upload_file</span>3. Upload template {monthLabel(month)}
+            <Icon name="upload_file" size={16} />3. Upload template {monthLabel(month)}
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
@@ -128,8 +129,8 @@ export function DataCenter({ open, onClose, onSaved, canDelete }: { open: boolea
                 return (
                   <tr key={m} className={`border-t border-line first:border-t-0 ${m === month ? "bg-surface-2" : ""}`}>
                     <td className="w-8 py-2 pl-3">
-                      <span className={`material-symbols-outlined !text-xl ${icon[1]}`} style={{ fontVariationSettings: "'FILL' 1" }}
-                        aria-label={row?.complete ? "lengkap" : row ? "sebagian" : "belum ada"}>{icon[0]}</span>
+                      <Icon name={icon[0]} size={20} strokeWidth={2} className={icon[1]}
+                        label={row?.complete ? "lengkap" : row ? "sebagian" : "belum ada"} />
                     </td>
                     <td className="py-2">
                       <button type="button" className="font-medium hover:text-accent" onClick={() => setMonth(m)}>{monthLabel(m)}</button>
@@ -141,7 +142,7 @@ export function DataCenter({ open, onClose, onSaved, canDelete }: { open: boolea
                     <td className="py-2 pr-3 text-right">
                       {row && canDelete && (
                         <button type="button" title="Hapus data bulan ini" onClick={() => void remove(m)} className="rounded p-1 text-fg-2 hover:text-danger">
-                          <span className="material-symbols-outlined !text-lg">delete</span>
+                          <Icon name="delete" size={18} />
                         </button>
                       )}
                     </td>

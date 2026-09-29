@@ -7,6 +7,7 @@ import { mergeSchedule, parseAgingLookup, parseMasterCsv, type ScheduleRow } fro
 import { fmtDate } from "@/lib/format";
 import { useToast } from "@/components/toast";
 import { btnPrimary, card, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 export function UploadJadwal() {
   const toast = useToast();
@@ -78,7 +79,7 @@ export function UploadJadwal() {
       )}
 
       <button type="button" className={btnPrimary} disabled={!master || busy} onClick={save}>
-        <span className="material-symbols-outlined">sync</span>
+        <Icon name="sync" size={20} />
         {busy ? "Menyimpan…" : "Proses & Sinkronisasi Jadwal"}
       </button>
     </div>

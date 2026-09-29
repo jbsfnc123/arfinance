@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme, type ThemeMode } from "@/lib/ui/prefs";
+import { Icon } from "@/components/icons";
 
 // Tombol tema ringkas (Gelap → Terang → Sistem) untuk header tanpa Control Center (Finance & Kolektor).
 const NEXT: Record<ThemeMode, ThemeMode> = { dark: "light", light: "system", system: "dark" };
@@ -12,7 +13,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
   return (
     <button type="button" onClick={() => setMode(NEXT[mode])} title={`${LABEL[mode]} · klik untuk mengganti`} aria-label={`${LABEL[mode]}, ganti tema`}
       className={`flex h-9 w-9 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-fg ${className}`}>
-      <span className="material-symbols-outlined">{ICON[mode]}</span>
+      <Icon name={ICON[mode]} size={20} />
     </button>
   );
 }

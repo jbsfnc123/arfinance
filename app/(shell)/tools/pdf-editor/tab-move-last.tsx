@@ -6,6 +6,7 @@ import { lastToFirstOrder, moveLastPageToFirst, uniqueNames } from "@/lib/module
 import { btnGhost, btnPrimary } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { Actions, Hint, ThumbImage, previewOf, thumbKey, useBusy, type Docs } from "./shared";
+import { Icon } from "@/components/icons";
 
 const PREVIEW_LIMIT = 12;
 const STEP = "Pindah halaman terakhir";
@@ -62,10 +63,10 @@ export function TabMoveLast({ d, setSave }: { d: Docs; setSave: (fn: (() => void
     <div className="space-y-4">
       <Hint>Halaman terakhir dipindah menjadi halaman pertama; nama file tetap sama. Pratinjau di bawah menunjukkan urutan hasil untuk <b>{a.name}</b>.</Hint>
       <Actions>
-        <button type="button" className={btnPrimary} onClick={applyActive}><span className="material-symbols-outlined !text-base">check</span>Terapkan ke dokumen</button>
+        <button type="button" className={btnPrimary} onClick={applyActive}><Icon name="check" size={16} />Terapkan ke dokumen</button>
         <button type="button" className={btnGhost} onClick={applyAll} disabled={d.docs.length < 2}>Terapkan ke semua dokumen</button>
-        <button type="button" className={btnGhost} onClick={downloadActive}><span className="material-symbols-outlined !text-base">download</span>Unduh hasil</button>
-        <button type="button" className={btnGhost} onClick={downloadAll}><span className="material-symbols-outlined !text-base">folder_zip</span>Unduh semua (ZIP)</button>
+        <button type="button" className={btnGhost} onClick={downloadActive}><Icon name="download" size={16} />Unduh hasil</button>
+        <button type="button" className={btnGhost} onClick={downloadAll}><Icon name="folder_zip" size={16} />Unduh semua (ZIP)</button>
       </Actions>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {order.map((src, i) => (

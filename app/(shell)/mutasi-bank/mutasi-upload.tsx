@@ -11,6 +11,7 @@ import { ImportLog } from "@/components/import-log";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls } from "@/components/ui";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type Box = "mutasi" | "erp" | "target";
 const EXPECT: Record<Box, FileKind> = { mutasi: "mutasi", erp: "erp", target: "target" };
@@ -50,7 +51,7 @@ export function MutasiUpload({ version, onDone }: { version: number; onDone: () 
       <div className="flex items-center gap-2">
         <h2 className="font-medium">{title}</h2>
         <button type="button" className={`${btnGhost} ml-auto !text-xs`} onClick={() => downloadXlsx(`Template ${title}.xlsx`, "Template", TEMPLATES[TEMPLATE_OF[b]]).catch((e: Error) => toast(`Gagal mengunduh Excel: ${e.message}`, "danger"))}>
-          <span className="material-symbols-outlined !text-base">download</span>Template
+          <Icon name="download" size={16} />Template
         </button>
       </div>
       <p className="text-xs text-fg-2">{note}</p>

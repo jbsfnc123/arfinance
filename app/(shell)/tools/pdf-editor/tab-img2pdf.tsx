@@ -6,6 +6,7 @@ import { imagesToPdf, type ImageAsset, type Margin, type Orientation, type Paper
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { Actions, Dropzone, Hint, ThumbGrid, reorder, useBusy, type Docs } from "./shared";
+import { Icon } from "@/components/icons";
 
 // 4. Gambar ke PDF: setiap foto satu halaman, selalu proporsional & di tengah.
 export type ImgItem = { uid: string; asset: ImageAsset };
@@ -29,8 +30,8 @@ export function TabImg2Pdf({ d, s, setS, onImages, setSave }: {
     <div className="space-y-4">
       <Hint>Pilih atau seret beberapa foto — setiap foto menjadi satu halaman PDF. Seret untuk mengurutkan, putar bila perlu. Foto tidak akan gepeng atau terpotong.</Hint>
       <Actions>
-        <button type="button" className={btnPrimary} onClick={apply} disabled={!s.items.length}><span className="material-symbols-outlined !text-base">check</span>Terapkan (buat foto-ke-pdf.pdf)</button>
-        <button type="button" className={btnGhost} onClick={download} disabled={!s.items.length}><span className="material-symbols-outlined !text-base">download</span>Unduh hasil</button>
+        <button type="button" className={btnPrimary} onClick={apply} disabled={!s.items.length}><Icon name="check" size={16} />Terapkan (buat foto-ke-pdf.pdf)</button>
+        <button type="button" className={btnGhost} onClick={download} disabled={!s.items.length}><Icon name="download" size={16} />Unduh hasil</button>
         <button type="button" className={`${btnGhost} hover:text-danger`} disabled={!s.items.length}
           onClick={() => { if (window.confirm("Hapus semua foto dari daftar?")) setS((x) => ({ ...x, items: [] })); }}>Reset</button>
       </Actions>

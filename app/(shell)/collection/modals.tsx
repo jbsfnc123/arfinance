@@ -8,6 +8,7 @@ import type { CollectionRow } from "@/lib/modules/collection/view-model";
 import { DEFAULT_WA_TEMPLATE, type WaTemplate } from "@/lib/modules/collection/wa-message";
 import { Modal } from "@/components/modal";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 export type Contact = { business_partner: string; nama: string | null; no_wa: string };
 
@@ -157,7 +158,7 @@ export function ContactsModal(props: {
       <div className="flex gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama, BP, nomor…" className={inputCls} />
         <button type="button" className={btnGhost} onClick={() => setBatch([{ business_partner: props.firstBp, nama: "", no_wa: "" }])}>
-          <span className="material-symbols-outlined">add</span>Tambah
+          <Icon name="add" size={20} />Tambah
         </button>
       </div>
 
@@ -175,7 +176,7 @@ export function ContactsModal(props: {
                 />
               ))}
               <button type="button" className="text-fg-2 hover:text-danger" onClick={() => setBatch(batch.filter((_, j) => j !== i))} aria-label="Hapus baris">
-                <span className="material-symbols-outlined">close</span>
+                <Icon name="close" size={20} />
               </button>
             </div>
           ))}
@@ -210,7 +211,7 @@ export function ContactsModal(props: {
                   <div className="truncate text-xs text-fg-2">{c.business_partner} · {c.no_wa}</div>
                 </button>
                 <button type="button" className="text-fg-2 hover:text-fg" onClick={() => { setEditing(c.business_partner); setDraft(c); }} aria-label="Ubah kontak">
-                  <span className="material-symbols-outlined">edit</span>
+                  <Icon name="edit" size={20} />
                 </button>
               </div>
             )}

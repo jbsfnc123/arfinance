@@ -11,6 +11,7 @@ import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
 import { LtkpPreview } from "../ltkp-preview";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
+import { Icon } from "@/components/icons";
 
 type Req = {
   id: number; created_at: string; created_by_name: string | null; bp_value: string; invoice_date: string | null;
@@ -110,7 +111,7 @@ export function PengajuanList({ myName }: { myName: string }) {
           ))}
         </div>
         <button type="button" className={btnPrimary} disabled={!selected.size} onClick={() => setLtkpOpen(true)}>
-          <span className="material-symbols-outlined">upload_file</span>Upload LTKP ({selected.size})
+          <Icon name="upload_file" size={20} />Upload LTKP ({selected.size})
         </button>
       </div>
 

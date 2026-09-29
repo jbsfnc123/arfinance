@@ -6,6 +6,7 @@ import { OLD_DAYS, type HistoryRow } from "@/lib/modules/collection/payment-hist
 import { useViewState } from "@/lib/ui/view-state";
 import { fmtDate, monthLabel, rupiah } from "@/lib/format";
 import { lamaCls, lamaTxt, PaymentHistoryModal, usePaymentHistory, type PayHistTarget } from "@/components/payment-history-modal";
+import { Icon } from "@/components/icons";
 
 const notOld = (r: HistoryRow) => !r.hasOld;
 const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
@@ -80,8 +81,8 @@ export function HistoryView() {
   const open = (r: HistoryRow) => setTarget(r.jenis === "Group" ? { kind: "group", name: r.name } : { kind: "bp", key: r.key, name: r.name });
   const seg = (m: "bp" | "group", label: string, icon: string) => (
     <button type="button" aria-pressed={mode === m} onClick={() => setMode(m)}
-      className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm ${mode === m ? "bg-accent text-on-accent" : "text-fg-2 hover:bg-surface-2"}`}>
-      <span className="material-symbols-outlined !text-base">{icon}</span>{label}
+      className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-sm ${mode === m ? "bg-accent-fill text-on-accent" : "text-fg-2 hover:bg-surface-2"}`}>
+      <Icon name={icon} size={16} />{label}
     </button>
   );
 
@@ -96,7 +97,7 @@ export function HistoryView() {
           {h.cov.map((c) => (
             <span key={c.month} title={c.payments ? `${c.payments.toLocaleString("id-ID")} transaksi pembayaran` : "Belum ada data pembayaran bulan ini"}
               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs ${c.payments ? "bg-success/15 text-success" : "bg-danger/15 text-danger"}`}>
-              <span className="material-symbols-outlined !text-sm">{c.payments ? "check_circle" : "cancel"}</span>
+              <Icon name={c.payments ? "check_circle" : "cancel"} size={14} />
               {monthLabel(c.month)}{c.payments ? ` · ${c.payments.toLocaleString("id-ID")}` : ""}
             </span>
           ))}

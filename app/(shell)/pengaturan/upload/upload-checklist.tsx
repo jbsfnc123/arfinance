@@ -7,6 +7,7 @@ import { CHECKLIST, FILES, isFresh, lastOf, type FileKey, type UploadStat } from
 import { fmtDate, fmtTimestamp } from "@/lib/format";
 import { todayJakarta } from "@/lib/parsers/date";
 import { card } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 // Checklist upload: per menu (ke bawah) daftar file yang dibutuhkan. Tercentang bila sudah di-upload
 // hari ini (WIB) — atau bulan ini untuk Target — dan otomatis silang lagi saat ganti hari.
@@ -60,10 +61,7 @@ export function UploadChecklist({ version }: { version: number }) {
                 const s = status.get(k)!;
                 return (
                   <li key={k} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-2 text-sm">
-                    <span className={`material-symbols-outlined !text-xl ${s.ok ? "text-success" : "text-danger"}`}
-                      style={{ fontVariationSettings: "'FILL' 1" }} aria-label={s.ok ? "sudah" : "belum"}>
-                      {s.ok ? "check_circle" : "cancel"}
-                    </span>
+                    <Icon name={s.ok ? "check_circle" : "cancel"} size={20} strokeWidth={2} className={s.ok ? "text-success" : "text-danger"} label={s.ok ? "sudah" : "belum"} />
                     <span className={s.ok ? "" : "text-fg"}>{def.label}</span>
                     {def.period === "month" && <span className="rounded bg-surface-2 px-1.5 text-[11px] text-fg-2">per bulan</span>}
                     <span className="text-xs text-fg-2">

@@ -11,6 +11,7 @@ import { useViewState } from "@/lib/ui/view-state";
 import { card, inputCls, td, th } from "@/components/ui";
 import { useM10 } from "../../mitra10/use-m10";
 import { useRkm } from "../../rkm/use-rkm";
+import { Icon } from "@/components/icons";
 
 const n = (v: number) => v.toLocaleString("id-ID");
 const hari = (v: number | null) => (v === null ? "–" : `${v.toLocaleString("id-ID")} hari`);
@@ -93,7 +94,7 @@ export function TukarDashboard() {
                 className={`cursor-pointer border-b border-line/50 hover:bg-surface-2 ${open === r.key ? "bg-surface-2 shadow-[inset_3px_0_0_var(--color-accent)]" : ""}`}>
                 <td className={td}>
                   <div className="flex items-center gap-1 font-medium">
-                    <span className="material-symbols-outlined !text-base text-fg-2">{open === r.key ? "expand_less" : "expand_more"}</span>{r.label}
+                    <Icon name={open === r.key ? "expand_less" : "expand_more"} size={16} className="text-fg-2" />{r.label}
                   </div>
                   <div className="text-xs text-fg-2">{r.source}</div>
                 </td>

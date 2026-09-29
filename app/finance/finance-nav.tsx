@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FINANCE_NAV } from "@/lib/menu";
+import { Icon } from "@/components/icons";
 
 // Navigasi Finance Workspace. Di host tangki.space path terlihat tanpa prefix /finance (rewrite proxy).
 export function FinanceNav() {
@@ -15,7 +16,7 @@ export function FinanceNav() {
         return (
           <Link key={n.href} href={n.href}
             className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm ${active ? "border-accent text-accent" : "border-transparent text-fg-2 hover:text-fg"}`}>
-            <span className="material-symbols-outlined !text-lg">{n.icon}</span>
+            <Icon name={n.icon} size={18} />
             {n.label}
           </Link>
         );

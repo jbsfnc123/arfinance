@@ -134,7 +134,7 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
         {steps.map((s, i) => (
           <li key={s} className="flex flex-1 items-center gap-2">
             <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-              step === i + 1 ? "bg-accent text-on-accent" : step > i + 1 ? "bg-success text-bg" : "bg-surface-2 text-fg-2"}`}>
+              step === i + 1 ? "bg-accent-fill text-on-accent" : step > i + 1 ? "bg-success text-bg" : "bg-surface-2 text-fg-2"}`}>
               {i + 1}
             </span>
             <span className="hidden text-xs text-fg-2 sm:inline">{s}</span>

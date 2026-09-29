@@ -12,6 +12,7 @@ import { useToast } from "@/components/toast";
 import { Tabs } from "@/components/tabs";
 import { Modal } from "@/components/modal";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 const TABS = [
   { key: "input", label: "Input Resi", icon: "local_shipping" },
@@ -199,7 +200,7 @@ function ResiPanel(props: { selected: EkspedisiRow[]; onClear: () => void; onSav
       </label>
       {resi.trim() && invalid && <p className="text-xs text-danger">{invalid}</p>}
       <button type="submit" className={`${btnPrimary} w-full`} disabled={busy || !selected.length || !!invalid}>
-        <span className="material-symbols-outlined !text-base">save</span>
+        <Icon name="save" size={16} />
         {busy ? "Menyimpan…" : `Simpan Resi${selected.length ? ` (${selected.length})` : ""}`}
       </button>
     </form>
@@ -224,11 +225,11 @@ function ResiModal(props: {
     <Modal open wide title={`Resi ${g.resi}`} onClose={props.onClose}
       footer={<>
         <button type="button" className={`${btnGhost} mr-auto text-danger`} disabled={busy} onClick={() => run(() => props.onDelete(g))}>
-          <span className="material-symbols-outlined !text-base">delete</span>Hapus resi
+          <Icon name="delete" size={16} />Hapus resi
         </button>
         <button type="button" className={btnGhost} onClick={props.onClose}>Tutup</button>
         <button type="button" className={btnPrimary} disabled={busy || !!invalid || !changed} onClick={() => run(() => props.onEdit(g, resi, tanggal))}>
-          <span className="material-symbols-outlined !text-base">save</span>Simpan perubahan
+          <Icon name="save" size={16} />Simpan perubahan
         </button>
       </>}>
       <div className="space-y-4">

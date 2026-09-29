@@ -1,22 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { MenuGroup } from "@/lib/menu";
-import { plateStyle } from "@/components/ui";
+import { AppIcon, Icon } from "@/components/icons";
+import { useDialog } from "@/components/use-dialog";
+import { itemIcon } from "@/lib/ui/app-icons";
 
 // App Launcher: semua modul yang boleh diakses (menu ACL existing) sebagai grid ubin per grup + pencarian di atas.
 // Keyboard: panah menggeser fokus antar-ubin (mengikuti jumlah kolom grid), Enter membuka, Esc menutup.
 export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; onClose: () => void; menu: MenuGroup[]; showHome: boolean }) {
   const [q, setQ] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => { setQ(""); onClose(); }, [onClose]);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
+  useDialog(open, close, dialogRef);
   const groups = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const all = [...(showHome ? [{ id: "home", label: "Beranda", icon: "home", children: [{ id: "home", label: "Beranda", href: "/" }] } as MenuGroup] : []), ...menu];
@@ -44,17 +42,17 @@ export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; 
   };
 
   return (
-    <div className="fade-in fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 pt-[7vh] backdrop-blur-[3px]" onMouseDown={close}>
-      <div role="dialog" aria-modal="true" aria-label="Semua aplikasi" onMouseDown={(e) => e.stopPropagation()}
+    <div className="fade-in fixed inset-0 z-(--z-overlay) flex items-start justify-center bg-black/30 p-4 pt-[7vh] backdrop-blur-[3px]" onMouseDown={close}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Semua aplikasi" onMouseDown={(e) => e.stopPropagation()}
         className="glass-strong pop-in relative flex max-h-[82vh] w-full max-w-5xl flex-col rounded-[var(--panel-radius)]">
         <div className="flex items-center gap-2 px-5 pb-3 pt-4">
           <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-[10px] border border-hairline bg-fg/6 px-3 py-1.5 focus-within:border-accent/60">
-            <span className="material-symbols-outlined !text-[18px] text-fg-2">search</span>
-            <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="Cari aplikasi" aria-label="Cari aplikasi"
+            <Icon name="search" size={18} className="text-fg-2" />
+            <input data-autofocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="Cari aplikasi" aria-label="Cari aplikasi"
               className="w-full bg-transparent text-[13px] outline-none placeholder:text-fg-2 no-ring" />
           </div>
           <button type="button" onClick={close} aria-label="Tutup" className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full text-fg-2 hover:bg-fg/8 hover:text-fg">
-            <span className="material-symbols-outlined !text-[18px]">close</span>
+            <Icon name="close" size={18} />
           </button>
         </div>
         <div ref={gridRef} onKeyDown={onGridKey} className="min-h-0 overflow-y-auto px-5 pb-5">
@@ -65,11 +63,9 @@ export function AppLauncher({ open, onClose, menu, showHome }: { open: boolean; 
                 {g.children.map((c) => {
                   const inner = (
                     <>
-                      <span className="flex h-11 w-11 items-center justify-center rounded-[12px] transition-transform duration-150 group-hover:-translate-y-0.5" style={plateStyle(g.id)}>
-                        <span className="material-symbols-outlined !text-[22px]">{g.icon}</span>
-                      </span>
+                      <AppIcon spec={itemIcon(g.id, c.id)} size={48} className="drop-shadow-[0_2px_4px_rgba(0,0,0,.18)] transition-transform duration-150 group-hover:-translate-y-0.5" />
                       <span className="line-clamp-2 text-center text-[12px] leading-snug">{c.label}</span>
-                      {c.external && <span className="material-symbols-outlined absolute right-2 top-2 !text-[13px] text-fg-2">open_in_new</span>}
+                      {c.external && <Icon name="open_in_new" size={13} className="absolute right-2 top-2 text-fg-2" />}
                       {q && <span className="text-[10px] text-fg-2">{g.label}</span>}
                     </>
                   );

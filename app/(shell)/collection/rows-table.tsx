@@ -7,6 +7,7 @@ import { cellText, COLUMN_DEFS, type CollectionRow, type CollectionSort, type Co
 import { useFillHeight } from "@/lib/ui/fill-height";
 import { useScrollMemory } from "@/lib/ui/view-state";
 import { btnGhost, card } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 const ROW_HEIGHT = 40;
 
@@ -109,7 +110,7 @@ export function RowsTable(props: {
                       <button type="button" title={`Sembunyikan kolom ${c.label}`} aria-label={`Sembunyikan kolom ${c.label}`}
                         onClick={(e) => { e.stopPropagation(); props.onHide!(c.key); }}
                         className="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100">
-                        <span className="material-symbols-outlined !text-sm">visibility_off</span>
+                        <Icon name="visibility_off" size={14} />
                       </button>
                     )}
                   </th>
@@ -168,7 +169,7 @@ export function RowsTable(props: {
         Menampilkan {rows.length.toLocaleString("id-ID")} baris (sesuai filter)
         <button type="button" className={`${btnGhost} !py-0.5 ${wrap ? "border-accent text-accent" : ""}`} aria-pressed={wrap}
           title="Tampilkan teks panjang secara utuh" onClick={() => setWrap(!wrap)}>
-          <span className="material-symbols-outlined !text-base">wrap_text</span>Teks penuh
+          <Icon name="wrap_text" size={16} />Teks penuh
         </button>
         {selection.length > 0 && (
           <button type="button" className="text-danger hover:underline" onClick={() => setSelection(() => [])}>

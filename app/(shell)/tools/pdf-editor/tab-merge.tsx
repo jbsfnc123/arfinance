@@ -6,6 +6,7 @@ import { mergePages, type ImageAsset, type MergeEntry, type Paper } from "@/lib/
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { Actions, Dropzone, Hint, ThumbGrid, previewOf, reorder, thumbKey, uid, useBusy, type Doc, type Docs } from "./shared";
+import { Icon } from "@/components/icons";
 
 // 3. Gabung PDF & foto: semua halaman tampil sebagai thumbnail; seret untuk mengurutkan,
 // putar 90°, hapus per halaman. Foto menjadi satu halaman (A4 / Letter / ikut foto).
@@ -98,10 +99,10 @@ export function TabMerge({ d, m, setM, setSave, onPdfFiles }: {
     <div className="space-y-4">
       <Hint>Semua halaman dari dokumen (dan foto tambahan) tampil di bawah. <b>Seret</b> untuk mengatur urutan, putar atau hapus per halaman, lalu terapkan. Foto menjadi satu halaman.</Hint>
       <Actions>
-        <button type="button" className={btnPrimary} onClick={apply} disabled={!m.items.length}><span className="material-symbols-outlined !text-base">check</span>Terapkan (buat gabungan.pdf)</button>
-        <button type="button" className={btnGhost} onClick={download} disabled={!m.items.length}><span className="material-symbols-outlined !text-base">download</span>Unduh hasil</button>
+        <button type="button" className={btnPrimary} onClick={apply} disabled={!m.items.length}><Icon name="check" size={16} />Terapkan (buat gabungan.pdf)</button>
+        <button type="button" className={btnGhost} onClick={download} disabled={!m.items.length}><Icon name="download" size={16} />Unduh hasil</button>
         <button type="button" className={btnGhost} onClick={() => setM((s) => ({ ...s, items: fromDocs(d.docs, s.items.filter((x) => x.kind === "image")), initialized: true }))} disabled={!d.docs.length}>
-          <span className="material-symbols-outlined !text-base">refresh</span>Susun ulang dari dokumen
+          <Icon name="refresh" size={16} />Susun ulang dari dokumen
         </button>
         <button type="button" className={`${btnGhost} hover:text-danger`} disabled={!m.items.length}
           onClick={() => { if (window.confirm("Kosongkan daftar halaman gabung?")) setM((s) => ({ ...s, items: [] })); }}>Reset</button>

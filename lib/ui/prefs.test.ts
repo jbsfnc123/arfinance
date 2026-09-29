@@ -17,4 +17,14 @@ describe("preferensi tema", () => {
     expect(PREFS_SCRIPT).toContain("data-theme");
     expect(() => new Function(PREFS_SCRIPT)).not.toThrow();
   });
+  it("skrip anti-kedip menerapkan tema, kepadatan & kurangi transparansi", () => {
+    const store: Record<string, string> = { "prefs:theme": "light", "prefs:density": "compact", "prefs:transparency": "reduced" };
+    const attrs: Record<string, string> = {};
+    new Function("localStorage", "document", "matchMedia", PREFS_SCRIPT)(
+      { getItem: (k: string) => store[k] ?? null },
+      { documentElement: { setAttribute: (k: string, v: string) => { attrs[k] = v; } } },
+      () => ({ matches: true }),
+    );
+    expect(attrs).toEqual({ "data-theme": "light", "data-theme-mode": "light", "data-density": "compact", "data-transparency": "reduced" });
+  });
 });

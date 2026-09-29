@@ -3,6 +3,7 @@ import { currentHost } from "@/lib/workspace-server";
 import { isSharedHost, WORKSPACES, workspaceFromHost } from "@/lib/workspace";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loginNamesFor, type LoginAccount } from "@/lib/auth/login-names";
+import { Icon } from "@/components/icons";
 
 const ERRORS: Record<string, string> = {
   inactive: "Akun Anda dinonaktifkan. Hubungi Super Admin.",
@@ -32,7 +33,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-xs rounded-2xl border border-line bg-surface p-6 text-center">
-        <span className="material-symbols-outlined !text-5xl text-accent">{w.icon}</span>
+        <Icon name={w.icon} size={48} className="text-accent" />
         <h1 className="mt-3 text-2xl font-medium">{w.label}</h1>
         <p className="mt-1 text-sm text-fg-2">{manual ? "Masuk dengan nama & PIN" : "Pilih nama Anda untuk masuk"}</p>
         <LoginFlow initialError={initialError} next={typeof next === "string" ? next : ""} names={names} manual={manual} />

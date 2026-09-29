@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { closePdf, forgetThumbs, isImage, isPdf, openPdf } from "@/lib/modules/pdf/browser";
 import { useToast } from "@/components/toast";
+import { Icon } from "@/components/icons";
 
 // ── Dokumen bersama (hanya di memori browser; hilang saat halaman ditutup) ──
 export type Doc = {
@@ -113,9 +114,9 @@ export function BusyProvider({ children }: { children: React.ReactNode }) {
     <BusyContext.Provider value={{ run }}>
       {children}
       {label && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-(--z-modal) flex items-center justify-center bg-black/40">
           <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-5 py-4 text-sm shadow-lg">
-            <span className="material-symbols-outlined animate-spin text-accent">progress_activity</span>{label}
+            <Icon name="progress_activity" size={20} className="animate-spin text-accent" />{label}
           </div>
         </div>
       )}
@@ -137,7 +138,7 @@ export function Dropzone({ onFiles, accept, title, hint, compact }: {
       onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setOver(false); onFiles([...e.dataTransfer.files]); }}
       className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-center ${compact ? "p-4" : "p-10"} ${over ? "border-accent bg-surface-2" : "border-line hover:bg-surface-2"}`}>
-      <span className={`material-symbols-outlined text-accent ${compact ? "" : "!text-4xl"}`}>upload_file</span>
+      <Icon name="upload_file" size={20} className={`text-accent ${compact ? "" : "!text-4xl"}`} />
       <span className="text-sm font-medium">{title}</span>
       {hint && <span className="text-xs text-fg-2">{hint}</span>}
       <input ref={input} type="file" multiple accept={accept} className="hidden"
@@ -173,10 +174,10 @@ export function ThumbGrid({ items, onMove, onRotate, onRemove }: {
             <span className="rounded bg-surface px-1.5">{i + 1}</span>
             <span className="min-w-0 flex-1 truncate text-fg-2" title={t.label}>{t.label}{t.note ? ` · ${t.note}` : ""}</span>
             <button type="button" title="Putar 90°" onClick={() => onRotate(t.uid)} className="rounded p-0.5 hover:bg-surface">
-              <span className="material-symbols-outlined !text-base">rotate_right</span>
+              <Icon name="rotate_right" size={16} />
             </button>
             <button type="button" title="Hapus" onClick={() => onRemove(t.uid)} className="rounded p-0.5 hover:bg-surface hover:text-danger">
-              <span className="material-symbols-outlined !text-base">close</span>
+              <Icon name="close" size={16} />
             </button>
           </div>
         </div>
@@ -199,7 +200,7 @@ export function ThumbImage({ src, srcKey }: { src: () => Promise<string>; srcKey
     <div className="flex aspect-[3/4] items-center justify-center overflow-hidden rounded-lg bg-white">
       {/* eslint-disable-next-line @next/next/no-img-element -- dataURL lokal, bukan aset untuk dioptimasi */}
       {url ? <img src={url} alt="" className="max-h-full max-w-full object-contain" draggable={false} />
-        : <span className="material-symbols-outlined animate-spin text-fg-2">progress_activity</span>}
+        : <Icon name="progress_activity" size={20} className="animate-spin text-fg-2" />}
     </div>
   );
 }

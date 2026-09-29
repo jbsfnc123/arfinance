@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import type { MenuGroup } from "@/lib/menu";
 import { plateStyle } from "@/components/ui";
 import { clampPanelX, dockSizes } from "./dock-math";
+import { Icon } from "@/components/icons";
 
 // Dock mengambang (navigasi utama, pengganti sidebar). Item = Beranda + grup menu yang boleh diakses (ACL existing)
 // + Semua aplikasi. Pembesaran mengikuti posisi kursor (kurva cosinus, lib: dock-math.ts): ukuran tombol benar-benar
@@ -79,23 +80,23 @@ export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHo
   const panelLeft = typeof window === "undefined" ? 0 : clampPanelX(openAt.x, PANEL_W, innerWidth);
 
   return (
-    <nav ref={navRef} aria-label="Menu utama" className="pointer-events-none fixed inset-x-0 bottom-2.5 z-40 hidden justify-center px-3 md:flex">
+    <nav ref={navRef} aria-label="Menu utama" className="pointer-events-none fixed inset-x-0 bottom-2.5 z-(--z-dock) hidden justify-center px-3 md:flex">
       {openGroup && (
         <div role="menu" aria-label={openGroup.label}
           className="glass pop-in pointer-events-auto fixed rounded-[var(--panel-radius)] p-1.5"
           style={{ left: panelLeft, bottom: openAt.bottom, width: PANEL_W }}>
           <div className="flex items-center gap-2.5 px-2.5 pb-2 pt-1.5">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg" style={plateStyle(openGroup.id)}>
-              <span className="material-symbols-outlined !text-[17px]">{openGroup.icon}</span>
+              <Icon name={openGroup.icon} size={17} />
             </span>
             <span className="text-[13px] font-semibold">{openGroup.label}</span>
           </div>
           <div className="mx-2 mb-1 border-t border-hairline" />
           {openGroup.children.map((c) => {
-            const cls = `flex items-center gap-2 rounded-[10px] px-3 py-[7px] text-[13px] transition-colors ${pathname === c.href ? "bg-accent text-on-accent" : "hover:bg-fg/8"}`;
+            const cls = `flex items-center gap-2 rounded-[10px] px-3 py-[7px] text-[13px] transition-colors ${pathname === c.href ? "bg-accent-fill text-on-accent" : "hover:bg-fg/8"}`;
             return c.external ? (
               <a key={c.id} href={c.href} target="_blank" rel="noreferrer" role="menuitem" className={cls} onClick={close}>
-                <span className="flex-1 truncate">{c.label}</span><span className="material-symbols-outlined !text-[15px] opacity-60">open_in_new</span>
+                <span className="flex-1 truncate">{c.label}</span><Icon name="open_in_new" size={15} className="opacity-60" />
               </a>
             ) : (
               <Link key={c.id} href={c.href} role="menuitem" className={cls} onClick={close}>
@@ -133,7 +134,7 @@ function DockButton({ ref, id, label, icon, size, active, pressed, separator, on
         style={{ width: size, height: size + 6 }}>
         <span className="flex items-center justify-center rounded-[28%] transition-[filter] group-hover:brightness-110 group-active:brightness-90"
           style={{ ...plateStyle(id), width: size - 4, height: size - 4 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: Math.round(size * 0.5) }}>{icon}</span>
+          <Icon name={icon} size={Math.round(size * 0.5)} />
         </span>
         <span aria-hidden className={`mt-[3px] h-1 w-1 rounded-full ${active ? "bg-fg-2" : "bg-transparent"}`} />
         <span role="tooltip"
@@ -155,13 +156,13 @@ export function MobileNav({ menu, showHome, onLauncher }: { menu: MenuGroup[]; s
   ];
   const activeId = pathname === "/" ? "home" : menu.find((g) => g.children.some((c) => c.href === pathname))?.id;
   return (
-    <nav aria-label="Menu utama" className="glass-strong fixed inset-x-0 bottom-0 z-40 flex justify-around rounded-t-[20px] border-b-0 px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
+    <nav aria-label="Menu utama" className="glass-strong fixed inset-x-0 bottom-0 z-(--z-dock) flex justify-around rounded-t-[20px] border-b-0 px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
       {[...items, { id: "launcher", label: "Semua", icon: "apps" }].map((it) => (
         <button key={it.id} type="button" aria-label={it.label} aria-current={activeId === it.id ? "page" : undefined}
           onClick={() => it.id === "launcher" ? onLauncher() : it.href ? router.push(it.href) : it.group ? (it.group.children.length === 1 ? router.push(it.group.children[0].href) : onLauncher()) : undefined}
           className={`flex min-w-14 flex-col items-center gap-0.5 rounded-xl px-2 py-1 text-[10px] ${activeId === it.id ? "text-fg" : "text-fg-2"}`}>
           <span className="flex h-8 w-8 items-center justify-center rounded-[10px]" style={activeId === it.id ? plateStyle(it.id) : undefined}>
-            <span className="material-symbols-outlined !text-[20px]">{it.icon}</span>
+            <Icon name={it.icon} size={20} />
           </span>
           {it.label}
         </button>

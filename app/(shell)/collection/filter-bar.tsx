@@ -7,6 +7,7 @@ import {
   type CollectionRow, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
 import { btnGhost, inputCls } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 
 export function FilterBar(props: {
@@ -59,7 +60,7 @@ export function FilterBar(props: {
     <div className="sticky top-0 z-10 -mx-6 mt-4 border-b border-line bg-bg/95 px-6 py-3 backdrop-blur">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-56 flex-1">
-          <span className="material-symbols-outlined absolute left-2.5 top-2 text-fg-2">search</span>
+          <Icon name="search" size={20} className="absolute left-2.5 top-2 text-fg-2" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari invoice, BP, catatan…" className={`${inputCls} pl-9`} />
         </div>
         <select value={filters.pg} onChange={(e) => setFilters({ ...filters, pg: e.target.value })} className={`${inputCls} !w-auto max-w-56`}>
@@ -74,7 +75,7 @@ export function FilterBar(props: {
         <input type="date" value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} className={`${inputCls} !w-auto`} title="Invoice date sampai" />
         <div className="relative">
           <button type="button" className={btnGhost} onClick={() => setColMenu(!colMenu)}>
-            <span className="material-symbols-outlined">view_column</span>
+            <Icon name="view_column" size={20} />
             Kolom
           </button>
           {colMenu && (
@@ -99,7 +100,7 @@ export function FilterBar(props: {
             <span key={c.label} className="inline-flex items-center gap-1 rounded-full bg-pill px-3 py-1 text-xs text-pill-fg">
               {c.label}
               <button type="button" onClick={() => setFilters({ ...filters, ...c.clear })} aria-label={`Hapus filter ${c.label}`}>
-                <span className="material-symbols-outlined !text-sm">close</span>
+                <Icon name="close" size={14} />
               </button>
             </span>
           ))}

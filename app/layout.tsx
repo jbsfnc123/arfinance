@@ -9,6 +9,7 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  preload: false, // cadangan saja: Mac/iOS memakai SF Pro, Windows memakai Segoe UI (lihat --font-sans)
 });
 
 // Judul tab mengikuti workspace (host): Finance / AR / AP Workspace.
@@ -23,12 +24,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* Tema & kepadatan dari localStorage sebelum paint pertama (tanpa kedip); atribut <html> diatur skrip ini. */}
         <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
-        {/* display=block disengaja: font ikon tidak boleh tampil sebagai teks nama ikon saat memuat. */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font, @next/next/google-font-display */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
-        />
       </head>
       <body className="min-h-full">{children}</body>
     </html>
