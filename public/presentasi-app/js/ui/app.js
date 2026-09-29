@@ -156,10 +156,43 @@ const App = (() => {
 
   function theme(t) {
     const next = t || (document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-    document.documentElement.dataset.theme = next;
     ls.set('theme', next);
-    if (D) render();
+    applyTheme(next);
   }
+
+  /* Terapkan tema tanpa memuat ulang: CSS langsung berganti; chart (warna dibaca saat dibuat) digambar ulang lewat
+   * render() yang mempertahankan slide, bulan, toggle/tab & mode edit. Bila teks slide sedang diketik, render ditunda
+   * sampai fokus lepas (teks disimpan dulu) agar isi contenteditable tidak tertimpa. */
+  let themeRenderPending = false;
+  function applyTheme(next) {
+    document.documentElement.dataset.theme = next;
+    if (!D) return;
+    const a = document.activeElement;
+    if (editing && a && a.closest && a.closest('[data-edit]')) { themeRenderPending = true; return; }
+    themeRenderPending = false;
+    render();
+  }
+
+  /* Tema dari AR Workspace (halaman induk /presentasi). Hanya pesan dari induk dengan origin sama & tipe dikenal. */
+  function hostTheme() {
+    try {
+      if (window.parent === window) return null;
+      const h = window.parent.document.documentElement.dataset;
+      applyTransparency(h.transparency === 'reduced');
+      return h.theme === 'light' || h.theme === 'dark' ? h.theme : null;
+    } catch (e) { return null; }
+  }
+  function applyTransparency(reduced) {
+    if (reduced) document.documentElement.dataset.transparency = 'reduced';
+    else delete document.documentElement.dataset.transparency;
+  }
+  window.addEventListener('message', e => {
+    if (window.parent === window || e.source !== window.parent || e.origin !== location.origin) return;
+    const d = e.data;
+    if (!d || d.type !== 'ar-deck:theme' || (d.theme !== 'light' && d.theme !== 'dark')) return;
+    applyTransparency(d.transparency === 'reduced');
+    if (document.documentElement.dataset.theme !== d.theme) applyTheme(d.theme);
+  });
 
   // ---------------------------------------------------------------- edit teks di layar (disimpan per bulan)
 
@@ -257,7 +290,11 @@ const App = (() => {
     const n = e.target.closest && e.target.closest('[data-edit]');
     if (!n || !editing) return;
     saveText(n);
-    setTimeout(() => { if (!document.activeElement || !document.activeElement.closest('[data-edit]')) resetBtn.style.display = 'none'; }, 50);
+    setTimeout(() => {
+      const inEdit = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-edit]');
+      if (!inEdit) resetBtn.style.display = 'none';
+      if (themeRenderPending && !inEdit) { themeRenderPending = false; render(); } // tema berganti saat mengetik
+    }, 50);
   });
 
   function textCount(ym) { return Object.keys(((state.texts || {})[ym || m]) || {}).length; }
@@ -365,7 +402,7 @@ const App = (() => {
   // ---------------------------------------------------------------- boot
 
   async function boot() {
-    const th = ls.get('theme');
+    const th = hostTheme() || ls.get('theme'); // di dalam AR Workspace: ikuti tema aplikasi
     if (th) document.documentElement.dataset.theme = th;
     const saved = await Store.load();
     state = saved || clone(window.DEMO_SNAPSHOT || newState_());

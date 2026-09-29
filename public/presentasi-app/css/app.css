@@ -338,6 +338,141 @@ body.presenting .phud.show, body.presenting .phud:hover { opacity: 1; }
 .ent .ty { font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
 .ent .val { margin-left: auto; text-align: right; font-size: 12px; color: var(--text-2); white-space: nowrap; }
 
+/* ================================================================
+ * Chrome editor — selaras AR Workspace (macOS, Fase 42)
+ * Token --ui-* HANYA untuk chrome editor (toolbar, rail, area kerja, menu, drawer, Data Center, toast). Slide, kartu,
+ * chart & cetak (#printRoot) tetap memakai variabel deck di atas sehingga hasil cetak/ekspor tidak berubah.
+ * ================================================================ */
+:root {
+  --ui-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+  --ui-bg: #f2f2f7;
+  --ui-surface: #ffffff;
+  --ui-surface-2: #f5f5f7;
+  --ui-sidebar: rgba(246, 246, 250, 0.92);
+  --ui-glass: rgba(250, 250, 252, 0.88);
+  --ui-hairline: rgba(0, 0, 0, 0.09);
+  --ui-separator: rgba(60, 60, 67, 0.12);
+  --ui-text: #1d1d1f;
+  --ui-text-2: #636366;
+  --ui-accent: #0066d6;
+  --ui-fill: #0068d9;
+  --ui-fill-hover: #0059bd;
+  --ui-fill-3: rgba(118, 118, 128, 0.12);
+  --ui-tint: #007aff;
+  --ui-selection: rgba(0, 122, 255, 0.13);
+  --ui-shadow: 0 12px 36px rgba(16, 24, 40, 0.14), 0 2px 6px rgba(16, 24, 40, 0.06);
+  --ui-shadow-lg: 0 28px 80px rgba(16, 24, 40, 0.22), 0 4px 14px rgba(16, 24, 40, 0.08);
+  --deck-font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; /* font slide (tidak berubah) */
+}
+:root[data-theme="dark"] {
+  --ui-bg: #1c1c1e;
+  --ui-surface: #242426;
+  --ui-surface-2: #2c2c2e;
+  --ui-sidebar: rgba(36, 36, 38, 0.92);
+  --ui-glass: rgba(40, 40, 43, 0.84);
+  --ui-hairline: rgba(255, 255, 255, 0.09);
+  --ui-separator: rgba(255, 255, 255, 0.08);
+  --ui-text: #f5f5f7;
+  --ui-text-2: #aeaeb2;
+  --ui-accent: #409cff;
+  --ui-fill: #0a6fe0;
+  --ui-fill-hover: #0a64d0;
+  --ui-fill-3: rgba(118, 118, 128, 0.24);
+  --ui-tint: #0a84ff;
+  --ui-selection: rgba(10, 132, 255, 0.24);
+  --ui-shadow: 0 12px 36px rgba(0, 0, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --ui-shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.app { background: var(--ui-bg); color: var(--ui-text); font-family: var(--ui-font); grid-template-rows: 52px 1fr; }
+:where(.app) .slide { font-family: var(--deck-font); color: var(--text); } /* spesifisitas rendah: aturan slide (mis. .slide.cover) tetap menang */
+.topbar { background: var(--ui-glass); border-bottom: 1px solid var(--ui-hairline); gap: 10px; padding: 0 14px;
+  -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%); }
+.brand-mark { border-radius: 9px; background: linear-gradient(180deg, #4da3ff, #1a63e0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 1px 2px rgba(0, 0, 0, .18); }
+.brand-title { font-weight: 600; letter-spacing: -.01em; }
+.brand-sub { color: var(--ui-text-2); }
+.select, .btn { height: 30px; border-radius: 999px; border: 1px solid var(--ui-hairline); background: var(--ui-surface); color: var(--ui-text);
+  font-size: 13px; box-shadow: 0 1px 1px rgba(0, 0, 0, .04); transition: background-color .12s, border-color .12s; }
+.select { border-radius: 8px; background-position: calc(100% - 16px) 13px, calc(100% - 11px) 13px; }
+.btn:hover, .select:hover { border-color: var(--ui-separator); background-color: var(--ui-surface-2); }
+.btn:active { background-color: var(--ui-fill-3); }
+.btn.primary { background: var(--ui-fill); border-color: transparent; color: #fff; }
+.btn.primary:hover { background: var(--ui-fill-hover); filter: none; }
+.btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+.btn.ghost:hover { background: var(--ui-fill-3); border-color: transparent; }
+.btn.icon { width: 30px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn:focus-visible, .select:focus-visible, .rail-item:focus-visible, .tabs button:focus-visible, .menu-list button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ui-tint) 80%, transparent); outline-offset: 2px; }
+.menu-list { background: var(--ui-glass); border: 1px solid var(--ui-hairline); border-radius: 14px; box-shadow: var(--ui-shadow); padding: 6px;
+  -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%); }
+.menu-list button { border-radius: 8px; }
+.menu-list button:hover { background: var(--ui-fill); color: #fff; }
+.menu-list button:hover small { color: #fff; }
+.menu-list small { color: var(--ui-text-2); }
+
+.rail { background: var(--ui-sidebar); border-right: 1px solid var(--ui-hairline); }
+.rail h6 { color: var(--ui-text-2); letter-spacing: .06em; }
+.rail-item { border-radius: 8px; }
+.rail-item:hover { background: var(--ui-fill-3); }
+.rail-item.active { background: var(--ui-selection); border-color: transparent; }
+.rail-item .n { background: var(--ui-fill-3); color: var(--ui-text-2); border-radius: 6px; }
+.rail-item.active .n { background: var(--ui-fill); color: #fff; }
+.rail-item .d { color: var(--ui-text-2); }
+
+.slide-foot-nav { color: var(--ui-text-2); }
+.notes { background: var(--ui-surface); border-color: var(--ui-hairline); color: var(--ui-text-2); }
+.notes b { color: var(--ui-text); }
+.drawer { background: var(--ui-surface); border-left: 1px solid var(--ui-hairline); }
+.modal { background: rgba(0, 0, 0, .35); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.modal-box { background: var(--ui-surface); color: var(--ui-text); border: 1px solid var(--ui-hairline); border-radius: 20px; box-shadow: var(--ui-shadow-lg);
+  font-family: var(--ui-font); }
+.modal-head { border-bottom-color: var(--ui-separator); }
+.tabs { border-bottom-color: var(--ui-separator); }
+.tabs button { color: var(--ui-text-2); }
+.tabs button.on { color: var(--ui-accent); border-bottom-color: var(--ui-accent); }
+.toast { background: var(--ui-glass); color: var(--ui-text); border: 1px solid var(--ui-hairline); box-shadow: var(--ui-shadow); font-family: var(--ui-font);
+  -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%); }
+.busy .box { background: var(--ui-surface); color: var(--ui-text); font-family: var(--ui-font); }
+.reset-text { font-family: var(--ui-font); }
+body.editing #editBtn { color: #1d1d1f; } /* teks gelap di atas kuning (putih hanya ±1,7:1) */
+
+/* Kurangi transparansi (dari AR Workspace) & browser tanpa backdrop-filter → solid */
+:root[data-transparency="reduced"] .topbar, :root[data-transparency="reduced"] .menu-list, :root[data-transparency="reduced"] .toast {
+  background: var(--ui-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .topbar, .menu-list, .toast { background: var(--ui-surface); }
+}
+
+/* Layar sempit/pendek: rail jadi strip horizontal, toolbar ikon saja (label tetap terbaca pembaca layar), drawer lembar penuh */
+@media (max-width: 760px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
+  .topbar { grid-column: 1; min-height: 52px; overflow-x: auto; padding: 0 10px; gap: 6px; }
+  .brand, .brand-mark, .topbar .tb-group, .topbar .btn, .topbar .select { flex: none; }
+  .brand { min-width: 0; }
+  .brand > div:last-child, .tb-spacer { display: none; }
+  .topbar .btn:not(.icon) { font-size: 0; gap: 0; width: 36px; padding: 0; justify-content: center; }
+  .topbar .btn:not(.icon) svg { width: 17px; height: 17px; }
+  .topbar #dataStatus { width: auto; padding: 0 10px; }
+  .rail { grid-column: 1; grid-row: 2; display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 6px 10px;
+    border-right: 0; border-bottom: 1px solid var(--ui-hairline); }
+  .rail h6, .rail-item .d { display: none; }
+  .rail-item { flex: none; padding: 6px 10px; min-height: 44px; }
+  .main { grid-column: 1; grid-row: 3; }
+  .stage-wrap { padding: 10px; }
+  .drawer { position: fixed; inset: 0 0 0 auto; z-index: 40; }
+  .drawer.open { width: 100%; }
+  .drawer-inner { width: 100%; }
+  .slide-foot-nav { flex-wrap: wrap; padding: 0 10px 10px; }
+}
+@media (pointer: coarse) {
+  .select, .btn { min-height: 44px; }
+  .btn.icon { width: 44px; }
+  .topbar .btn:not(.icon) { min-width: 44px; }
+  .menu-list button { min-height: 44px; }
+}
+
 /* ---------------- print (PDF) ---------------- */
 .print-root { display: none; }
 @media print {

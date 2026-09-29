@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Json } from "@/lib/database.types";
 import { cachedQuery } from "@/lib/cache/cached-query";
 import { completeness, type MonthData } from "@/lib/modules/deck/template";
 import { compressJson, decodeMonth, deckState } from "@/lib/modules/deck/store";
 import { useToast } from "@/components/toast";
-import { useResolvedTheme } from "@/lib/ui/prefs";
+import { useResolvedTheme, useTransparency } from "@/lib/ui/prefs";
 import { DataCenter } from "./data-center";
 
 type Bridge = {
@@ -32,8 +32,16 @@ export function DeckFrame({ kind }: { kind: string }) {
   const [frameKey, setFrameKey] = useState(0);
   const [dcOpen, setDcOpen] = useState(false);
   const months = useRef<Months>(new Map());
-  // Deck dibuka dengan tema aplikasi (?theme= didukung app deck); tombol tema di dalam deck tetap berfungsi.
+  // Tema aplikasi dikirim ke deck lewat postMessage (tipe "ar-deck:theme", origin sama) tanpa mengganti instance iframe:
+  // slide, bulan, toggle/tab, mode edit & teks yang sedang diketik tetap. Saat boot deck membaca tema dari <html> induk.
+  // Iframe hanya dimuat ulang setelah Data Center menyimpan (frameKey). Tombol tema di dalam deck tetap berfungsi.
   const theme = useResolvedTheme();
+  const [transparency] = useTransparency();
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const postTheme = useCallback(() => {
+    frameRef.current?.contentWindow?.postMessage({ type: "ar-deck:theme", theme, transparency }, window.location.origin);
+  }, [theme, transparency]);
+  useEffect(() => { postTheme(); }, [postTheme]);
 
   useEffect(() => {
     window.ARDeckBridge = {
@@ -82,8 +90,8 @@ export function DeckFrame({ kind }: { kind: string }) {
 
   return (
     // Mengisi area konten shell: menutup padding <main> (px-4/pt-4, md: px-6/pt-5) dan berhenti tepat di atas ruang Dock.
-    <div className="-mx-4 -mt-4 h-[calc(100dvh-var(--topbar-h)-var(--dock-reserve))] min-h-[420px] md:-mx-6 md:-mt-5">
-      <iframe key={`${frameKey}-${theme}`} src={`/presentasi-app/index.html?theme=${theme}`} title="AR Management Deck" allow="fullscreen" className="block h-full w-full border-0" />
+    <div className="-mx-4 -mt-4 h-[calc(100dvh-var(--topbar-h)-var(--dock-reserve))] md:-mx-6 md:-mt-5">
+      <iframe key={frameKey} ref={frameRef} onLoad={postTheme} src="/presentasi-app/index.html" title="AR Management Deck" allow="fullscreen" className="block h-full w-full border-0" />
       <DataCenter open={dcOpen} onClose={() => setDcOpen(false)} onSaved={() => setFrameKey((k) => k + 1)} canDelete={kind === "sa" || kind === "ctrl"} />
     </div>
   );
