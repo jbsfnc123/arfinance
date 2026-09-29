@@ -87,8 +87,12 @@ export function DataTableModal(props: {
             <tr>
               {spec.cols.map((c) => (
                 <th key={c.k} onClick={() => setSort({ k: c.k, dir: sort?.k === c.k ? (-sort.dir as 1 | -1) : 1 })}
-                  className={`cursor-pointer whitespace-nowrap border-b border-line px-2 py-2 font-medium text-fg-2 ${c.n ? "text-right" : "text-left"}`}>
-                  {c.l}{sort?.k === c.k ? (sort.dir > 0 ? " ▲" : " ▼") : ""}
+                  aria-sort={sort?.k === c.k ? (sort.dir > 0 ? "ascending" : "descending") : undefined}
+                  className={`cursor-pointer whitespace-nowrap border-b border-hairline px-2 py-2 font-medium text-fg-2 hover:text-fg ${c.n ? "text-right" : "text-left"}`}>
+                  <button type="button" aria-label={`Urutkan menurut ${c.l}`} className="inline-flex items-center gap-0.5 rounded-[4px] font-medium"
+                    onClick={(e) => { e.stopPropagation(); setSort({ k: c.k, dir: sort?.k === c.k ? (-sort.dir as 1 | -1) : 1 }); }}>
+                    {c.l}{sort?.k === c.k && <Icon name={sort.dir > 0 ? "expand_less" : "expand_more"} size={12} strokeWidth={2.25} className="text-accent" />}
+                  </button>
                 </th>
               ))}
             </tr>

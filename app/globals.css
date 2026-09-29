@@ -47,6 +47,11 @@
   --success: #30d158;
   --chart-grid: rgba(255, 255, 255, 0.07);
   --chart-track: #3a3a3c;
+  --note-yellow: #ffd60a;
+  --note-green: #30d158;
+  --note-blue: #0a84ff;
+  --note-pink: #ff375f;
+  --note-purple: #bf5af2;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.28);
   --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.45);
@@ -120,6 +125,11 @@
   --success: #1e7e34;
   --chart-grid: rgba(0, 0, 0, 0.07);
   --chart-track: #e5e5ea;
+  --note-yellow: #ffcc00;
+  --note-green: #34c759;
+  --note-blue: #007aff;
+  --note-pink: #ff2d55;
+  --note-purple: #af52de;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 1px rgba(16, 24, 40, 0.03);
   --shadow-md: 0 4px 14px rgba(16, 24, 40, 0.08);
   --shadow-lg: 0 18px 50px rgba(16, 24, 40, 0.16);
@@ -229,6 +239,11 @@ body {
   padding-top: var(--cell-py);
   padding-bottom: var(--cell-py);
 }
+/* Baris tabel virtual: tinggi diatur rowHeight() (lib/ui/density.ts) → padding sel minimal agar tidak memaksa lebih tinggi. */
+[data-density="compact"] tbody tr[data-index] > td {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
 
 /* ── Gerak ─────────────────────────────────────────────────────────────────────── */
 @keyframes page-in {
@@ -270,6 +285,13 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--text-secondary) 55%, transparent); }
 ::-webkit-scrollbar-corner { background: transparent; }
+
+/* Kotak centang, radio & slider memakai biru sistem. */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--accent-tint);
+}
 
 /* Kolom cari di dalam wadah yang sudah menandai fokus (Spotlight, Launcher): tanpa cincin ganda. */
 input.no-ring:focus,

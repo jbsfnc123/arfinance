@@ -11,11 +11,8 @@ const ReactECharts = dynamic(() => import("echarts-for-react"), {
   loading: () => <div className="h-full w-full animate-pulse rounded-lg bg-surface-2" />,
 });
 
-// Nilai gelap untuk halaman yang masih memakai konstanta; halaman baru memakai chartTheme() agar ikut tema terang.
-export const CHART_TEXT = "#9aa0a6";
-export const CHART_GRID = "rgba(255,255,255,.08)";
-
-// onClick menerima indeks data yang diklik (untuk drill-down). Warna teks mengikuti tema aktif.
+// onClick menerima indeks data yang diklik (untuk drill-down). Warna teks mengikuti tema aktif; pemanggil membangun
+// warna seri dari seriesColors()/categoryColors()/chartTheme() dengan useResolvedTheme() agar ikut berganti tema.
 export function Chart({ option, height = 260, onClick }: { option: EChartsOption; height?: number; onClick?: (dataIndex: number) => void }) {
   const theme = useResolvedTheme();
   const t = chartTheme();

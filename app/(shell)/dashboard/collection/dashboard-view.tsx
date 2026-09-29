@@ -178,7 +178,7 @@ function DonutCard({ title, d, kind, className }: { title: string; d: SpvSummary
     series: [{
       type: "pie", radius: ["66%", "84%"], center: ["50%", "50%"], silent: true, label: { show: false },
       animationDuration: 500, animationEasing: "cubicOut",
-      data: values.map((v) => ({ value: v.value, itemStyle: { color: v.color, borderRadius: 4, borderColor: theme === "dark" ? "#232428" : "#ffffff", borderWidth: 2 } })),
+      data: values.map((v) => ({ value: v.value, itemStyle: { color: v.color, borderRadius: 4, borderColor: t.surface, borderWidth: 2 } })),
     }],
   };
   const legend = kind === "pencapaian"
@@ -312,10 +312,10 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
       <div className="px-4 pt-4">
         <CardHead title="Rincian Pencapaian" sub="Target, terkumpul, sisa & janji bayar per kelompok"
           right={
-            <div className="flex gap-0.5 rounded-xl bg-surface-2/70 p-0.5">
+            <div className="flex gap-0.5 rounded-[10px] bg-fill-3 p-[3px]">
               {TABS.map((t) => (
                 <button key={t.key} type="button" onClick={() => setTab(t.key)} aria-pressed={tab === t.key}
-                  className={`rounded-lg px-3 py-1 text-xs ${tab === t.key ? "bg-surface text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
+                  className={`rounded-[8px] px-3 py-1 text-xs transition-colors ${tab === t.key ? "bg-surface font-medium text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
                   {t.label}
                 </button>
               ))}

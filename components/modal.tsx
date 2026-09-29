@@ -35,10 +35,12 @@ export function Modal(props: {
         className={`glass-strong pop-in flex max-h-[90vh] w-full flex-col overflow-hidden rounded-[20px] ${props.xl ? "max-w-[min(96vw,1600px)]" : props.wide ? "max-w-3xl" : "max-w-lg"}`}
       >
         {win ? (
-          <div className="relative flex h-10 shrink-0 items-center border-b border-hairline bg-fg/[0.03] px-3.5">
-            <button type="button" onClick={onClose} aria-label="Tutup" title="Tutup"
-              className="group flex h-3 w-3 items-center justify-center rounded-full bg-[#ff5f57] shadow-[inset_0_0_0_0.5px_rgba(0,0,0,.25)]">
-              <Icon name="close" size={9} strokeWidth={3} className="text-black/60 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" />
+          <div className="relative flex h-10 shrink-0 items-center border-b border-hairline bg-fg/[0.03] px-2">
+            {/* Area klik 24px (WCAG 2.2), titik visual 12px seperti macOS. */}
+            <button type="button" onClick={onClose} aria-label="Tutup" title="Tutup" className="group flex h-6 w-6 items-center justify-center rounded-full">
+              <span className="flex h-3 w-3 items-center justify-center rounded-full bg-[#ff5f57] shadow-[inset_0_0_0_0.5px_rgba(0,0,0,.25)]">
+                <Icon name="close" size={9} strokeWidth={3} className="text-black/60 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" />
+              </span>
             </button>
             <h2 className="pointer-events-none absolute inset-x-16 truncate text-center text-[13px] font-semibold text-fg">{props.title}</h2>
           </div>

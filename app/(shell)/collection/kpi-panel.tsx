@@ -10,7 +10,9 @@ import {
 import { collectionAllocationOf } from "@/lib/local/derived";
 import { useDataset } from "@/lib/local/store";
 import { todayJakarta } from "@/lib/parsers/date";
-import { Chart, CHART_GRID } from "@/components/chart";
+import { Chart } from "@/components/chart";
+import { chartTheme, seriesColors } from "@/lib/ui/palette";
+import { useResolvedTheme } from "@/lib/ui/prefs";
 import { card, inputCls, td, th } from "@/components/ui";
 import { useViewState } from "@/lib/ui/view-state";
 import { Icon } from "@/components/icons";
@@ -141,6 +143,7 @@ function AllocationChart({ collection }: { collection: string }) {
   const agingAll = useDataset("aging").data?.lines;
   const current = todayJakarta().slice(0, 7);
   const [month, setMonth] = useViewState("collection:allocMonth", current);
+  const theme = useResolvedTheme();
   const a = useMemo(
     () => (erp && targets && agingAll ? collectionAllocationOf(month, collection, erp, targets, agingAll) : null),
     [month, collection, erp, targets, agingAll],
@@ -151,15 +154,16 @@ function AllocationChart({ collection }: { collection: string }) {
   }, [current, month, a, targets]);
 
   if (!a) return <div className="text-sm text-fg-2">Memuat data alokasi…</div>;
+  const sc = seriesColors(theme), ct = chartTheme();
   const option: EChartsOption = {
     grid: { left: 8, right: 8, top: 36, bottom: 8, containLabel: true },
     tooltip: { trigger: "axis", valueFormatter: (x) => (x == null ? "-" : `${Number(x).toLocaleString("id-ID")} jt`) },
-    legend: { top: 0, textStyle: { color: "#9aa0a6" } },
+    legend: { top: 0, textStyle: { color: ct.text } },
     xAxis: { type: "category", data: a.days.map((d) => String(Number(d.date.slice(8)))) },
-    yAxis: { type: "value", name: "Juta", splitLine: { lineStyle: { color: CHART_GRID } } },
+    yAxis: { type: "value", name: "Juta", splitLine: { lineStyle: { color: ct.grid } } },
     series: [
-      { name: "Alloc in Target", type: "bar", stack: "a", data: a.days.map((d) => juta(d.inTarget)), itemStyle: { color: "#5f8fd8" }, barMaxWidth: 16 },
-      { name: "Di luar target", type: "bar", stack: "a", data: a.days.map((d) => juta(d.outside)), itemStyle: { color: "#fdd663" }, barMaxWidth: 16 },
+      { name: "Alloc in Target", type: "bar", stack: "a", data: a.days.map((d) => juta(d.inTarget)), itemStyle: { color: sc.bar }, barMaxWidth: 16 },
+      { name: "Di luar target", type: "bar", stack: "a", data: a.days.map((d) => juta(d.outside)), itemStyle: { color: sc.warning }, barMaxWidth: 16 },
     ],
   };
   return (

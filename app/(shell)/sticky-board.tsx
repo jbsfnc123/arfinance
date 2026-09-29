@@ -14,13 +14,15 @@ type Note = Tables<"sticky_notes">;
 export const MAX_NOTES = 10;
 const SAVE_DELAY = 800;
 
-// Warna transparan di atas permukaan kartu: terbaca di tema gelap maupun terang.
+// Warna catatan = token tema (--note-*, app/globals.css), dicampur transparan di atas permukaan kartu sehingga
+// terbaca di tema gelap maupun terang. Kunci warna yang tersimpan di database tidak berubah.
+const note = (v: string) => ({ bg: `color-mix(in srgb, var(${v}) 16%, transparent)`, border: `color-mix(in srgb, var(${v}) 55%, transparent)`, dot: `var(${v})` });
 const COLORS: Record<string, { bg: string; border: string; dot: string }> = {
-  yellow: { bg: "rgba(253,214,99,.16)", border: "rgba(253,214,99,.55)", dot: "#fdd663" },
-  green:  { bg: "rgba(129,201,149,.16)", border: "rgba(129,201,149,.55)", dot: "#81c995" },
-  blue:   { bg: "rgba(138,180,248,.16)", border: "rgba(138,180,248,.55)", dot: "#8ab4f8" },
-  pink:   { bg: "rgba(242,139,130,.16)", border: "rgba(242,139,130,.55)", dot: "#f28b82" },
-  purple: { bg: "rgba(197,138,249,.16)", border: "rgba(197,138,249,.55)", dot: "#c58af9" },
+  yellow: note("--note-yellow"),
+  green: note("--note-green"),
+  blue: note("--note-blue"),
+  pink: note("--note-pink"),
+  purple: note("--note-purple"),
 };
 
 
