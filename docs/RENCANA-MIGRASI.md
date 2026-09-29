@@ -765,3 +765,22 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   metrik tengah besar, aging tooltip nominal·invoice·%, Top 10 BP chip aging, rekonsiliasi 3 angka + tabel penyebab,
   skeleton. Angka sebelum/sesudah identik (44 nilai Rp, bulan sama).
 - Iterasi berikutnya: redesign per halaman lain, notifikasi (belum ada backend), jendela utilitas mengambang.
+
+## Refinement macOS tahap 2 (Fase 40, 2026-09-30)
+- Hanya presentasi; API/DB/perhitungan/auth/ACL tidak berubah. Angka Dashboard Collection identik dengan kode main
+  pada hari yang sama (48 nilai Rp + semua persen, urutan sama).
+- **Material bertingkat** (globals.css): `.glass-soft` (Top bar, blur 20) < `.glass` (popover/Control Center/tooltip,
+  opasitas 0,93–0,94 agar isi terbaca) < `.glass-strong` (Dock, Spotlight, Launcher, modal; blur 40). Token baru:
+  `--hairline`, `--highlight`, `--surface-glass-soft/-strong`, `--shadow-md/-popover/-floating/-dock`,
+  `--panel-radius` 18, `--dock-radius` 24. Palet graphite (gelap) & frosted cool-gray (terang), wallpaper 3 gradien
+  + noise SVG ringan, scrollbar tipis, animasi `drop-in`/`fade-in`.
+- **Dock**: pembesaran mengikuti kursor (kurva cosinus, `app/(shell)/shell/dock-math.ts` + tes) 44→56 px (tablet
+  38→46), ukuran tombol benar-benar bertambah; plate ber-tint per grup (`plateStyle`/`tintOf` di components/ui.ts,
+  dipetakan dari id grup lib/menu tanpa mengubah logika menu); tooltip kaca berjeda 250 ms; submenu di atas ikon yang
+  diklik, dijepit ke viewport, dengan panah.
+- TopBar 40px ala menu bar (`toolbarBtn`, breadcrumb grup › halaman); Spotlight 640px dengan kategori; Launcher grid
+  ubin ber-tint + navigasi panah; Control Center modul-modul (tile layar penuh/refresh, segmented tema & kepadatan).
+- Modal: `variant="window"` (bilah judul + titik merah tutup, tanpa minimize/maximize palsu) untuk pratinjau data
+  (DataTableModal) & History Pembayaran; modal form tetap header biasa.
+- Tabel: `tableCls` (header sticky semi-transparan, hairline, hover), dipakai Dashboard Collection; LocalTable,
+  TableBox, Daftar Tagihan hanya diganti kelas. Palet chart punya varian gelap/terang (`seriesColors`, `agingColors`).
