@@ -6,12 +6,12 @@ import { useLayoutEffect, type RefObject } from "react";
 // halaman hanya punya satu scrollbar: header sticky dan footer/total tabel selalu terlihat di layar 768px
 // maupun ultrawide. Dipasang sebagai max-height → tabel pendek tetap ringkas.
 
-const MAIN_PAD = 24; // padding bawah <main> (p-6)
+const MAIN_PAD = 24; // padding bawah <main> bawaan (p-6); dengan Dock dibaca dari computed style
 
 /** Tinggi maksimum untuk elemen yang dimulai `offsetTop` px dari atas area scroll setinggi `viewport`. */
-export function fillHeight(viewport: number, offsetTop: number, opts: { min?: number; reserve?: number } = {}) {
-  const { min = 320, reserve = 0 } = opts;
-  return Math.max(min, Math.floor(viewport - offsetTop - reserve - MAIN_PAD));
+export function fillHeight(viewport: number, offsetTop: number, opts: { min?: number; reserve?: number; pad?: number } = {}) {
+  const { min = 320, reserve = 0, pad = MAIN_PAD } = opts;
+  return Math.max(min, Math.floor(viewport - offsetTop - reserve - pad));
 }
 
 export function useFillHeight(ref: RefObject<HTMLElement | null>, opts: { min?: number; reserve?: number; enabled?: boolean } = {}) {
@@ -24,7 +24,8 @@ export function useFillHeight(ref: RefObject<HTMLElement | null>, opts: { min?: 
       const box = scroller?.getBoundingClientRect();
       const top = el.getBoundingClientRect().top - (box?.top ?? 0) + (scroller?.scrollTop ?? window.scrollY);
       const viewport = scroller?.clientHeight ?? window.innerHeight;
-      const h = fillHeight(viewport, top, { min, reserve });
+      const pad = scroller ? parseFloat(getComputedStyle(scroller).paddingBottom) || MAIN_PAD : MAIN_PAD;
+      const h = fillHeight(viewport, top, { min, reserve, pad });
       if (el.style.maxHeight !== `${h}px`) el.style.maxHeight = `${h}px`;
     };
     apply();

@@ -744,3 +744,24 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   bersamaan: aging+`pack_erp` 1/4 gagal, aging+`pack_erp_recent` 0/4. Query `pack_erp_recent` sendiri ±1,2 dtk di
   server; sisanya serialisasi/pengiriman JSON. Kandidat tindak lanjut: coba ulang otomatis di `useDataset`, paket
   lebih kecil (kolom/rentang), atau naikkan statement_timeout khusus RPC paket.
+
+## Redesign UI "macOS-inspired Enterprise AR Workspace" — iterasi 1 (Fase 39, 2026-09-30)
+- Hanya lapisan tampilan; logika bisnis, API/RPC, routing, auth/ACL, perhitungan, dan data tidak berubah.
+- **Token & tema** (app/globals.css): token baru (`--background`, `--surface(-elevated/-glass)`, `--border`,
+  `--text-primary/secondary`, `--accent`, `--success/warning/danger`, radius, shadow, blur) + alias token lama
+  (`--bg`, `--surface-2`, `--text`, …) sehingga kelas Tailwind existing tetap berfungsi. Gelap = bawaan; terang lewat
+  `<html data-theme="light">`. Preferensi tema (Gelap/Terang/Sistem) & kepadatan (Nyaman/Padat) di localStorage
+  (`lib/ui/prefs.ts`), diterapkan sebelum paint oleh skrip inline (`lib/ui/prefs-script.ts`). Font Inter. Warna chart
+  terpusat di `lib/ui/palette.ts` (`chartTheme()` membaca token); `components/chart.tsx` render ulang saat tema berganti.
+- **Shell AR** (`app/(shell)/shell/*`, `shell-chrome.tsx`; sidebar dihapus): Top bar kaca 44px, **Dock** mengambang
+  (grup `visibleMenu(access)` + Semua aplikasi; klik grup → submenu mengambang), **App Launcher**, **Spotlight**
+  Ctrl/Cmd+K (menu; BP & No Invoice dari dataset aging lokal bila sudah dimuat & akun punya Daftar Tagihan),
+  **Control Center** (tema, kepadatan, layar penuh, refresh, "Data aging per"). HP <768px: bottom nav. Konten
+  `padding-bottom: var(--dock-reserve)` dan `useFillHeight` membaca padding itu → tabel tinggi-layar tidak tertutup
+  Dock; toast & ActionBar Daftar Tagihan di atas Dock. Refresh Top bar = `reloadLoaded()` + `router.refresh()`.
+- **Komponen bersama:** `card` radius 16 + shadow, `chip`, `cardTitle`; `components/skeleton.tsx`, `popover.tsx`,
+  `theme-toggle.tsx` (Finance & Kolektor: tombol tema, layout tetap tanpa Dock); modal & toast bergaya kaca.
+- **Dashboard Collection** (referensi): KPI dengan aksen semantik, grid 12 kolom (4·4·4 / 7·5 / 12), donut dengan
+  metrik tengah besar, aging tooltip nominal·invoice·%, Top 10 BP chip aging, rekonsiliasi 3 angka + tabel penyebab,
+  skeleton. Angka sebelum/sesudah identik (44 nilai Rp, bulan sama).
+- Iterasi berikutnya: redesign per halaman lain, notifikasi (belum ada backend), jendela utilitas mengambang.

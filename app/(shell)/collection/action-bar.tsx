@@ -163,7 +163,7 @@ export function ActionBar(props: {
   return (
     <>
       {selected.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:left-[var(--sidebar-w)]">
+        <div className="glass fixed inset-x-3 z-30 rounded-2xl px-4 py-3 md:inset-x-6" style={{ bottom: "calc(var(--dock-reserve) - 12px)" }}>
           <div className="flex flex-wrap items-center gap-2">
             <div className="mr-2 text-sm">
               <b>{selected.length}</b> dipilih · <b>{rupiah(total)}</b>
