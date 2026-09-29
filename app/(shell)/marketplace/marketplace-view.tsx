@@ -200,7 +200,7 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
     <div className="mx-auto max-w-[1800px] space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
-          <h1 className="text-2xl font-medium">Dashboard Penghasilan Marketplace</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight">Dashboard Penghasilan Marketplace</h1>
           <p className="text-sm text-fg-2">
             {R ? `${PLATFORMS[R.meta.platform].label} · Toko: ${R.meta.username} · Periode ${R.meta.dari} s/d ${R.meta.ke}` : "Belum ada data — silakan upload file Excel."}
           </p>

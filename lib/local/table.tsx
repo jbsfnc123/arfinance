@@ -338,7 +338,7 @@ export function LocalTable<T>(props: {
                   {/* Tombol agar urutkan bisa lewat keyboard (Enter/Spasi); klik area header tetap berfungsi. */}
                   <button type="button" onClick={(e) => { e.stopPropagation(); toggleSort(c.k); }}
                     aria-label={`Urutkan menurut ${c.l}`} className="inline-flex items-center gap-0.5 rounded-[4px] font-medium">
-                    {c.l}{c.edit && <span className="ml-1 text-accent" title="Bisa diedit">✎</span>}
+                    {c.l}{c.edit && <span className="ml-1 inline-flex text-accent" title="Bisa diedit"><Icon name="edit" size={12} /></span>}
                     {sort?.k === c.k && <Icon name={sort.dir === 1 ? "expand_less" : "expand_more"} size={13} strokeWidth={2.25} className="text-accent" />}
                   </button>
                   {props.hideKey && cols.length > 1 && (

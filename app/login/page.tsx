@@ -3,7 +3,8 @@ import { currentHost } from "@/lib/workspace-server";
 import { isSharedHost, WORKSPACES, workspaceFromHost } from "@/lib/workspace";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loginNamesFor, type LoginAccount } from "@/lib/auth/login-names";
-import { Icon } from "@/components/icons";
+import { AppIcon } from "@/components/icons";
+import { workspaceIcon } from "@/lib/ui/app-icons";
 
 const ERRORS: Record<string, string> = {
   inactive: "Akun Anda dinonaktifkan. Hubungi Super Admin.",
@@ -32,9 +33,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-xs rounded-2xl border border-line bg-surface p-6 text-center">
-        <Icon name={w.icon} size={48} className="text-accent" />
-        <h1 className="mt-3 text-2xl font-medium">{w.label}</h1>
+      <div className="glass-strong pop-in w-full max-w-sm rounded-[24px] px-7 pb-7 pt-8 text-center">
+        <AppIcon spec={{ ...workspaceIcon(ws), glyph: w.icon }} size={64} className="mx-auto drop-shadow-[0_4px_10px_rgba(0,0,0,.2)]" />
+        <h1 className="mt-4 text-[22px] font-semibold tracking-tight">{w.label}</h1>
         <p className="mt-1 text-sm text-fg-2">{manual ? "Masuk dengan nama & PIN" : "Pilih nama Anda untuk masuk"}</p>
         <LoginFlow initialError={initialError} next={typeof next === "string" ? next : ""} names={names} manual={manual} />
       </div>

@@ -26,7 +26,7 @@ export function CekHargaView() {
 
   return (
     <div className="w-full">
-      <h1 className="text-2xl font-medium">Cek Selisih Harga PO vs SO</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Cek Selisih Harga PO vs SO</h1>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
         {tab === "so" && <UploadSo />}

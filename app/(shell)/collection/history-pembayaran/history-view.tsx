@@ -89,7 +89,7 @@ export function HistoryView() {
   return (
     <div className="w-full space-y-4">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h1 className="text-2xl font-medium">History Pembayaran BP</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">History Pembayaran BP</h1>
         <span className="text-sm text-fg-2">
           Periode payment date <b className="text-fg">{periodTxt}</b> · hanya invoice ber-tempo (Net N Days) · tanpa TikTok/Shopee
         </span>

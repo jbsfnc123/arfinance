@@ -108,7 +108,7 @@ function Editor() {
   return (
     <div className="mx-auto max-w-[1600px]">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-medium">PDF Editor</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">PDF Editor</h1>
         <span className="flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">
           <Icon name="lock" size={14} />Diproses di browser — file tidak dikirim ke server
         </span>

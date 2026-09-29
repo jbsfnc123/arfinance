@@ -10,13 +10,14 @@ export function FinanceNav() {
   const raw = usePathname();
   const pathname = raw.replace(/^\/finance(?=\/|$)/, "") || "/";
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-line px-4">
+    <nav className="flex gap-1 overflow-x-auto border-b border-separator px-4 py-1.5">
       {FINANCE_NAV.map((n) => {
         const active = n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
         return (
           <Link key={n.href} href={n.href}
-            className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm ${active ? "border-accent text-accent" : "border-transparent text-fg-2 hover:text-fg"}`}>
-            <Icon name={n.icon} size={18} />
+            aria-current={active ? "page" : undefined}
+            className={`flex h-[var(--control-h)] shrink-0 items-center gap-1.5 rounded-[8px] px-3 text-[13px] transition-colors ${active ? "bg-selection font-medium text-accent" : "text-fg-2 hover:bg-fg/6 hover:text-fg"}`}>
+            <Icon name={n.icon} size={16} />
             {n.label}
           </Link>
         );

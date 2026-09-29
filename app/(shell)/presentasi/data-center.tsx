@@ -21,7 +21,7 @@ const addMonth = (ym: string, k: number) => {
 };
 
 // Data Center Presentasi AR: pilih bulan → unduh template (1 slide = 1 sheet) → isi → upload kembali.
-// Daftar cut-off per bulan: ✔ lengkap, x/8 sebagian, ✖ belum ada. Tidak terhubung dengan menu lain.
+// Daftar cut-off per bulan: lengkap, x/8 sebagian, belum ada (ikon check_circle / pending / cancel). Tidak terhubung dengan menu lain.
 export function DataCenter({ open, onClose, onSaved, canDelete }: { open: boolean; onClose: () => void; onSaved: () => void; canDelete: boolean }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
@@ -81,7 +81,7 @@ export function DataCenter({ open, onClose, onSaved, canDelete }: { open: boolea
       });
       if (error) throw error;
       const warn = [...(r.missingSheets.length ? [`Sheet tidak ada: ${r.missingSheets.join(", ")}`] : []), ...r.warnings.slice(0, 3)];
-      toast(`${monthLabel(month)} tersimpan — ${c.complete ? "lengkap ✔" : `${c.filled}/${c.total} sheet terisi`}.${warn.length ? "\n" + warn.join("\n") : ""}`,
+      toast(`${monthLabel(month)} tersimpan — ${c.complete ? "lengkap" : `${c.filled}/${c.total} sheet terisi`}.${warn.length ? "\n" + warn.join("\n") : ""}`,
         c.complete ? "success" : "warning", 9000);
       await refresh();
       onSaved();
@@ -90,7 +90,7 @@ export function DataCenter({ open, onClose, onSaved, canDelete }: { open: boolea
   }
 
   async function remove(m: string) {
-    if (!confirm(`Hapus data presentasi ${monthLabel(m)}? Bulan ini akan kosong (✖).`)) return;
+    if (!confirm(`Hapus data presentasi ${monthLabel(m)}? Bulan ini akan kosong (belum ada data).`)) return;
     const { error } = await supabase.rpc("deck_month_delete", { p_month: m });
     if (error) return toast(`Gagal menghapus: ${error.message}`, "danger");
     toast(`Data ${monthLabel(m)} dihapus.`, "success");

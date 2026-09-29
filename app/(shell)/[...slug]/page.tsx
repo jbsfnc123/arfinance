@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { canAccess, findMenuByHref } from "@/lib/menu";
-import { Icon } from "@/components/icons";
+import { AppIcon, Icon } from "@/components/icons";
+import { groupIcon } from "@/lib/ui/app-icons";
 
 // Placeholder untuk semua menu yang modulnya belum dimigrasi.
 // Setiap modul yang selesai di-port mendapat route sendiri, yang otomatis
@@ -28,7 +29,7 @@ export default async function PendingModulePage({ params }: PageProps<"/[...slug
 
   return (
     <div className="mx-auto mt-16 max-w-md text-center">
-      <Icon name={group.icon} size={48} className="text-accent" />
+      <AppIcon spec={groupIcon(group.id)} size={64} className="mx-auto" />
       <h1 className="mt-3 text-xl font-medium">
         {group.label} · {item.label}
       </h1>

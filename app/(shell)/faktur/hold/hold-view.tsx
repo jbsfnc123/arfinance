@@ -84,7 +84,7 @@ export function HoldView() {
 
   return (
     <div className="w-full space-y-4">
-      <h1 className="text-2xl font-medium">Hold Faktur Pajak</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Hold Faktur Pajak</h1>
 
       <div className={`${card} space-y-3 p-5`}>
         <h2 className="text-sm font-medium">{editing ? "Ubah hold faktur" : "Tambah hold faktur"}</h2>

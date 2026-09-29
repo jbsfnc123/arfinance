@@ -7,6 +7,7 @@ import { cachedQuery } from "@/lib/cache/cached-query";
 import { completeness, type MonthData } from "@/lib/modules/deck/template";
 import { compressJson, decodeMonth, deckState } from "@/lib/modules/deck/store";
 import { useToast } from "@/components/toast";
+import { useResolvedTheme } from "@/lib/ui/prefs";
 import { DataCenter } from "./data-center";
 
 type Bridge = {
@@ -31,6 +32,8 @@ export function DeckFrame({ kind }: { kind: string }) {
   const [frameKey, setFrameKey] = useState(0);
   const [dcOpen, setDcOpen] = useState(false);
   const months = useRef<Months>(new Map());
+  // Deck dibuka dengan tema aplikasi (?theme= didukung app deck); tombol tema di dalam deck tetap berfungsi.
+  const theme = useResolvedTheme();
 
   useEffect(() => {
     window.ARDeckBridge = {
@@ -78,8 +81,9 @@ export function DeckFrame({ kind }: { kind: string }) {
   }, [supabase, toast]);
 
   return (
-    <div className="-m-6 h-[calc(100vh-60px)]">
-      <iframe key={frameKey} src="/presentasi-app/index.html" title="AR Management Deck" allow="fullscreen" className="h-full w-full border-0" />
+    // Mengisi area konten shell: menutup padding <main> (px-4/pt-4, md: px-6/pt-5) dan berhenti tepat di atas ruang Dock.
+    <div className="-mx-4 -mt-4 h-[calc(100dvh-var(--topbar-h)-var(--dock-reserve))] min-h-[420px] md:-mx-6 md:-mt-5">
+      <iframe key={`${frameKey}-${theme}`} src={`/presentasi-app/index.html?theme=${theme}`} title="AR Management Deck" allow="fullscreen" className="block h-full w-full border-0" />
       <DataCenter open={dcOpen} onClose={() => setDcOpen(false)} onSaved={() => setFrameKey((k) => k + 1)} canDelete={kind === "sa" || kind === "ctrl"} />
     </div>
   );

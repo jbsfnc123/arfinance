@@ -124,7 +124,7 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
                       <td className={`${td} max-w-96 whitespace-normal`}>
                         {g.isi || <span className="text-fg-2">—</span>}
                         {g.done && g.closedAt && (
-                          <div className="text-[11px] text-success">✓ {g.closedBy ?? ""} · {fmtTimestamp(g.closedAt)}</div>
+                          <div className="flex items-center gap-1 text-[11px] text-success"><Icon name="check" size={12} strokeWidth={2.25} />{g.closedBy ?? ""} · {fmtTimestamp(g.closedAt)}</div>
                         )}
                       </td>
                       <td className={`${td} text-right`} onClick={(e) => e.stopPropagation()}>
@@ -141,7 +141,7 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
                     </tr>
                     {open === g.key && g.items.map((n) => (
                       <tr key={n.invoice_no} className={`text-xs text-fg-2 ${n.invoice_date && n.invoice_date.slice(0, 7) < todayJakarta().slice(0, 7) ? "bg-danger/5" : ""}`}>
-                        <td className={`${td} pl-10`} colSpan={2}>🧾 {n.invoice_no} · 📅 {fmtDate(n.invoice_date)}</td>
+                        <td className={`${td} pl-10`} colSpan={2}><span className="inline-flex items-center gap-1.5"><Icon name="receipt_long" size={14} className="text-fg-2" />{n.invoice_no}<span className="text-fg-2">·</span><Icon name="event" size={14} className="text-fg-2" />{fmtDate(n.invoice_date)}</span></td>
                         <td className={`${td} text-right`}>{rupiah(n.nominal)}</td>
                         <td className={td} colSpan={2}>{n.no_po || n.no_sj ? `PO: ${n.no_po ?? "—"} · SJ: ${n.no_sj ?? "—"}` : "—"}</td>
                       </tr>

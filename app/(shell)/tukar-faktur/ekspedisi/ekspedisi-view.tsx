@@ -106,7 +106,7 @@ export function EkspedisiView() {
   return (
     <div className="w-full space-y-4">
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <h1 className="text-2xl font-medium">Tukar Faktur Ekspedisi</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">Tukar Faktur Ekspedisi</h1>
         <span className="text-sm text-fg-2">
           Catat No Resi invoice yang dikirim lewat ekspedisi · data aging {aging.data?.month ? `per ${aging.data.month}` : ""}
         </span>

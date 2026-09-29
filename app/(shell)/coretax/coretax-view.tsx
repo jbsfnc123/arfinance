@@ -143,7 +143,7 @@ export function CoretaxView() {
     <div className="w-full space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
-          <h1 className="text-2xl font-medium">XML CoreTax</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight">XML CoreTax</h1>
           <p className="text-sm text-fg-2">{loaded ? `${file} · NPWP penjual ${tin || "—"}` : "Muat file XML bulk faktur pajak dari CoreTax."}</p>
         </div>
         <label className={`${btnPrimary} cursor-pointer`}>

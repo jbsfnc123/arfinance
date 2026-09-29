@@ -68,7 +68,7 @@ export function UploadCenter() {
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium">Pusat Upload Data</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">Pusat Upload Data</h1>
         <p className="mt-1 text-sm text-fg-2">
           Upload laporan ERP sekali di sini — datanya tersimpan satu kali dan langsung dipakai semua menu yang terkait.
           Upload ulang file yang sama tidak membuat data dobel.

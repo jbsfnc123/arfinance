@@ -102,7 +102,7 @@ export function PengajuanList({ myName }: { myName: string }) {
   return (
     <div className="w-full space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto text-2xl font-medium">Daftar Pengajuan Pembatalan &amp; Revisi</h1>
+        <h1 className="mr-auto text-[22px] font-semibold tracking-tight">Daftar Pengajuan Pembatalan &amp; Revisi</h1>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari invoice, BP, tax no, LTKP…" className={`${inputCls} !w-64`} />
         <div className="flex gap-1">
           {([["open", "Belum diproses"], ["done", "Sudah diproses"], ["all", "Semua"]] as const).map(([k, l]) => (

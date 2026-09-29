@@ -56,7 +56,7 @@ export function JadwalView() {
 
   return (
     <div className="w-full space-y-4">
-      <h1 className="text-2xl font-medium">Laporan &amp; Jadwal Kolektor</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Laporan &amp; Jadwal Kolektor</h1>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       {tab === "laporan" ? <LaporanHarian /> : (<>
       <div className="flex flex-wrap items-center gap-2">
@@ -100,7 +100,7 @@ export function JadwalView() {
                     <tr key={i.invoice_no} className="text-xs text-fg-2">
                       <td className={`${td} pl-10`}>{i.invoice_no}</td>
                       <td className={`${td} text-right`}>{fmtDate(i.invoice_date)}</td>
-                      <td className={td}>{i.tukar ? "✓ Sudah" : "Belum"}</td>
+                      <td className={td}>{i.tukar ? <span className="inline-flex items-center gap-1 text-success"><Icon name="check" size={13} strokeWidth={2.25} />Sudah</span> : "Belum"}</td>
                       <td className={td}>{i.kolektor ?? ""}</td>
                     </tr>
                   ))}

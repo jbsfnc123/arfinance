@@ -79,8 +79,8 @@ export function PinForm({ initialError, name, noPin, next, onChangeName }: {
         {Array.from({ length: PIN_LENGTH }, (_, i) => (
           <div
             key={i}
-            className={`flex h-12 w-10 items-center justify-center rounded-lg border text-2xl ${
-              i === pin.length && !pending ? "border-accent" : "border-line"
+            className={`flex h-12 w-10 items-center justify-center rounded-[10px] border text-2xl transition-colors ${
+              i === pin.length && !pending ? "border-accent-tint shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent-tint)_22%,transparent)]" : "border-line"
             } bg-surface-2`}
           >
             {i < pin.length ? "•" : ""}
@@ -103,7 +103,7 @@ export function PinForm({ initialError, name, noPin, next, onChangeName }: {
               onClick={() => press(key)}
               disabled={pending}
               aria-label={key === "⌫" ? "Hapus" : key}
-              className="h-14 rounded-xl bg-surface-2 text-xl font-medium hover:bg-line active:bg-pill disabled:opacity-50"
+              className="h-14 rounded-[14px] bg-fg/[0.07] text-xl font-medium tabular-nums transition-colors hover:bg-fg/[0.11] active:bg-fg/[0.18] disabled:opacity-50"
             >
               {key === "⌫" ? <Icon name="backspace" size={20} /> : key}
             </button>

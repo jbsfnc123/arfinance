@@ -141,7 +141,7 @@ export function Mitra10View() {
   return (
     <div className="w-full">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-medium">Mitra10 Tukar Faktur</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">Mitra10 Tukar Faktur</h1>
         {tab === "kk" && !m.loading && (
           <div className="flex flex-wrap items-center gap-1.5" aria-label="Invoice tampil per Username">
             <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-medium text-accent tabular-nums">

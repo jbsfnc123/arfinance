@@ -20,7 +20,7 @@ export default async function TargetPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-medium">Upload Target Bulanan</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Upload Target Bulanan</h1>
       <p className="mt-1 text-sm text-fg-2">
         Target menjadi dasar &quot;Total Target&quot; dan &quot;Sudah Terkumpul&quot; di Dashboard Collection. Upload ulang
         untuk bulan yang sama akan mengganti target bulan itu.

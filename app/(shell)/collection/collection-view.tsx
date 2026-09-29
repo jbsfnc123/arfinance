@@ -135,7 +135,7 @@ export function CollectionView(props: {
   if (!coll) {
     return (
       <div className="mx-auto max-w-5xl">
-        <h1 className="text-2xl font-medium">Collection</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">Collection</h1>
         <p className="mt-1 text-sm text-fg-2">Pilih collection. Data per: {fmtTimestamp(lastUpdate)}</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((c) => (
