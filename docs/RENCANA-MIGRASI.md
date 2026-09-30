@@ -926,3 +926,17 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   termasuk data SJ & baris `import_log` module `sj`; indeks 0043 ikut terhapus). Kode: revert commit Fase 45.
 - **Penerapan kode**: merge ke `main` → deploy Vercel. Setelah deploy, Super Admin mencentang menu Monitor Surat Jalan
   untuk akun yang perlu (Controller agar bisa upload), lalu upload file CSV pertama.
+
+## Kotak Cari LocalTable responsif (Fase 45b, 2026-09-30)
+- Keluhan: peringatan INP "Event handlers … blocked UI updates for 982.5ms" pada kotak **Cari…** LocalTable.
+  Penyebab: tiap ketukan me-render ulang tabel secara sinkron (cari per kolom + `toLowerCase`, opsi filter dinamis,
+  urut ulang semua baris dengan `localeCompare` yang membuat collator baru per perbandingan, render & ukur ulang baris).
+- Perbaikan (`lib/local/table.tsx`, berlaku untuk semua tabel): `SearchBox` dengan state sendiri (huruf tampil seketika)
+  + `startTransition` untuk penyaringan; indeks teks cari dibangun sekali per data (`buildSearchIndex`/`searchMatcher`);
+  urut sekali per data/urutan lalu disaring; satu `Intl.Collator`; formatter angka bersama `fmtNum` (`lib/format.ts`,
+  juga `rupiah`/`lamaTxt`); kata cari tetap diingat di sessionStorage tetapi dibaca sekali saat tabel dibuka
+  (`useViewStateInitial`, simpan `writeViewState(…, { silent: true })`) — berlangganan store yang berubah di tengah render
+  konkuren memaksa render sinkron. Hasil cari & urutan identik (tes kesetaraan).
+- Ukur (build produksi, Event Timing, INP maks per ketukan): Monitor SJ 18.805 SJ sintetis 416 → 24 ms, History
+  Pembayaran 160 → 16 ms, Mitra10 Receiving/Kertas Kerja ±30 → 16–32 ms. CPU diperlambat 4×: handler ≤ ±120 ms; puncak
+  sesekali 200–450 ms di tabel 18 rb baris (render latar satu komponen belum bisa disela).

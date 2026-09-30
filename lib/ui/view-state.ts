@@ -52,12 +52,13 @@ export function readViewState<T>(key: string, o: Opts = {}): T | undefined {
   return val as T | undefined;
 }
 
-export function writeViewState<T>(key: string, value: T | undefined, o: Opts = {}) {
+/** `silent`: simpan tanpa memberi tahu pelanggan (pemanggil sudah memegang nilai terbaru di state React-nya sendiri). */
+export function writeViewState<T>(key: string, value: T | undefined, o: Opts & { silent?: boolean } = {}) {
   const k = PREFIX + key;
   const raw = value === undefined ? null : encode(value, o);
   writeRaw(k, raw);
   mem.set(k, { raw, val: value });
-  notify(k);
+  if (!o.silent) notify(k);
 }
 
 function allKeys(): string[] {
@@ -101,6 +102,24 @@ export function useViewState<T>(key: string, initial: T, o: Opts = {}): [T, (v: 
     writeViewState(key, next, { set });
   }, [key, init, set]);
   return [value, setValue];
+}
+
+/**
+ * Nilai tersimpan dibaca SEKALI per pemasangan komponen (tanpa berlangganan). Untuk state yang setelah itu dipegang
+ * state React biasa & disimpan dengan writeViewState(…, { silent: true }) — mis. kata cari LocalTable yang diperbarui
+ * lewat transisi. Berlangganan store yang berubah di tengah render konkuren memaksa React me-render ulang secara
+ * sinkron, sehingga pekerjaan berat kembali ke dalam ketukan tombol.
+ */
+const once = new Map<string, unknown>();
+const noSubscribe = () => () => {};
+export function useViewStateInitial<T>(key: string, initial: T): T {
+  const k = PREFIX + key;
+  const [init] = useState(initial);
+  useEffect(() => () => { once.delete(k); }, [k]); // dibuka lagi nanti → baca nilai terbaru
+  return useSyncExternalStore(noSubscribe, () => {
+    if (!once.has(k)) once.set(k, readViewState<T>(key) ?? init);
+    return once.get(k) as T;
+  }, () => init);
 }
 
 /**

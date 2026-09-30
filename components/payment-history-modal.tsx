@@ -6,7 +6,7 @@ import {
   agingByBp, groupHistory, historyPeriod, paymentHistory, coverage, type HistoryRow, type HistoryTx,
 } from "@/lib/modules/collection/payment-history";
 import { todayJakarta } from "@/lib/parsers/date";
-import { fmtDate, monthLabel, rupiah } from "@/lib/format";
+import { fmtDate, fmtNum, monthLabel, rupiah } from "@/lib/format";
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { Modal } from "@/components/modal";
 import { TableBox } from "@/components/table-box";
@@ -17,7 +17,7 @@ import { Icon } from "@/components/icons";
 export type PayHistTarget = { kind: "bp"; key: string; name: string } | { kind: "group"; name: string };
 
 export const lamaCls = (d: number | null) => (d === null ? "text-fg-2" : d <= 0 ? "text-success" : d <= 30 ? "text-warning" : "text-danger");
-export const lamaTxt = (d: number | null) => (d === null ? "–" : `${d > 0 ? "+" : ""}${d.toLocaleString("id-ID")} hr`);
+export const lamaTxt = (d: number | null) => (d === null ? "–" : `${d > 0 ? "+" : ""}${fmtNum(d)} hr`);
 
 /** Hitung semua baris History Pembayaran (mode BP & Group) dari dataset lokal. Dipakai halaman & modal. */
 export function usePaymentHistory() {
