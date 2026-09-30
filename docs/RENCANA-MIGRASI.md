@@ -849,7 +849,7 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   `group.locked` bila semua anak terkunci. ACL (`canAccess`, profile_menus, needs) tidak berubah; halaman tetap dijaga
   `menuGuard` + RLS, jadi URL yang diketik langsung tetap menampilkan "Tidak ada akses".
 - Shell: layout mengirim `navMenu` + `homeLocked`; `ToastProvider` membungkus seluruh shell; `denyAccess` menampilkan
-  "Anda tidak memiliki akses ke “Grup › Menu”. Hubungi Super Admin untuk membuka akses." tanpa navigasi.
+  "Tidak memiliki akses Grup › Menu" tanpa navigasi (kalimat "hubungi Super Admin" dihapus atas permintaan user).
   Dock (grup/Beranda/submenu), Launcher (ubin jadi tombol), Spotlight (bisa dicari, meta "Tidak ada akses") dan navigasi
   bawah HP (grup yang bisa diakses didahulukan) memakai `LockDot` (components/lock-dot.tsx) + label aksesibel
   "— tidak ada akses". Prefetch & pencarian BP/Invoice hanya untuk menu yang bisa diakses.

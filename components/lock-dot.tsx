@@ -10,4 +10,4 @@ export function LockDot({ className = "" }: { className?: string }) {
 export const LOCKED_SUFFIX = " — tidak ada akses";
 
 /** Pesan saat menu tanpa akses diklik (tetap di halaman sekarang). */
-export const deniedMessage = (label: string) => `Anda tidak memiliki akses ke “${label}”. Hubungi Super Admin untuk membuka akses.`;
+export const deniedMessage = (label: string) => `Tidak memiliki akses ${label}`;
