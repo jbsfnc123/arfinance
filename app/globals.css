@@ -62,6 +62,10 @@
   --mark-lavender-bg: #352b48;
   --mark-lavender-bg-hover: #3d3253;
   --mark-lavender-accent: #c89bff;
+  /* Teks badge status di baris berwarna (latar badge opak): kontras ≥ 4,5:1 */
+  --badge-success-fg: #30d158;
+  --badge-warning-fg: #ffd60a;
+  --badge-danger-fg: #ff8a84;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.28);
   --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.45);
@@ -149,6 +153,9 @@
   --mark-lavender-bg: #f0e9ff;
   --mark-lavender-bg-hover: #e7ddfc;
   --mark-lavender-accent: #af52de;
+  --badge-success-fg: #176b2b;
+  --badge-warning-fg: #8a4d00;
+  --badge-danger-fg: #b80012;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 1px rgba(16, 24, 40, 0.03);
   --shadow-md: 0 4px 14px rgba(16, 24, 40, 0.08);
   --shadow-lg: 0 18px 50px rgba(16, 24, 40, 0.16);
@@ -275,6 +282,12 @@ tr[data-mark="lavender"] { --mark-bg: var(--mark-lavender-bg); --mark-bg-hover: 
 tr[data-mark]:not([data-selected]) > td { background-color: var(--mark-bg); }
 tr[data-mark]:not([data-selected]):hover > td { background-color: var(--mark-bg-hover); }
 tr[data-mark] > td:first-child { box-shadow: inset 3px 0 0 var(--mark-accent); }
+/* Badge status (Done/Pending/Check) di baris berwarna: latar 20% transparan akan bercampur dengan tint/hover/selection
+   dan menurunkan kontras di bawah 4,5:1. Di sini latar badge dibuat OPAK (warna status 20% di atas --surface) dan teks
+   memakai varian pekat → kontras tetap ≥ 4,5:1 di semua keadaan baris. Hue & arti status tidak berubah. */
+tr[data-mark] [data-badge].text-success { background-color: color-mix(in srgb, var(--success) 20%, var(--surface)); color: var(--badge-success-fg); }
+tr[data-mark] [data-badge].text-warning { background-color: color-mix(in srgb, var(--warning) 20%, var(--surface)); color: var(--badge-warning-fg); }
+tr[data-mark] [data-badge].text-danger { background-color: color-mix(in srgb, var(--danger) 20%, var(--surface)); color: var(--badge-danger-fg); }
 
 /* Baris tabel virtual: tinggi diatur rowHeight() (lib/ui/density.ts) → padding sel minimal agar tidak memaksa lebih tinggi. */
 [data-density="compact"] tbody tr[data-index] > td {
