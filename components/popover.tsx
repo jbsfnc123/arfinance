@@ -10,7 +10,7 @@ export function Popover({ open, onClose, children, className = "", label }: {
   open: boolean; onClose: () => void; children: React.ReactNode; className?: string; label: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useDialog(open, onClose, ref, { modal: false });
+  useDialog(open, onClose, ref, { kind: "popover", layerRef: ref });
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {

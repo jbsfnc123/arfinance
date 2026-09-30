@@ -2,7 +2,7 @@ import { menuGuard } from "@/lib/guard";
 import { NoAccess } from "@/components/no-access";
 import { createClient } from "@/lib/supabase/server";
 import { fmtTimestamp, monthLabel } from "@/lib/format";
-import { card, td, th } from "@/components/ui";
+import { card, emptyTd, td, th } from "@/components/ui";
 import { UploadTarget } from "./upload-target";
 
 export default async function TargetPage() {
@@ -49,7 +49,7 @@ export default async function TargetPage() {
             ))}
             {!history?.length && (
               <tr>
-                <td className={`${td} text-fg-2`} colSpan={4}>Belum ada upload target.</td>
+                <td className={emptyTd} colSpan={4}>Belum ada upload target.</td>
               </tr>
             )}
           </tbody>

@@ -98,7 +98,7 @@ function ProfileMenu({ open, onClose, user, portalHref, signOut }: {
   signOut: (e: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const [theme, setTheme] = useTheme();
-  const item = "flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-accent-fill hover:text-on-accent";
+  const item = "flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-1.5 text-left text-[13px] transition-colors pointer-coarse:min-h-11 hover:bg-accent-fill hover:text-on-accent";
   return (
     <Popover open={open} onClose={onClose} label="Menu akun" className="right-0 top-full mt-1.5 w-64 p-1.5">
       <div className="flex items-center gap-3 px-2.5 py-2">
@@ -114,7 +114,7 @@ function ProfileMenu({ open, onClose, user, portalHref, signOut }: {
         <span className="ml-auto flex gap-0.5 rounded-lg bg-fg/6 p-0.5">
           {THEMES.map((t) => (
             <button key={t.v} type="button" aria-pressed={theme === t.v} onClick={() => setTheme(t.v)}
-              className={`rounded-md px-2 py-0.5 text-[11px] ${theme === t.v ? "bg-surface text-fg shadow-sm" : "hover:text-fg"}`}>{t.l}</button>
+              className={`rounded-md px-2 py-0.5 text-[11px] pointer-coarse:min-h-11 pointer-coarse:px-3 ${theme === t.v ? "bg-surface text-fg shadow-sm" : "hover:text-fg"}`}>{t.l}</button>
           ))}
         </span>
       </div>

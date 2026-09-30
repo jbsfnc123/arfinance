@@ -7,7 +7,7 @@ import { EMPTY_INVOICE, type InvoiceFields } from "@/lib/modules/faktur/constant
 import { fmtDate, fmtTimestamp } from "@/lib/format";
 import type { Tables } from "@/lib/database.types";
 import { useToast } from "@/components/toast";
-import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { btnGhost, btnPrimary, card, emptyTd, inputCls, td, th } from "@/components/ui";
 import { InvoiceLookup } from "../invoice-lookup";
 import { setRemarks, useRemarks } from "@/lib/modules/remarks";
 import { TableBox } from "@/components/table-box";
@@ -132,7 +132,7 @@ export function HoldView() {
                   </td>
                 </tr>
               ))}
-              {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Belum ada hold faktur.</td></tr>}
+              {shown.length === 0 && <tr><td className={emptyTd} colSpan={7}>Belum ada hold faktur.</td></tr>}
             </tbody>
           </table>
         </TableBox>

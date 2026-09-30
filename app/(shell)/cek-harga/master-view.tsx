@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/database.types";
-import { btnGhost, card, inputCls, td, th } from "@/components/ui";
+import { btnGhost, card, emptyTd, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
 import { Icon } from "@/components/icons";
@@ -72,7 +72,7 @@ export function MasterView() {
                   <td className={`${td} text-right`}>{Number(r.grand_total).toLocaleString("id-ID")}</td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Belum ada data MASTER. Upload SO terlebih dahulu.</td></tr>}
+              {rows.length === 0 && <tr><td className={emptyTd} colSpan={7}>Belum ada data MASTER. Upload SO terlebih dahulu.</td></tr>}
             </tbody>
           </table>
         </TableBox>

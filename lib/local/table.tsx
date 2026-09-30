@@ -326,7 +326,7 @@ export function LocalTable<T>(props: {
           <thead className="sticky top-0 z-10 bg-surface/90 backdrop-blur">
             <tr>
               {props.selectable && (
-                <th className={`${th} w-8 border-b border-hairline`}>
+                <th className={`${th} w-8 cursor-pointer border-b border-hairline pointer-coarse:min-w-11`} onClick={(e) => { if (e.target === e.currentTarget) setSel(allSel ? new Set() : new Set(rows.map(props.rowKey))); }}>
                   <input type="checkbox" checked={allSel} aria-label="Pilih semua baris"
                     onChange={() => setSel(allSel ? new Set() : new Set(rows.map(props.rowKey)))} />
                 </th>
@@ -334,17 +334,17 @@ export function LocalTable<T>(props: {
               {cols.map((c) => (
                 <th key={c.k} onClick={() => toggleSort(c.k)}
                   aria-sort={sort?.k === c.k ? (sort.dir === 1 ? "ascending" : "descending") : undefined}
-                  className={`${th} group cursor-pointer select-none border-b border-hairline hover:text-fg ${c.n ? "text-right" : ""}`} style={{ minWidth: c.w }}>
+                  className={`${th} group cursor-pointer select-none border-b border-hairline hover:text-fg pointer-coarse:py-0 ${c.n ? "text-right" : ""}`} style={{ minWidth: c.w }}>
                   {/* Tombol agar urutkan bisa lewat keyboard (Enter/Spasi); klik area header tetap berfungsi. */}
                   <button type="button" onClick={(e) => { e.stopPropagation(); toggleSort(c.k); }}
-                    aria-label={`Urutkan menurut ${c.l}`} className="inline-flex items-center gap-0.5 rounded-[4px] font-medium">
+                    aria-label={`Urutkan menurut ${c.l}`} className="inline-flex items-center gap-0.5 rounded-[4px] font-medium pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                     {c.l}{c.edit && <span className="ml-1 inline-flex text-accent" title="Bisa diedit"><Icon name="edit" size={12} /></span>}
                     {sort?.k === c.k && <Icon name={sort.dir === 1 ? "expand_less" : "expand_more"} size={13} strokeWidth={2.25} className="text-accent" />}
                   </button>
                   {props.hideKey && cols.length > 1 && (
                     <button type="button" title={`Sembunyikan kolom ${c.l}`} aria-label={`Sembunyikan kolom ${c.l}`}
                       onClick={(e) => { e.stopPropagation(); setHidden([...hidden, c.k]); }}
-                      className="ml-1 inline-flex align-middle text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100">
+                      className="ml-1 inline-flex align-middle text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100 pointer-coarse:h-11 pointer-coarse:w-11 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:opacity-70">
                       <Icon name="visibility_off" size={14} />
                     </button>
                   )}
@@ -362,7 +362,9 @@ export function LocalTable<T>(props: {
                   onClick={props.onRowClick ? () => props.onRowClick!(r) : undefined}
                   className={`${sel.has(id) ? "bg-selection hover:bg-selection-hover" : "hover:bg-fg/[0.04]"} ${props.onRowClick ? "cursor-pointer" : ""} ${props.rowClass?.(r) ?? ""}`}>
                   {props.selectable && (
-                    <td className="border-b border-hairline px-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="cursor-pointer border-b border-hairline px-3" title="Pilih baris"
+                      // Seluruh sel = area centang (target sentuh lebih besar tanpa mengubah tinggi baris virtual).
+                      onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }}>
                       <input type="checkbox" checked={sel.has(id)} aria-label="Pilih baris"
                         onChange={() => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; })} />
                     </td>

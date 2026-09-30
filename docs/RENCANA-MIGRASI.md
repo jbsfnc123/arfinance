@@ -810,3 +810,34 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   atas Dock dan membuka deck dengan `?theme=` aktif; `window.ARDeckBridge` tidak berubah.
 - Diuji: 27 route × 6 ukuran (1440×900 … 320, 720×450 = zoom 200%), ACL akun non-SA, overlay/fokus/keyboard, tema
   gelap & terang. Keterbatasan: SF Pro belum diuji di Mac asli; ganti tema aplikasi memuat ulang iframe Presentasi.
+
+## Penyempurnaan UI tahap 3 (Fase 42, 2026-09-30)
+Menutup kekurangan hasil audit Fase 41. Hanya presentasi/aksesibilitas/pengukuran layout; API/RPC, query, schema,
+auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency tidak berubah. Base `ce9e2da`.
+- **A. Overlay** (`components/use-dialog.ts`, `app/(shell)/shell/use-command-k.ts`): lapisan berjenis `modal` /
+  `overlay` (Spotlight, Launcher) / `popover`. Ctrl/Cmd+K diabaikan selama dialog modal halaman aktif (form tetap aktif,
+  isi utuh). z-index lapisan = token jenis + kedalaman tumpukan (`calc(var(--z-modal) + n)`), inert (atribut) & kunci
+  scroll ber-refcount, daftar focusable melewati tabIndex negatif/`:disabled`/`[hidden]`/inert/tak terlihat.
+  Tes interaksi `components/use-dialog.dom.test.tsx` (happy-dom, Modal/Popover/Spotlight asli).
+- **B. Tema Sistem** (`lib/ui/prefs.ts`, `components/prefs-sync.tsx` di root layout): satu listener OS + `storage`
+  menerapkan preferensi ke `<html>` lalu memberi tahu komponen; mode eksplisit tidak ditimpa OS. Tes
+  `lib/ui/prefs.dom.test.tsx`.
+- **C. Kontras & sentuh**: `--accent-fill-hover` gelap `#0a64d0` (putih 5,6:1; sebelumnya 4,0:1), subtitle terpilih
+  Spotlight tanpa opacity (4,8/5,3:1), `glass-strong` .84/.88 (teks sekunder ≥ 4,5:1 pada komposisi terburuk),
+  placeholder `fg-2` penuh. `@media (pointer: coarse)`: `--topbar-h` 48, `--control-h` 44; toolbar, tutup
+  modal/Launcher, item menu, segmen, header tabel ≥ 44×44; desktop tetap 38/28 px.
+- **D. Presentasi**: iframe tidak lagi di-key/di-src dengan tema. Tema & transparansi dikirim via `postMessage`
+  (`ar-deck:theme`, divalidasi source/origin/tipe/nilai); boot deck membaca tema `<html>` induk. Slide, bulan,
+  toggle/tab, mode edit & teks yang sedang diketik tetap (render ditunda sampai fokus lepas). Chrome editor memakai
+  token `--ui-*` (graphite/frosted seperti aplikasi, font sistem); slide & cetak tetap. Layar ≤ 760px: rail strip
+  horizontal, toolbar ikon, drawer penuh. `ARDeckBridge` tidak berubah.
+- **E. Konsistensi modul**: CoreTax & Marketplace memakai `Tabs`; filter status memakai `segGroup/segItem`; chip
+  toggle `toggleChip`; `EmptyState` & `emptyTd` untuk keadaan kosong. Control Center di layar < 640px menempel ke tepi
+  kanan viewport (sebelumnya terpotong di lebar 320px).
+- **Hasil QA (dev lokal, Chromium/Playwright di Windows 11)**: lint 0 error (3 warning lama TanStack Virtual), 43 file /
+  246 tes, typegen + tsc, build lulus. 27 route × 1440×900/1366×768/768×1024/390×844/320×640/720×450 tanpa overflow &
+  error konsol (`/presentasi` hanya tercatat "teks kosong" karena isinya iframe). ACL Ulfa/Mando sesuai. Angka
+  Dashboard Collection, hitungan filter Daftar Tagihan & isi sel export TF Mitra10 identik dengan baseline hari yang
+  sama; cetak & export Excel Presentasi identik pada data sintetis (bridge di-stub, tanpa tulis database).
+- Keterbatasan: SF Pro/⌘K belum diuji di Mac asli; zoom 200% hanya disetarakan dengan viewport 720×450 (bukan zoom
+  browser sungguhan); data Presentasi produksi kosong di dev sehingga uji deck memakai data sintetis.

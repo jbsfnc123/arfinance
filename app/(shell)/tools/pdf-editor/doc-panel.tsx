@@ -27,7 +27,7 @@ export function DocPanel({ d, onFiles }: { d: Docs; onFiles: (files: File[]) => 
             <li key={x.id}>
               <div role="button" tabIndex={0} onClick={() => d.setActiveId(x.id)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); d.setActiveId(x.id); } }}
-                className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${x.id === d.activeId ? "bg-pill text-pill-fg" : "hover:bg-surface-2"}`}>
+                className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${x.id === d.activeId ? "bg-selection font-medium text-accent" : "hover:bg-fg/6"}`}>
                 <Icon name="picture_as_pdf" size={18} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate" title={x.name}>{x.name}</span>

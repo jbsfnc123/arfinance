@@ -7,7 +7,7 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 import { fmtDate, fmtTimestamp } from "@/lib/format";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
-import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { btnGhost, btnPrimary, card, emptyTd, inputCls, segGroup, segItem, td, th } from "@/components/ui";
 import { LtkpPreview } from "../ltkp-preview";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
@@ -104,10 +104,10 @@ export function PengajuanList({ myName }: { myName: string }) {
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-auto text-[22px] font-semibold tracking-tight">Daftar Pengajuan Pembatalan &amp; Revisi</h1>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari invoice, BP, tax no, LTKP…" className={`${inputCls} !w-64`} />
-        <div className="flex gap-1">
+        <div role="group" aria-label="Status" className={`${segGroup} flex`}>
           {([["open", "Belum diproses"], ["done", "Sudah diproses"], ["all", "Semua"]] as const).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setStatus(k)}
-              className={`rounded-full px-3 py-1 text-xs ${status === k ? "bg-pill text-pill-fg" : "hover:bg-surface-2"}`}>{l}</button>
+              aria-pressed={status === k} className={segItem(status === k)}>{l}</button>
           ))}
         </div>
         <button type="button" className={btnPrimary} disabled={!selected.size} onClick={() => setLtkpOpen(true)}>
@@ -169,7 +169,7 @@ export function PengajuanList({ myName }: { myName: string }) {
                   )}
                 </Fragment>
               ))}
-              {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={7}>Tidak ada pengajuan.</td></tr>}
+              {shown.length === 0 && <tr><td className={emptyTd} colSpan={7}>Tidak ada pengajuan.</td></tr>}
             </tbody>
           </table>
         </TableBox>

@@ -20,7 +20,7 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
     <div className="flex gap-1 rounded-[10px] bg-fg/6 p-[3px]">
       {options.map((o) => (
         <button key={o.v} type="button" aria-pressed={value === o.v} onClick={() => onChange(o.v)}
-          className={`flex flex-1 flex-col items-center gap-0.5 rounded-[8px] py-1.5 text-[11px] transition-colors ${value === o.v ? "bg-surface text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
+          className={`flex flex-1 flex-col items-center justify-center gap-0.5 rounded-[8px] py-1.5 text-[11px] transition-colors pointer-coarse:min-h-11 ${value === o.v ? "bg-surface text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
           <Icon name={o.i} size={18} />{o.l}
         </button>
       ))}
@@ -56,7 +56,7 @@ export function ControlCenter({ open, onClose, onRefresh, refreshing }: { open: 
   }, []);
   const toggleFull = () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.(); };
   return (
-    <Popover open={open} onClose={onClose} label="Pusat kontrol" className="right-0 top-full mt-1.5 w-[320px] p-2.5">
+    <Popover open={open} onClose={onClose} label="Pusat kontrol" className="right-0 top-full mt-1.5 w-[min(320px,calc(100vw-1rem))] p-2.5 max-sm:fixed max-sm:right-2 max-sm:top-[calc(var(--topbar-h)+6px)] max-sm:mt-0">
       <div className="grid grid-cols-2 gap-2">
         <Tile icon={full ? "fullscreen_exit" : "fullscreen"} title="Layar penuh" sub={full ? "Aktif" : "Nonaktif"} on={full} onClick={toggleFull} />
         <Tile icon="refresh" title="Refresh data" sub={refreshing ? "Memuat…" : "Semua data di tab ini"} onClick={onRefresh} disabled={refreshing} spin={refreshing} />

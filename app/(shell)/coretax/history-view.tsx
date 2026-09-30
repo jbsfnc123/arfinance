@@ -7,7 +7,7 @@ import { DETAIL_HEADERS, PIVOT_HEADERS } from "@/lib/modules/coretax/coretax";
 import { downloadXlsxSheets } from "@/lib/xlsx-client";
 import { fmtTimestamp, rupiah } from "@/lib/format";
 import { useToast } from "@/components/toast";
-import { card, td, th } from "@/components/ui";
+import { card, emptyTd, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 
 type Batch = Tables<"coretax_batches">;
@@ -78,7 +78,7 @@ export function HistoryView() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={9}>Belum ada data tersimpan.</td></tr>}
+            {rows.length === 0 && <tr><td className={emptyTd} colSpan={9}>Belum ada data tersimpan.</td></tr>}
           </tbody>
         </table>
       </TableBox>

@@ -10,7 +10,7 @@ import { noteLatest } from "@/lib/modules/collection/rows";
 import { arOf } from "@/lib/local/derived";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
-import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { btnGhost, btnPrimary, card, emptyTd, inputCls, segGroup, segItem, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
 import { Icon } from "@/components/icons";
@@ -82,10 +82,10 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
       <div className="flex flex-wrap items-center gap-2 px-4 pt-4">
         <h2 className="font-medium">Log Catatan {kategori}</h2>
         <span className="text-xs text-fg-2">· {groups.length} catatan</span>
-        <div className="ml-auto flex gap-1">
+        <div role="group" aria-label="Status" className={`${segGroup} ml-auto flex`}>
           {([["open", "Belum Selesai"], ["done", "Selesai"], ["all", "Semua"]] as const).map(([k, label]) => (
             <button key={k} type="button" onClick={() => setStatus(k)}
-              className={`rounded-full px-3 py-1 text-xs ${status === k ? "bg-pill text-pill-fg" : "hover:bg-surface-2"}`}>
+              aria-pressed={status === k} className={segItem(status === k)}>
               {label}
             </button>
           ))}
@@ -150,9 +150,9 @@ export function NoteLog({ kategori, invoiceFilter }: { kategori: string; invoice
                 );
               })}
               {!loading && groups.length === 0 && (
-                <tr><td className={`${td} text-fg-2`} colSpan={5}>Tidak ada catatan.</td></tr>
+                <tr><td className={emptyTd} colSpan={5}>Tidak ada catatan.</td></tr>
               )}
-              {loading && <tr><td className={`${td} text-fg-2`} colSpan={5}>Memuat…</td></tr>}
+              {loading && <tr><td className={emptyTd} colSpan={5}>Memuat…</td></tr>}
             </tbody>
           </table>
         </TableBox>

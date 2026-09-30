@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { fmtTimestamp } from "@/lib/format";
 import { useToast } from "@/components/toast";
-import { card, inputCls, td, th } from "@/components/ui";
+import { card, emptyTd, inputCls, td, th } from "@/components/ui";
 import { LtkpPreview } from "../ltkp-preview";
 import { TableBox } from "@/components/table-box";
 import { useViewState } from "@/lib/ui/view-state";
@@ -68,7 +68,7 @@ export function LtkpSearch() {
                   <td className={td}>{fmtTimestamp(r.ltkp.created_at)} <span className="text-xs text-fg-2">{r.ltkp.created_by_name}</span></td>
                 </tr>
               ))}
-              {shown.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={5}>Tidak ada dokumen LTKP.</td></tr>}
+              {shown.length === 0 && <tr><td className={emptyTd} colSpan={5}>Tidak ada dokumen LTKP.</td></tr>}
             </tbody>
           </table>
         </TableBox>

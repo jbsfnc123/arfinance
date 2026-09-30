@@ -6,7 +6,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { fmtDate, monthLabel } from "@/lib/format";
 import { tukarDays, tukarKpi } from "@/lib/modules/tukar/dashboard";
 import { useViewState } from "@/lib/ui/view-state";
-import { card, inputCls, td, th } from "@/components/ui";
+import { card, emptyTd, inputCls, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 
 // Laporan Harian kolektor (pindahan Dashboard Tukar Faktur lama): tukar faktur Done per hari dari Aplikasi Kolektor —
@@ -45,7 +45,7 @@ export function LaporanHarian() {
               </tr>
             </thead>
             <tbody>
-              {!data && <tr><td className={`${td} text-fg-2`} colSpan={4}>Memuat…</td></tr>}
+              {!data && <tr><td className={emptyTd} colSpan={4}>Memuat…</td></tr>}
               {data?.days.map((d) => {
                 const idle = !d.inv && !d.bp && !d.lok;
                 return (

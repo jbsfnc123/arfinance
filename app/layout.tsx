@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { PREFS_SCRIPT } from "@/lib/ui/prefs-script";
+import { PrefsSync } from "@/components/prefs-sync";
 import "./globals.css";
 import { currentWorkspace } from "@/lib/workspace-server";
 import { WORKSPACES } from "@/lib/workspace";
@@ -25,7 +26,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Tema & kepadatan dari localStorage sebelum paint pertama (tanpa kedip); atribut <html> diatur skrip ini. */}
         <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
       </head>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <PrefsSync />
+        {children}
+      </body>
     </html>
   );
 }

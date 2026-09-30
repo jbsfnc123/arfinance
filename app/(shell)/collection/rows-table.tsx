@@ -10,6 +10,7 @@ import { useDensity } from "@/lib/ui/prefs";
 import { rowHeight } from "@/lib/ui/density";
 import { btnGhost, card } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { EmptyState } from "@/components/empty-state";
 
 const ROW_HEIGHT = 40; // Nyaman; Padat → rowHeight() (lib/ui/density.ts)
 
@@ -96,7 +97,7 @@ export function RowsTable(props: {
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-[1] bg-surface/90 backdrop-blur">
             <tr>
-              <th className="w-12 border-b border-hairline px-3 py-2 text-left">
+              <th className="w-12 cursor-pointer border-b border-hairline px-3 py-2 text-left pointer-coarse:min-w-11" onClick={(e) => { if (e.target === e.currentTarget) toggleAll(); }}>
                 <input type="checkbox" checked={allChecked} onChange={toggleAll} aria-label="Pilih semua baris" />
               </th>
               {cols.map((c) => {
@@ -108,12 +109,12 @@ export function RowsTable(props: {
                     onClick={props.onSort ? () => props.onSort!(c.key) : undefined}
                     aria-sort={active === 1 ? "ascending" : active === -1 ? "descending" : undefined}
                     title={props.onSort ? "Klik untuk mengurutkan" : undefined}
-                    className={`group relative whitespace-nowrap border-b border-hairline py-2 text-xs font-medium text-fg-2 ${props.onHide ? "pl-3 pr-7" : "px-3"} ${props.onSort ? "cursor-pointer select-none hover:text-fg" : ""} ${c.money ? "text-right" : "text-left"}`}
+                    className={`group relative whitespace-nowrap border-b border-hairline py-2 text-xs font-medium text-fg-2 ${props.onHide ? "pl-3 pr-7 pointer-coarse:pr-11" : "px-3"} pointer-coarse:py-0 ${props.onSort ? "cursor-pointer select-none hover:text-fg" : ""} ${c.money ? "text-right" : "text-left"}`}
                   >
                     {props.onSort ? (
                       // Tombol agar urutkan bisa lewat keyboard (Enter/Spasi); klik area header tetap berfungsi.
                       <button type="button" onClick={(e) => { e.stopPropagation(); props.onSort!(c.key); }} aria-label={`Urutkan menurut ${c.label}`}
-                        className="inline-flex items-center gap-0.5 rounded-[4px] font-medium">
+                        className="inline-flex items-center gap-0.5 rounded-[4px] font-medium pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                         {c.label}
                         {active !== 0 && <Icon name={active === 1 ? "expand_less" : "expand_more"} size={13} strokeWidth={2.25} className="text-accent" />}
                       </button>
@@ -121,7 +122,7 @@ export function RowsTable(props: {
                     {props.onHide && cols.length > 1 && (
                       <button type="button" title={`Sembunyikan kolom ${c.label}`} aria-label={`Sembunyikan kolom ${c.label}`}
                         onClick={(e) => { e.stopPropagation(); props.onHide!(c.key); }}
-                        className="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100">
+                        className="absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100 pointer-coarse:right-0 pointer-coarse:h-11 pointer-coarse:w-11 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:opacity-70">
                         <Icon name="visibility_off" size={14} />
                       </button>
                     )}
@@ -174,7 +175,7 @@ export function RowsTable(props: {
           </tbody>
         </table>
         {!props.loading && rows.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-fg-2">Tidak ada data yang cocok dengan filter saat ini.</p>
+          <EmptyState icon="filter_alt_off" title="Tidak ada invoice yang cocok" hint="Ubah atau hapus filter/kata cari untuk melihat invoice lain." />
         )}
         {props.loading && <p className="px-4 py-8 text-center text-sm text-fg-2">Memuat data…</p>}
       </div>

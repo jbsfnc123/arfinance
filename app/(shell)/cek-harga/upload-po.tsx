@@ -8,7 +8,7 @@ import {
 } from "@/lib/modules/cekharga/cekharga";
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { useToast } from "@/components/toast";
-import { btnGhost, btnPrimary, card, inputCls, td, th } from "@/components/ui";
+import { btnGhost, btnPrimary, card, emptyTd, inputCls, segGroup, segItem, td, th } from "@/components/ui";
 import { TableBox } from "@/components/table-box";
 import { Icon } from "@/components/icons";
 
@@ -121,12 +121,13 @@ export function UploadPo({ casesVersion, onArchived }: { casesVersion: number; o
         <section className={`${card} overflow-hidden`}>
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 text-sm">
             <span>Total <b>{rows.length}</b> PO</span>
+            <div role="group" aria-label="Status rekonsiliasi" className={segGroup}>
             {(["ALL", "SELISIH", "NOT_FOUND", "OK"] as const).map((s) => (
-              <button key={s} type="button" onClick={() => setFilter(s)}
-                className={`rounded-full px-3 py-1 text-xs ${filter === s ? "bg-pill text-pill-fg" : "hover:bg-surface-2"}`}>
+              <button key={s} type="button" onClick={() => setFilter(s)} aria-pressed={filter === s} className={segItem(filter === s)}>
                 {s === "ALL" ? "Semua" : RECON_STATUS_TEXT[s]} {s !== "ALL" && <b>{counts[s]}</b>}
               </button>
             ))}
+            </div>
             <button type="button" className={`${btnGhost} ml-auto`} onClick={exportExcel}>
               <Icon name="download" size={20} />Export Excel
             </button>
@@ -167,7 +168,7 @@ export function UploadPo({ casesVersion, onArchived }: { casesVersion: number; o
                       </tr>
                     );
                   })}
-                  {visible.length === 0 && <tr><td className={`${td} text-fg-2`} colSpan={11}>Tidak ada data untuk status ini.</td></tr>}
+                  {visible.length === 0 && <tr><td className={emptyTd} colSpan={11}>Tidak ada data untuk status ini.</td></tr>}
                 </tbody>
               </table>
             </TableBox>

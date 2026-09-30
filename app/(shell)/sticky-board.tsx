@@ -158,7 +158,7 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
               <div key={n.id} className="relative flex min-h-52 flex-col rounded-2xl border p-3 shadow-sm"
                 style={{ background: c.bg, borderColor: c.border }}>
                 <button type="button" onClick={() => togglePin(n)} title={n.pinned_at ? "Lepas pin" : "Pin (selalu teratas)"}
-                  className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-2 ${n.pinned_at ? "text-accent" : "text-fg-2"}`}>
+                  className={`absolute right-2 top-2 flex h-7 w-7 pointer-coarse:right-0.5 pointer-coarse:top-0.5 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full hover:bg-surface-2 ${n.pinned_at ? "text-accent" : "text-fg-2"}`}>
                   <Icon name="push_pin" filled={!!n.pinned_at} size={18} />
                 </button>
                 <textarea
@@ -177,7 +177,7 @@ export function StickyBoard({ initial }: { initial: Note[] }) {
                       style={{ background: col.dot }} />
                   ))}
                   <button type="button" onClick={() => remove(n)} title="Hapus note"
-                    className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-danger">
+                    className="ml-auto flex h-7 w-7 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-danger">
                     <Icon name="delete" size={18} />
                   </button>
                 </div>

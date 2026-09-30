@@ -44,9 +44,10 @@ export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHo
   // Ukuran: desktop 44→56, tablet (<1024px) 38→46, dikecilkan otomatis bila jumlah ikon tidak muat di lebar layar;
   // gerak dikurangi → tanpa pembesaran.
   const wide = useMedia("(min-width: 1024px)", true);
+  const coarse = useMedia("(pointer: coarse)"); // tablet sentuh: ikon dasar ≥ 44px
   const still = useMedia("(prefers-reduced-motion: reduce)");
   const vw = useViewportW();
-  const base = dockFitBase(items.length, vw, wide ? 44 : 38);
+  const base = dockFitBase(items.length, vw, wide || coarse ? 44 : 38, { min: coarse ? 44 : 30 });
   const max = still ? base : Math.round(base * (wide ? 56 / 44 : 46 / 38));
   const activeId = pathname === "/" ? "home" : menu.find((g) => g.children.some((c) => c.href === pathname))?.id;
   const sizes = dockSizes(mouseX, centers.length === items.length ? centers : items.map(() => -1e4), base, max);
@@ -96,7 +97,7 @@ export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHo
           <div className="mx-2 mb-1 border-t border-hairline" />
           {openGroup.children.map((c) => {
             const on = pathname === c.href;
-            const cls = `flex items-center gap-2.5 rounded-[10px] px-2 py-[5px] text-[13px] transition-colors ${on ? "bg-accent-fill text-on-accent" : "hover:bg-fg/8"}`;
+            const cls = `flex items-center gap-2.5 rounded-[10px] px-2 py-[5px] text-[13px] transition-colors pointer-coarse:min-h-11 ${on ? "bg-accent-fill text-on-accent" : "hover:bg-fg/8"}`;
             const glyph = <Icon name={itemIcon(openGroup.id, c.id).glyph} size={16} className={on ? "" : "text-fg-2"} />;
             return c.external ? (
               <a key={c.id} href={c.href} target="_blank" rel="noreferrer" role="menuitem" className={cls} onClick={close}>

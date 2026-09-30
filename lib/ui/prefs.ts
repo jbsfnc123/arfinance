@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 // Preferensi tampilan per browser (localStorage): tema Dark/Light/System, kepadatan & transparansi. Diterapkan sebagai
 // atribut `data-theme` / `data-density` / `data-transparency` di <html>. Skrip inline (PREFS_SCRIPT) menerapkannya sebelum paint pertama agar tidak
@@ -20,14 +20,29 @@ export function resolveTheme(mode: ThemeMode, prefersDark: boolean): "dark" | "l
   return mode === "system" ? (prefersDark ? "dark" : "light") : mode;
 }
 
+const DARK_Q = "(prefers-color-scheme: dark)";
 const listeners = new Set<() => void>();
 const read = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
-const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* opsional */ } listeners.forEach((fn) => fn()); };
+const notify = () => listeners.forEach((fn) => fn());
+const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* opsional */ } notify(); };
+
+// Satu jalur untuk perubahan dari luar (tema OS berubah, preferensi diubah di tab lain): terapkan ke <html> dulu, lalu
+// beri tahu komponen. Listener OS/storage dipasang sekali selama ada subscriber dan dilepas saat subscriber terakhir pergi.
+let detachExternal: (() => void) | null = null;
+const onExternal = () => { applyPrefs(); notify(); };
+const onStorage = (e: StorageEvent) => { if (e.key === null || e.key.startsWith("prefs:")) onExternal(); };
 const subscribe = (fn: () => void) => {
   listeners.add(fn);
-  const mq = typeof matchMedia === "function" ? matchMedia("(prefers-color-scheme: dark)") : null;
-  mq?.addEventListener("change", fn);
-  return () => { listeners.delete(fn); mq?.removeEventListener("change", fn); };
+  if (!detachExternal && typeof window !== "undefined") {
+    const mq = typeof matchMedia === "function" ? matchMedia(DARK_Q) : null;
+    mq?.addEventListener("change", onExternal);
+    window.addEventListener("storage", onStorage);
+    detachExternal = () => { mq?.removeEventListener("change", onExternal); window.removeEventListener("storage", onStorage); };
+  }
+  return () => {
+    listeners.delete(fn);
+    if (!listeners.size && detachExternal) { detachExternal(); detachExternal = null; }
+  };
 };
 
 export function applyPrefs() {
@@ -35,7 +50,7 @@ export function applyPrefs() {
   const raw = read(THEME_KEY);
   const mode = isThemeMode(raw) ? raw : DEFAULT_THEME;
   const d = document.documentElement;
-  d.setAttribute("data-theme", resolveTheme(mode, matchMedia("(prefers-color-scheme: dark)").matches));
+  d.setAttribute("data-theme", resolveTheme(mode, matchMedia(DARK_Q).matches));
   d.setAttribute("data-theme-mode", mode);
   if (read(DENSITY_KEY) === "compact") d.setAttribute("data-density", "compact"); else d.removeAttribute("data-density");
   if (read(TRANSPARENCY_KEY) === "reduced") d.setAttribute("data-transparency", "reduced"); else d.removeAttribute("data-transparency");
@@ -66,6 +81,11 @@ export function useTransparency(): [Transparency, (t: Transparency) => void] {
 /** Tema efektif saat ini (untuk chart yang butuh warna konkret). */
 export function useResolvedTheme(): "dark" | "light" {
   const [mode] = useTheme();
-  const prefersDark = useSyncExternalStore(subscribe, () => matchMedia("(prefers-color-scheme: dark)").matches, () => true);
+  const prefersDark = useSyncExternalStore(subscribe, () => matchMedia(DARK_Q).matches, () => true);
   return resolveTheme(mode, prefersDark);
+}
+
+/** Pasang sinkronisasi preferensi (tema OS & tab lain) tanpa membaca nilai apa pun — dipakai <PrefsSync /> di root layout. */
+export function usePrefsSync() {
+  useEffect(() => subscribe(() => {}), []);
 }

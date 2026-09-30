@@ -7,7 +7,7 @@ import { Icon } from "@/components/icons";
 // panjang) = baris pil yang bisa digulir horizontal tanpa membungkus. role="tablist", panah kiri/kanan/Home/End
 // memindah pilihan (roving tabindex); label, urutan & perilaku onChange sama dengan sebelumnya.
 export function Tabs<K extends string>(props: {
-  tabs: readonly { key: K; label: string; icon: string }[];
+  tabs: readonly { key: K; label: string; icon?: string }[];
   value: K;
   onChange: (k: K) => void;
   variant?: "segmented" | "strip";
@@ -37,7 +37,7 @@ export function Tabs<K extends string>(props: {
               className={`${base} ${seg
                 ? on ? "bg-surface font-medium text-fg shadow-sm" : "text-fg-2 hover:text-fg"
                 : on ? "bg-selection font-medium text-accent" : "text-fg-2 hover:bg-fg/6 hover:text-fg"}`}>
-              <Icon name={t.icon} size={16} />{t.label}
+              {t.icon && <Icon name={t.icon} size={16} />}{t.label}
             </button>
           );
         })}
