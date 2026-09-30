@@ -1,4 +1,5 @@
 import { unpack, type Packed } from "./pack";
+import type { SjEvent, SjReceiver } from "@/lib/modules/sj/compute";
 import type { DatasetKey } from "@/lib/cache/versions";
 import type { RowMark } from "@/lib/modules/row-marks";
 
@@ -33,6 +34,8 @@ export type RkmGr = { id: number; no: string | null; grpo_no: string | null; no_
 export type RkmKw = { id: number; no: string | null; grpo_no: string | null; tgl_grpo: string | null; cabang: string | null; no_sj: string | null; no_po: string | null; jumlah_grpo: number | null; no_grn: string | null; total_grn: number | null; total_grpo_grn: number | null; tgl_faktur_pajak: string | null; no_faktur_pajak: string | null; jumlah_faktur_pajak: number | null; selisih: number | null; pembuat: string | null; tanggal_input: string | null };
 export type Mutation = { id: number; account: string; tx_date: string; amount: number; keterangan: string | null; catatan: string | null; excluded: boolean; excluded_note: string | null };
 export type Remark = { ref: string; no_sj: string | null; invoice_no: string | null; keterangan: string; source: string; updated_at: string; updated_by_name: string | null };
+export type SjBatch = { id: number; file_name: string; rows_total: number; rows_new: number; rows_dup: number; rows_bad: number; published_at: string; uploader: string };
+export type SjLog = { at: string; action: string; old_name: string | null; new_name: string | null; by_name: string };
 export type Account = { code: string; last4: string; sort: number; active: boolean };
 
 export type Datasets = {
@@ -52,6 +55,8 @@ export type Datasets = {
   // Penanda warna baris Kertas Kerja (row_marks, migrasi 0040) per modul.
   m10Marks: { marks: RowMark[] };
   rkmMarks: { marks: RowMark[] };
+  // Monitor Surat Jalan (migrasi 0042): kejadian terpublikasi (urut sumber), daftar Receiver, riwayat upload & perubahan.
+  sj: { events: SjEvent[]; receivers: SjReceiver[]; batches: SjBatch[]; log: SjLog[]; canManage: boolean };
 };
 export type DatasetName = keyof Datasets;
 
@@ -87,4 +92,5 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string
   payhist: { rpc: "pack_erp_recent", deps: ["erp"], decode: (r) => ({ ...decodeErp(r), counts: (r.counts as Record<string, number>) ?? undefined }) },
   m10Marks: { rpc: "pack_row_marks", args: { p_module: "m10" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
   rkmMarks: { rpc: "pack_row_marks", args: { p_module: "rkm" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
+  sj: { rpc: "pack_sj", deps: ["sj"], decode: (r) => ({ ...(tables(r, ["events", "receivers", "batches", "log"]) as Omit<Datasets["sj"], "canManage">), canManage: r.canManage === true }) },
 };

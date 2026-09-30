@@ -880,3 +880,49 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   normal/hover/terpilih (diukur computed & piksel di browser; sebelumnya 3,05–3,6 di tema terang). Tes regresi
   `lib/ui/badge-contrast.test.ts` menghitung dari token globals.css. Badge di baris tanpa warna & tabel lain tidak
   diubah (di tema terang tetap ±3,9–4,0:1, keterbatasan lama).
+
+## Monitor Surat Jalan (Fase 45, 2026-09-30)
+- Menu baru **Tukar Faktur › Monitor Surat Jalan** (`tukar.monitor_sj`, `/monitor-surat-jalan`, glyph `fact_check`):
+  Dashboard / Kertas Kerja / Upload & Setting, pola & gaya mengikuti Mitra10 Tukar Faktur. Tidak ada akses default untuk
+  non-SA (centang lewat Akses menu per akun). Lihat = semua akun ber-menu; **upload & daftar Receiver = Controller/Super
+  Admin** (dicek server `private.sj_can_manage()`; UI menonaktifkan kontrol dengan penjelasan).
+- **Sumber**: `LaporanSerahTerimaSuratJalan*.csv` — koma, RFC 4180 (Description bisa multi-baris), UTF-8 (BOM opsional),
+  18 kolom: Area, SJ No., Tanggal SJ, Business Partner, Locator, Send Date, Sender, Receive Date, Receiver, Jumlah Hari,
+  Faktur, Description, No. Route, Shipper 1, No. Plat, Driver, Shipper 2, Send Receipt Doc No. Wajib: SJ No., Tanggal SJ,
+  Receive Date, Receiver (hilang → error jelas); kolom tambahan diabaikan & dilaporkan. Tanggal `DD Mon YYYY` diurai ketat
+  (format lain/mustahil → kosong + ditandai, tidak ditebak); `-` = kosong. File contoh: 25.513 baris, 18.805 SJ unik,
+  6.659 SJ berulang (≤ 3 baris), 0 baris bermasalah; `Jumlah Hari` = Receive Date − Tanggal SJ (cocok 13.227/13.227 acuan).
+- **Aturan** (satu definisi `lib/modules/sj/compute.ts` untuk Dashboard, Kertas Kerja & ekspor):
+  identitas SJ = `upper(trim(SJ No.))`; satu baris CSV = satu kejadian (riwayat, tidak digabung). Receiver diakui = nama
+  aktif di daftar (trim + spasi tunggal + tanpa beda kapital, tanpa fuzzy; awal: Bintang Anugia Arragi, Wienda Aswar).
+  **Acuan = kejadian pertama yang diakui menurut urutan sumber (urutan publikasi upload, lalu nomor baris file)** — bukan
+  urutan tabel/tanggal. Receive Date acuan kosong → tetap Sudah diterima + "Tanggal terima belum valid" (acuan tidak
+  diganti). **Rata-rata waktu penerimaan** = rata-rata (Receive Date acuan − Tanggal SJ) hari kalender, satu nilai per SJ;
+  negatif / masa depan (Asia/Jakarta) / tanggal kosong dikeluarkan dan dihitung sebagai "dikecualikan"; tanpa sampel → "—".
+  Umur belum diterima = hari ini − Tanggal SJ; bucket 0–3 / 4–7 / 8–14 / 15–30 / > 30. Penanda: laporan penerimaan ganda,
+  hanya Receiver di luar daftar, Receive Date tanpa Receiver, tanggal SJ tidak valid, durasi negatif, tanggal masa depan,
+  SJ sama Area/BP berbeda. Periode bawaan = bulan Tanggal SJ terbaru (bukan masa depan); filter periode & Area dipakai
+  bersama Dashboard & Kertas Kerja (KPI total = jumlah baris Kertas Kerja = SJ di ekspor riwayat).
+- **Duplikasi antar-upload**: `event_key` = sha256 seluruh nilai mentah 18 kolom (nomor baris tidak ikut) dan unik →
+  upload ulang identik/tumpang tindih melewati kejadian yang sama, kejadian baru tetap masuk; tidak ada dedup berdasarkan
+  nomor SJ saja, tidak ada yang dihapus/diubah oleh upload. Kejadian dari upload yang lebih awal tetap menjadi acuan.
+- **Upload**: parse & validasi di browser → pratinjau (pemetaan kolom, statistik, Receiver di luar daftar, baris bermasalah
+  dengan nomor baris) → `sj_upload_begin` → `sj_upload_rows` (potongan 2.000; staging bertipe, kirim ulang aman) →
+  `sj_upload_commit` (atomik: staging harus lengkap; hasil baru/identik/bermasalah dari server). Gagal di tengah → tidak
+  ada yang tampil, ulangi = batch baru. Maks. 60.000 baris per upload. Staging > 1 hari dibersihkan otomatis.
+- **Receiver**: tambah / ubah / nonaktifkan (tidak pernah dihapus), nama unik setelah normalisasi (klien & server 23505),
+  pratinjau dampak (jumlah SJ berubah status / acuan) sebelum simpan, jejak perubahan `sj_receiver_log`.
+- **Database** (produksi, pola Fase 44: uji lokal PGlite 48/48 (+41/41 tanpa 0044) → snapshot → dry-run ber-rollback →
+  apply → advisors → bandingkan snapshot): `0042_monitor_sj` (sequence `sj_publish_seq`; `sj_batches`, `private.sj_stage`,
+  `sj_events`, `sj_receivers` + seed, `sj_receiver_log`; RLS baca `has_menu('tukar.monitor_sj')`, authenticated hanya
+  SELECT (insert/update/delete/TRUNCATE dicabut), trigger `bump_version('sj')`; RPC `pack_sj`, `sj_events_of`,
+  `sj_upload_begin/rows/commit`, `sj_receiver_save`), `0043_sj_receiver_log_idx` (indeks FK, saran advisor),
+  `0044_sj_upload_perf` (uji beban 25.513 baris di produksi: commit 4,3 → 2,4 dtk di bawah batas 8 dtk authenticated —
+  hash/tanggal dihitung per potongan, `sj_date` SQL tanpa EXCEPTION, indeks tanggal tak terpakai dihapus, batas 60.000).
+  Tidak menyentuh tabel faktur/worksheet Mitra10/RKM; satu-satunya tabel bersama yang ditulis: `import_log` (module `sj`).
+  `pack_sj` 25.513 kejadian ≈ 0,5 dtk / 5,3 MB JSON.
+- **Rollback**: `supabase/rollback/0044_sj_upload_perf_down.sql` (kembali ke definisi 0042; ditolak bila staging berisi —
+  tunggu upload selesai/hapus batch staging), lalu `supabase/rollback/0042_monitor_sj_down.sql` (hapus seluruh objek modul
+  termasuk data SJ & baris `import_log` module `sj`; indeks 0043 ikut terhapus). Kode: revert commit Fase 45.
+- **Penerapan kode**: merge ke `main` → deploy Vercel. Setelah deploy, Super Admin mencentang menu Monitor Surat Jalan
+  untuk akun yang perlu (Controller agar bisa upload), lalu upload file CSV pertama.

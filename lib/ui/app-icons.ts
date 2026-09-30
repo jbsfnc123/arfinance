@@ -23,7 +23,7 @@ const ITEM_GLYPH: Record<string, string> = {
   "dash.coll": "monitoring", "dash.tukar": "swap_horiz", "rek.mutasi": "account_balance", "lap.presentasi": "slideshow",
   "coll.tagihan": "receipt_long", "coll.case": "assignment_late", "coll.payhist": "history",
   "tukar.jadwal": "event", "tukar.detail": "smartphone", "tukar.ekspedisi": "local_shipping", "tukar.upload": "upload_file",
-  "rek.mitra10": "storefront", "tukar.rkm": "storefront",
+  "rek.mitra10": "storefront", "tukar.rkm": "storefront", "tukar.monitor_sj": "fact_check",
   "inv.pengajuan": "edit_note", "inv.batal": "summarize", "inv.hold": "pause_circle", "ext.ltkp": "picture_as_pdf", "rek.coretax": "code",
   "bill.detail": "receipt_long", "bill.ecom": "shopping_cart", "bill.komisi": "payments",
   "rek.cekharga": "compare_arrows", "rek.marketplace": "storefront",
