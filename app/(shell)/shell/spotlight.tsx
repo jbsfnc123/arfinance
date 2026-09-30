@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MenuGroup } from "@/lib/menu";
+import type { NavGroup } from "@/lib/menu";
+import { LockDot, LOCKED_SUFFIX } from "@/components/lock-dot";
 import { useLoadedDataset } from "@/lib/local/store";
 import { EMPTY_FILTERS } from "@/lib/modules/collection/view-model";
 import { writeViewState } from "@/lib/ui/view-state";
@@ -15,11 +16,11 @@ import { groupIcon, itemIcon } from "@/lib/ui/app-icons";
 // terkini (→ Daftar Tagihan dengan kata cari terisi). Tidak ada hasil buatan bila data belum ada.
 
 type Kind = "menu" | "bp" | "invoice";
-type Hit = { key: string; kind: Kind; title: string; sub: string; meta?: string; icon: string; group: string; go: () => void };
+type Hit = { key: string; kind: Kind; title: string; sub: string; meta?: string; icon: string; group: string; locked?: boolean; go: () => void };
 const KIND_LABEL: Record<Kind, string> = { menu: "Menu", bp: "Business Partner", invoice: "Invoice" };
 
-export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
-  open: boolean; onClose: () => void; menu: MenuGroup[]; showHome: boolean; canTagihan: boolean;
+export function Spotlight({ open, onClose, menu, homeLocked, canTagihan, onDenied }: {
+  open: boolean; onClose: () => void; menu: NavGroup[]; homeLocked: boolean; canTagihan: boolean; onDenied: (label: string) => void;
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -33,13 +34,17 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
   const type = (v: string) => { setQ(v); setIdx(0); };
 
   const menuHits = useMemo<Hit[]>(() => {
-    const items: Hit[] = showHome ? [{ key: "home", kind: "menu", title: "Beranda", sub: "Halaman utama", icon: itemIcon("home", "home").glyph, group: "home", go: () => router.push("/") }] : [];
+    // Semua menu; yang tanpa akses tetap bisa dicari (bertitik merah) tetapi memilihnya hanya menampilkan pesan.
+    const items: Hit[] = [{ key: "home", kind: "menu", title: "Beranda", sub: "Halaman utama", icon: itemIcon("home", "home").glyph, group: "home",
+      locked: homeLocked, meta: homeLocked ? "Tidak ada akses" : undefined, go: () => (homeLocked ? onDenied("Beranda") : router.push("/")) }];
     for (const g of menu) for (const c of g.children) {
-      items.push({ key: c.id, kind: "menu", title: c.label, sub: g.label, meta: c.external ? "Tautan luar" : undefined, icon: itemIcon(g.id, c.id).glyph, group: g.id,
-        go: () => { if (c.external) window.open(c.href, "_blank", "noreferrer"); else router.push(c.href); } });
+      items.push({ key: c.id, kind: "menu", title: c.label, sub: g.label, meta: c.locked ? "Tidak ada akses" : c.external ? "Tautan luar" : undefined,
+        icon: itemIcon(g.id, c.id).glyph, group: g.id, locked: c.locked,
+        go: () => { if (c.locked) onDenied(`${g.label} › ${c.label}`); else if (c.external) window.open(c.href, "_blank", "noreferrer"); else router.push(c.href); } });
     }
-    return items;
-  }, [menu, showHome, router]);
+    // Daftar awal (tanpa kata cari): menu yang bisa dibuka lebih dulu.
+    return [...items.filter((h) => !h.locked), ...items.filter((h) => h.locked)];
+  }, [menu, homeLocked, router, onDenied]);
 
   const hits = useMemo<Hit[]>(() => {
     const needle = q.trim().toLowerCase();
@@ -97,7 +102,11 @@ export function Spotlight({ open, onClose, menu, showHome, canTagihan }: {
               )}
               <div id={`spot-${i}`} data-i={i} role="option" aria-selected={i === idx} onMouseMove={() => idx !== i && setIdx(i)} onClick={() => pick(h)}
                 className={`flex cursor-pointer items-center gap-3 rounded-[10px] px-2.5 py-1.5 pointer-coarse:min-h-11 ${i === idx ? "bg-accent-fill text-on-accent" : ""}`}>
-                <AppIcon spec={{ ...groupIcon(h.group), glyph: h.icon }} size={28} />
+                <span className="relative flex" title={h.locked ? "Tidak ada akses" : undefined}>
+                  <AppIcon spec={{ ...groupIcon(h.group), glyph: h.icon }} size={28} />
+                  {h.locked && <LockDot className="!-right-1 !-top-1" />}
+                </span>
+                {h.locked && <span className="sr-only">{LOCKED_SUFFIX}</span>}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium">{h.title}</span>
                   <span className={`block truncate text-[11px] ${i === idx ? "text-on-accent" : "text-fg-2"}`}>{h.sub}</span>

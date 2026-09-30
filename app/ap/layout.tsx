@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/session";
-import { AP_MENU_REGISTRY, canEnterWorkspace, visibleMenu } from "@/lib/menu";
+import { AP_MENU_REGISTRY, canEnterWorkspace, navMenu } from "@/lib/menu";
 import { currentHost } from "@/lib/workspace-server";
 import { WORKSPACES, workspaceUrl } from "@/lib/workspace";
 import { WorkspaceDenied } from "@/components/workspace-denied";
@@ -9,10 +9,13 @@ import { ShellChrome } from "../(shell)/shell-chrome";
 export default async function ApLayout({ children }: LayoutProps<"/ap">) {
   const [{ profile, role, access }, host] = await Promise.all([getSession(), currentHost()]);
   if (!canEnterWorkspace("ap", access)) return <WorkspaceDenied ws="ap" access={access} host={host} />;
-  const menu = visibleMenu(access, AP_MENU_REGISTRY);
+  // AP: tetap hanya menu yang bisa diakses (penanda titik merah khusus AR Workspace).
+  const menu = navMenu(access, AP_MENU_REGISTRY)
+    .map((g) => ({ ...g, children: g.children.filter((c) => !c.locked) }))
+    .filter((g) => g.children.length > 0);
 
   return (
-    <ShellChrome title={WORKSPACES.ap.label} icon={WORKSPACES.ap.icon} menu={menu} showHome
+    <ShellChrome title={WORKSPACES.ap.label} icon={WORKSPACES.ap.icon} menu={menu} homeLocked={false}
       portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null}
       user={{ id: profile.id, name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}

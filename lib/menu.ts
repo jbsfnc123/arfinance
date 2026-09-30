@@ -159,6 +159,19 @@ export function visibleMenu(access: Access, registry: MenuGroup[] = MENU_REGISTR
     .filter((g) => g.children.length > 0);
 }
 
+// Navigasi AR Workspace: SEMUA grup & submenu tampil untuk semua akun; yang tidak boleh diakses ditandai `locked`
+// (ikon bertitik merah, klik → pesan "tidak memiliki akses"). Hak akses tetap dari canAccess; halaman tetap dijaga
+// menuGuard + RLS, jadi ini hanya soal tampilan.
+export type NavItem = MenuItem & { locked: boolean };
+export type NavGroup = Omit<MenuGroup, "children"> & { children: NavItem[]; locked: boolean };
+
+export function navMenu(access: Access, registry: MenuGroup[] = MENU_REGISTRY): NavGroup[] {
+  return registry.map((g) => {
+    const children = g.children.map((c) => ({ ...c, locked: !canAccess(c, access) }));
+    return { ...g, children, locked: children.every((c) => c.locked) };
+  });
+}
+
 // Tujuan awal untuk role tanpa akses Beranda: menu internal pertama yang diizinkan.
 export function firstAllowedHref(access: Access): string | null {
   for (const g of visibleMenu(access)) {

@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import type { MenuGroup } from "@/lib/menu";
+import type { NavGroup } from "@/lib/menu";
 import { idbClear } from "@/lib/cache/idb";
 import { reloadLoaded } from "@/lib/local/store";
 import { clearViewState, ensureViewOwner } from "@/lib/ui/view-state";
-import { ToastProvider } from "@/components/toast";
+import { ToastProvider, useToast } from "@/components/toast";
+import { deniedMessage } from "@/components/lock-dot";
 import { TopBar } from "./shell/top-bar";
 import { Dock, MobileNav } from "./shell/dock";
 import { AppLauncher } from "./shell/app-launcher";
@@ -17,15 +18,22 @@ import { useCommandK } from "./shell/use-command-k";
 // (HP) + App Launcher + Spotlight (Ctrl/Cmd+K). Konten memakai hampir seluruh lebar; ruang bawah dicadangkan
 // (--dock-reserve) agar tabel yang tingginya mengikuti layar tidak tertutup Dock. Client component karena menyimpan
 // status overlay dan membersihkan cache browser saat logout. Props & pemanggil (layout.tsx) tidak berubah.
-export function ShellChrome({ title, icon, portalHref, menu, showHome, user, children }: {
+type ShellProps = {
   title: string;
   portalHref?: string | null; // akun SA / divisi AR + AP: kembali ke pemilih workspace (tangki.space)
   icon: string;
-  menu: MenuGroup[];
-  showHome: boolean;
+  menu: NavGroup[];           // SEMUA menu; `locked` = tanpa akses (titik merah, klik → pesan)
+  homeLocked: boolean;
   user: { id: string; name: string; role: string; collection: string | null };
   children: React.ReactNode;
-}) {
+};
+
+// ToastProvider membungkus seluruh shell agar Dock/Launcher/Spotlight bisa menampilkan pesan "tidak memiliki akses".
+export function ShellChrome(props: ShellProps) {
+  return <ToastProvider><ShellFrame {...props} /></ToastProvider>;
+}
+
+function ShellFrame({ title, icon, portalHref, menu, homeLocked, user, children }: ShellProps) {
   // Overlay diikat ke path saat dibuka → pindah halaman otomatis menutupnya tanpa setState di effect.
   const [ov, setOv] = useState<{ path: string; v: "launcher" | "spotlight" | null }>({ path: "", v: null });
   const [refreshing, setRefreshing] = useState(false);
@@ -36,12 +44,15 @@ export function ShellChrome({ title, icon, portalHref, menu, showHome, user, chi
     setOv((prev) => ({ path: pathname, v: typeof v === "function" ? v(prev.path === pathname ? prev.v : null) : v })), [pathname]);
   // State tampilan (filter/cari/scroll) milik akun ini; akun lain di tab yang sama → dibersihkan dulu.
   ensureViewOwner(user.id);
-  const canTagihan = menu.some((g) => g.children.some((c) => c.id === "coll.tagihan"));
+  const canTagihan = menu.some((g) => g.children.some((c) => c.id === "coll.tagihan" && !c.locked));
+  const toast = useToast();
+  // Menu tanpa akses: tetap di halaman sekarang, tampilkan pesan.
+  const denyAccess = useCallback((label: string) => toast(deniedMessage(label), "danger", 6000), [toast]);
 
   // Prefetch semua menu yang boleh diakses saat browser sedang senggang, supaya klik menu tidak menunggu server.
   useEffect(() => {
-    const hrefs = menu.flatMap((g) => g.children.filter((c) => !c.external).map((c) => c.href));
-    if (showHome) hrefs.unshift("/");
+    const hrefs = menu.flatMap((g) => g.children.filter((c) => !c.external && !c.locked).map((c) => c.href));
+    if (!homeLocked) hrefs.unshift("/");
     const run = () => hrefs.forEach((h) => router.prefetch(h));
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(run, { timeout: 3000 });
@@ -49,7 +60,7 @@ export function ShellChrome({ title, icon, portalHref, menu, showHome, user, chi
     }
     const t = setTimeout(run, 1200);
     return () => clearTimeout(t);
-  }, [menu, showHome, router]);
+  }, [menu, homeLocked, router]);
 
   // Ctrl/Cmd+K → Spotlight (diabaikan selama dialog form/data halaman masih terbuka, lihat use-command-k.ts).
   const toggleSpotlight = useCallback(() => setOverlay((o) => (o === "spotlight" ? null : "spotlight")), [setOverlay]);
@@ -75,14 +86,12 @@ export function ShellChrome({ title, icon, portalHref, menu, showHome, user, chi
       <TopBar title={title} icon={icon} menu={menu} portalHref={portalHref} user={user}
         onSearch={() => setOverlay("spotlight")} onRefresh={refresh} refreshing={refreshing} signOut={signOut} />
       <main className="min-w-0 flex-1 overflow-auto px-4 pt-4 md:px-6 md:pt-5" style={{ paddingBottom: "var(--dock-reserve)" }}>
-        <ToastProvider>
-          <div key={pathname} className="page-in">{children}</div>
-        </ToastProvider>
+        <div key={pathname} className="page-in">{children}</div>
       </main>
-      <Dock menu={menu} showHome={showHome} onLauncher={() => setOverlay("launcher")} />
-      <MobileNav menu={menu} showHome={showHome} onLauncher={() => setOverlay("launcher")} />
-      <AppLauncher open={overlay === "launcher"} onClose={closeOverlay} menu={menu} showHome={showHome} />
-      <Spotlight open={overlay === "spotlight"} onClose={closeOverlay} menu={menu} showHome={showHome} canTagihan={canTagihan} />
+      <Dock menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
+      <MobileNav menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
+      <AppLauncher open={overlay === "launcher"} onClose={closeOverlay} menu={menu} homeLocked={homeLocked} onDenied={denyAccess} />
+      <Spotlight open={overlay === "spotlight"} onClose={closeOverlay} menu={menu} homeLocked={homeLocked} canTagihan={canTagihan} onDenied={denyAccess} />
     </div>
   );
 }

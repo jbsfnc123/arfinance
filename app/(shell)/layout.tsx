@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/session";
-import { canAccess, canEnterWorkspace, HOME_ITEM, visibleMenu } from "@/lib/menu";
+import { canAccess, canEnterWorkspace, HOME_ITEM, navMenu } from "@/lib/menu";
 import { currentHost } from "@/lib/workspace-server";
 import { WORKSPACES, workspaceUrl } from "@/lib/workspace";
 import { WorkspaceDenied } from "@/components/workspace-denied";
@@ -8,11 +8,12 @@ import { ShellChrome } from "./shell-chrome";
 export default async function ShellLayout({ children }: LayoutProps<"/">) {
   const [{ profile, role, access }, host] = await Promise.all([getSession(), currentHost()]);
   if (!canEnterWorkspace("ar", access)) return <WorkspaceDenied ws="ar" access={access} host={host} />;
-  const menu = visibleMenu(access);
+  // Semua menu tampil; yang tanpa akses ditandai locked (titik merah). Halaman tetap dijaga menuGuard + RLS.
+  const menu = navMenu(access);
 
   return (
     <ShellChrome title={WORKSPACES.ar.label} icon={WORKSPACES.ar.icon} menu={menu}
-      portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null} showHome={canAccess(HOME_ITEM, access)}
+      portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null} homeLocked={!canAccess(HOME_ITEM, access)}
       user={{ id: profile.id, name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}
     </ShellChrome>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACL_MENU_IDS, HOME_ITEM, aclGroups, canEnterWorkspace, homeWorkspace, MENU_REGISTRY, canAccess, findMenuById, findMenuByHref, firstAllowedHref, menusDiffer, visibleMenu } from "./menu";
+import { ACL_MENU_IDS, HOME_ITEM, aclGroups, canEnterWorkspace, homeWorkspace, MENU_REGISTRY, canAccess, findMenuById, findMenuByHref, firstAllowedHref, menusDiffer, navMenu, visibleMenu } from "./menu";
 
 const item = (id: string) => MENU_REGISTRY.flatMap((g) => g.children).find((c) => c.id === id)!;
 
@@ -103,5 +103,29 @@ describe("akses menu per akun", () => {
     expect(menusDiffer(["home", "menu.lama"], ["home"])).toBe(false);
     expect(menusDiffer(["home"], ["home", "coll.tagihan"])).toBe(true);
     expect(menusDiffer(["home", "coll.case"], ["home", "coll.tagihan"])).toBe(true);
+  });
+});
+
+describe("navMenu: semua menu tampil, yang tanpa akses ditandai locked", () => {
+  const total = MENU_REGISTRY.reduce((n, g) => n + g.children.length, 0);
+  const count = (gs: ReturnType<typeof navMenu>, locked: boolean) => gs.flatMap((g) => g.children).filter((c) => c.locked === locked).length;
+  it("Super Admin: semua tampil, tidak ada yang terkunci", () => {
+    const n = navMenu({ kind: "sa", allowed: new Set() });
+    expect(n.map((g) => g.id)).toEqual(MENU_REGISTRY.map((g) => g.id));
+    expect(count(n, false)).toBe(total);
+    expect(n.some((g) => g.locked)).toBe(false);
+  });
+  it("akun biasa: urutan & jumlah sama dengan registry, terkunci sesuai canAccess (termasuk needs)", () => {
+    const access = { kind: "coll", allowed: new Set(["coll.tagihan", "dash.coll", "tool.pdf"]) };
+    const n = navMenu(access);
+    expect(n.flatMap((g) => g.children).map((c) => c.id)).toEqual(MENU_REGISTRY.flatMap((g) => g.children).map((c) => c.id));
+    for (const g of n) for (const c of g.children) expect(c.locked).toBe(!canAccess(c, access));
+    expect(n.flatMap((g) => g.children).find((c) => c.id === "dash.coll")!.locked).toBe(true); // butuh ctrl
+    expect(count(n, false)).toBe(visibleMenu(access).reduce((k, g) => k + g.children.length, 0));
+  });
+  it("grup terkunci hanya bila semua submenunya terkunci", () => {
+    const n = navMenu({ kind: "coll", allowed: new Set(["coll.tagihan"]) });
+    expect(n.find((g) => g.id === "collection")!.locked).toBe(false);
+    expect(n.find((g) => g.id === "tools")!.locked).toBe(true);
   });
 });
