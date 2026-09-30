@@ -5,8 +5,13 @@ export const BULAN_ID = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
+// Satu formatter bersama: toLocaleString("id-ID") membuat formatter baru di setiap panggilan (lambat di tabel besar).
+// Hasil identik dengan Number.prototype.toLocaleString("id-ID").
+const NUM_ID = new Intl.NumberFormat("id-ID");
+export const fmtNum = (n: number) => NUM_ID.format(n);
+
 export function rupiah(n: number | null | undefined) {
-  return "Rp " + (Number(n) || 0).toLocaleString("id-ID");
+  return "Rp " + fmtNum(Number(n) || 0);
 }
 
 // "2026-09-15" → "15/09/2026"

@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtNum } from "@/lib/format";
 import { parseNumber } from "@/lib/parsers/number";
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { useFillHeight } from "@/lib/ui/fill-height";
 import { useDensity } from "@/lib/ui/prefs";
 import { rowHeight } from "@/lib/ui/density";
-import { useScrollMemory, useViewState } from "@/lib/ui/view-state";
+import { useScrollMemory, useViewState, useViewStateInitial, writeViewState } from "@/lib/ui/view-state";
 import { btnGhost, card, inputCls, th } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { Icon } from "@/components/icons";
@@ -56,16 +56,19 @@ const isEmpty = (v: unknown) => v === null || v === undefined || v === "";
 export function cellText<T>(r: T, c: LCol<T>): string {
   if (c.text) return c.text(r);
   const v = r[c.k] as unknown;
-  if (c.n) return isEmpty(v) ? "" : Number(v).toLocaleString("id-ID");
+  if (c.n) return isEmpty(v) ? "" : fmtNum(Number(v));
   if (c.d) return fmtDate(v as string | null);
   return isEmpty(v) ? "" : String(v);
 }
+
+// Satu collator untuk semua perbandingan (localeCompare dengan locale membuat collator baru di setiap panggilan → lambat).
+const collator = new Intl.Collator("id", { numeric: true });
 
 /** Urutan baris: kosong selalu di akhir (naik maupun turun); angka dibandingkan sebagai angka. */
 export function compareCells(x: unknown, y: unknown, numeric: boolean, dir: 1 | -1) {
   const ex = isEmpty(x), ey = isEmpty(y);
   if (ex || ey) return ex === ey ? 0 : ex ? 1 : -1;
-  const cmp = numeric ? Number(x) - Number(y) : String(x).localeCompare(String(y), "id", { numeric: true });
+  const cmp = numeric ? Number(x) - Number(y) : collator.compare(String(x), String(y));
   return cmp * dir;
 }
 
@@ -86,6 +89,47 @@ export function filterOptions<T>(rows: T[], filters: LFilter<T>[], active: Recor
     const opts = fl.options.filter((o) => counts.has(o) || active[fl.k] === o).map((o) => ({ value: o, count: counts.get(o) ?? 0 }));
     return { ...fl, opts };
   });
+}
+
+/**
+ * Indeks pencarian: teks kolom cari per baris, sudah huruf kecil, dipisah  (kata tidak cocok melintasi kolom).
+ * Dibangun sekali per data, jadi tiap ketukan di kotak Cari cukup satu `includes` per baris.
+ */
+export function buildSearchIndex<T>(rows: readonly T[], search: readonly (keyof T & string)[], cols: readonly LCol<T>[]) {
+  const searchCols = search.map((k) => cols.find((c) => c.k === k));
+  const index = new Map<T, string>();
+  for (const r of rows) {
+    index.set(r, search.map((k, i) => {
+      const c = searchCols[i];
+      return (c?.text ? c.text(r) : String(r[k] ?? "")).toLowerCase();
+    }).join(""));
+  }
+  return index;
+}
+export function searchMatcher<T>(index: ReadonlyMap<T, string>, q: string) {
+  const needle = q.trim().toLowerCase();
+  return (r: T) => !needle || (index.get(r)?.includes(needle) ?? false);
+}
+
+/**
+ * Kotak Cari dengan state sendiri: huruf tampil seketika (hanya komponen ini yang di-render), lalu `onChange` dijalankan
+ * sebagai transisi. Nilai dari luar (pemulihan state) diterapkan hanya bila berbeda dari yang terakhir dikirim, agar
+ * transisi lama tidak menimpa ketikan terbaru.
+ */
+function SearchBox({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  const [text, setText] = useState(value);
+  const [sent, setSent] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) { setPrevValue(value); if (value !== sent) { setText(value); setSent(value); } }
+  const [pending, startTransition] = useTransition();
+  return (
+    <span className="relative inline-flex">
+      <input value={text} placeholder="Cari…" aria-label={label} aria-busy={pending || undefined}
+        onChange={(e) => { const v = e.target.value; setText(v); setSent(v); startTransition(() => onChange(v)); }}
+        className={`${inputCls} !w-44 pr-7 xl:!w-60`} />
+      {pending && <Icon name="progress_activity" size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-fg-2" />}
+    </span>
+  );
 }
 
 /** N teratas (urutan sudah benar); `where` menyaring baris yang boleh masuk daftar N teratas. */
@@ -132,7 +176,14 @@ export function LocalTable<T>(props: {
   // Cari, filter, urutan, centang, Teks penuh & posisi scroll diingat selama tab browser terbuka (pindah menu aman).
   const vk = `table:${props.stateKey ?? props.hideKey ?? props.title}`;
   const toast = useToast();
-  const [q, setQ] = useViewState(`${vk}:q`, "");
+  // Kata cari: diingat di sessionStorage (dipulihkan saat kembali ke menu), tetapi nilai yang menyaring tabel adalah
+  // state React biasa yang diperbarui lewat transisi dari <SearchBox> — ketukan hanya me-render kotak input, penyaringan
+  // & render baris berjalan di latar dan bisa disela (dulu tiap ketukan me-render ulang tabel secara sinkron: INP ±1 dtk).
+  const storedQ = useViewStateInitial(`${vk}:q`, "");
+  const [q, setQ] = useState(storedQ);
+  const [prevStoredQ, setPrevStoredQ] = useState(storedQ);
+  if (storedQ !== prevStoredQ) { setPrevStoredQ(storedQ); setQ(storedQ); } // pemulihan setelah hidrasi
+  const changeQ = (v: string) => { setQ(v); writeViewState(`${vk}:q`, v, { silent: true }); };
   const [f, setF] = useViewState<Record<string, string>>(`${vk}:f`, props.defaultFilter ?? {});
   const [sort, setSort] = useViewState<{ k: string; dir: 1 | -1 } | null>(`${vk}:sort`, null);
   const toggleSort = (k: string) => setSort(sort?.k === k ? (sort.dir === 1 ? { k, dir: -1 } : null) : { k, dir: 1 });
@@ -156,28 +207,23 @@ export function LocalTable<T>(props: {
   const activeF = useMemo(() => Object.fromEntries(Object.entries(f).filter(([k, v]) =>
     v && props.filters?.find((fl) => fl.k === k)?.options.includes(v))), [f, props.filters]);
 
-  const matchSearch = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    const searchCols = props.search.map((k) => props.cols.find((c) => c.k === k));
-    return (r: T) => !needle || props.search.some((k, i) => {
-      const c = searchCols[i];
-      return (c?.text ? c.text(r) : String(r[k] ?? "")).toLowerCase().includes(needle);
-    });
-  }, [q, props.search, props.cols]);
+  const searchIndex = useMemo(() => buildSearchIndex(props.rows, props.search, props.cols), [props.rows, props.search, props.cols]);
+  const matchSearch = useMemo(() => searchMatcher(searchIndex, q), [searchIndex, q]);
   const dynFilters = useMemo(() => filterOptions(props.rows, props.filters ?? [], activeF, matchSearch),
     [props.rows, props.filters, activeF, matchSearch]);
 
   const [showAll, setShowAll] = useState(false);
-  const allRows = useMemo(() => {
-    let out = props.rows.filter((r) =>
-      Object.entries(activeF).every(([k, v]) => String((r as Record<string, unknown>)[k] ?? "") === v) && matchSearch(r));
-    const s = sort ?? props.defaultSort;
-    if (s) {
-      const col = props.cols.find((c) => c.k === s.k);
-      out = [...out].sort((a, b) => compareCells((a as Record<string, unknown>)[s.k], (b as Record<string, unknown>)[s.k], !!col?.n, s.dir));
-    }
-    return out;
-  }, [props.rows, props.cols, props.defaultSort, activeF, matchSearch, sort]);
+  // Urut sekali per data/urutan (bukan per ketukan); filter di bawah mempertahankan urutan ini.
+  const sortKey = sort ?? props.defaultSort;
+  const sortK = sortKey?.k, sortDir = sortKey?.dir;
+  const sorted = useMemo(() => {
+    if (!sortK || !sortDir) return props.rows;
+    const numeric = !!props.cols.find((c) => c.k === sortK)?.n;
+    return [...props.rows].sort((a, b) => compareCells((a as Record<string, unknown>)[sortK], (b as Record<string, unknown>)[sortK], numeric, sortDir));
+  }, [props.rows, props.cols, sortK, sortDir]);
+  const allRows = useMemo(() => sorted.filter((r) =>
+    Object.entries(activeF).every(([k, v]) => String((r as Record<string, unknown>)[k] ?? "") === v) && matchSearch(r)),
+  [sorted, activeF, matchSearch]);
   // N teratas hanya selama cari/filter belum aktif (dan "Tampilkan semua" belum diklik).
   const limited = !!props.defaultLimit && !showAll && !q.trim() && Object.keys(activeF).length === 0 &&
     (allRows.length > props.defaultLimit || (!!props.limitWhere && allRows.some((r) => !props.limitWhere!(r))));
@@ -196,10 +242,16 @@ export function LocalTable<T>(props: {
   }, [allRows]);
   const rows = useMemo(() => (limited ? topRows(allRows, defaultLimit!, limitWhere) : allRows), [limited, allRows, defaultLimit, limitWhere]);
 
-  if (process.env.NODE_ENV !== "production" && props.rows.length) {
+  // Cek rowKey ganda (dev) sekali per data, bukan di setiap render/ketukan.
+  // (rowKey sering fungsi inline → dibaca lewat ref agar tidak memicu ulang.)
+  const keyRef = useRef({ rowKey: props.rowKey, title: props.title });
+  useEffect(() => { keyRef.current = { rowKey: props.rowKey, title: props.title }; });
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production" || !props.rows.length) return;
+    const { rowKey, title } = keyRef.current;
     const seen = new Set<string | number>();
-    for (const r of props.rows) { const k = props.rowKey(r); if (seen.has(k)) { console.warn(`LocalTable "${props.title}": rowKey ganda`, k); break; } seen.add(k); }
-  }
+    for (const r of props.rows) { const k = rowKey(r); if (seen.has(k)) { console.warn(`LocalTable "${title}": rowKey ganda`, k); break; } seen.add(k); }
+  }, [props.rows]);
 
   const [density] = useDensity();
   const rowH = rowHeight(density, ROW_H);
@@ -250,8 +302,7 @@ export function LocalTable<T>(props: {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari…" aria-label={`Cari di ${props.title}`}
-          className={`${inputCls} !w-44 xl:!w-60`} />
+        <SearchBox value={q} onChange={changeQ} label={`Cari di ${props.title}`} />
         {dynFilters.map((fl) => (
           <select key={fl.k} value={activeF[fl.k] ?? ""} onChange={(e) => setF({ ...f, [fl.k]: e.target.value })} className={`${inputCls} !w-auto max-w-64`}
             aria-label={`Filter ${fl.l}`}>
