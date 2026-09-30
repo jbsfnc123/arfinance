@@ -3,17 +3,18 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { MenuGroup } from "@/lib/menu";
+import type { NavGroup } from "@/lib/menu";
+import { LockDot, LOCKED_SUFFIX } from "@/components/lock-dot";
 import { clampPanelX, dockFitBase, dockSizes } from "./dock-math";
 import { AppIcon, Icon } from "@/components/icons";
 import { groupIcon, itemIcon } from "@/lib/ui/app-icons";
 
-// Dock mengambang (navigasi utama, pengganti sidebar). Item = Beranda + grup menu yang boleh diakses (ACL existing)
-// + Semua aplikasi. Pembesaran mengikuti posisi kursor (kurva cosinus, lib: dock-math.ts): ukuran tombol benar-benar
+// Dock mengambang (navigasi utama, pengganti sidebar). Item = Beranda + SEMUA grup menu + Semua aplikasi. Menu tanpa
+// akses (ACL existing) bertitik merah; klik → onDenied (pesan, tetap di halaman). Pembesaran mengikuti posisi kursor (kurva cosinus, lib: dock-math.ts): ukuran tombol benar-benar
 // bertambah sehingga Dock ikut melebar seperti macOS — tanpa pantulan. Klik grup → submenu mengambang tepat di atas
 // ikon (dijepit ke viewport); grup dengan satu submenu langsung navigasi.
 
-export type DockItem = { id: string; label: string; icon: string; href?: string; group?: MenuGroup };
+export type DockItem = { id: string; label: string; icon: string; href?: string; group?: NavGroup; locked?: boolean };
 
 const PANEL_W = 288;
 const mq = (q: string) => (fn: () => void) => {
@@ -23,7 +24,7 @@ const useMedia = (q: string, server = false) => useSyncExternalStore(mq(q), () =
 const onResize = (fn: () => void) => { addEventListener("resize", fn); return () => removeEventListener("resize", fn); };
 const useViewportW = () => useSyncExternalStore(onResize, () => innerWidth, () => 1440);
 
-export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHome: boolean; onLauncher: () => void }) {
+export function Dock({ menu, homeLocked, onLauncher, onDenied }: { menu: NavGroup[]; homeLocked: boolean; onLauncher: () => void; onDenied: (label: string) => void }) {
   const pathname = usePathname();
   const router = useRouter();
   // Menu terbuka diikat ke path → pindah halaman otomatis menutup (tanpa setState di effect).
@@ -37,8 +38,8 @@ export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHo
   const raf = useRef(0);
 
   const items: DockItem[] = [
-    ...(showHome ? [{ id: "home", label: "Beranda", icon: "home", href: "/" }] : []),
-    ...menu.map((g) => ({ id: g.id, label: g.label, icon: g.icon, group: g })),
+    { id: "home", label: "Beranda", icon: "home", href: "/", locked: homeLocked },
+    ...menu.map((g) => ({ id: g.id, label: g.label, icon: g.icon, group: g, locked: g.locked })),
     { id: "launcher", label: "Semua aplikasi", icon: "apps" },
   ];
   // Ukuran: desktop 44→56, tablet (<1024px) 38→46, dikecilkan otomatis bila jumlah ikon tidak muat di lebar layar;
@@ -73,6 +74,7 @@ export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHo
 
   function activate(it: DockItem, i: number) {
     if (it.id === "launcher") { close(); onLauncher(); return; }
+    if (it.locked) { close(); onDenied(it.label); return; } // grup/Beranda tanpa akses: pesan, tetap di halaman
     if (it.href) { close(); router.push(it.href); return; }
     const g = it.group!;
     if (g.children.length === 1 && !g.children[0].external) { close(); router.push(g.children[0].href); return; }
@@ -97,8 +99,14 @@ export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHo
           <div className="mx-2 mb-1 border-t border-hairline" />
           {openGroup.children.map((c) => {
             const on = pathname === c.href;
-            const cls = `flex items-center gap-2.5 rounded-[10px] px-2 py-[5px] text-[13px] transition-colors pointer-coarse:min-h-11 ${on ? "bg-accent-fill text-on-accent" : "hover:bg-fg/8"}`;
-            const glyph = <Icon name={itemIcon(openGroup.id, c.id).glyph} size={16} className={on ? "" : "text-fg-2"} />;
+            const cls = `flex w-full items-center gap-2.5 rounded-[10px] px-2 py-[5px] text-left text-[13px] transition-colors pointer-coarse:min-h-11 ${on ? "bg-accent-fill text-on-accent" : "hover:bg-fg/8"}`;
+            const glyph = <span className="relative flex"><Icon name={itemIcon(openGroup.id, c.id).glyph} size={16} className={on ? "" : "text-fg-2"} />{c.locked && <LockDot className="!-right-1 !-top-1 !h-[7px] !w-[7px] !ring-[1.5px]" />}</span>;
+            if (c.locked) return (
+              <button key={c.id} type="button" role="menuitem" aria-label={c.label + LOCKED_SUFFIX} title="Tidak ada akses" className={cls}
+                onClick={() => { close(); onDenied(`${openGroup.label} › ${c.label}`); }}>
+                {glyph}<span className="flex-1 truncate">{c.label}</span>
+              </button>
+            );
             return c.external ? (
               <a key={c.id} href={c.href} target="_blank" rel="noreferrer" role="menuitem" className={cls} onClick={close}>
                 {glyph}<span className="flex-1 truncate">{c.label}</span><Icon name="open_in_new" size={14} className="opacity-60" />
@@ -118,7 +126,7 @@ export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHo
         className="glass-strong pointer-events-auto flex items-end gap-1 rounded-[var(--dock-radius)] px-1.5 pb-1 pt-1.5"
         style={{ boxShadow: "var(--shadow-dock), inset 0 1px 0 var(--highlight)" }}>
         {items.map((it, i) => (
-          <DockButton key={it.id} ref={(el) => { btnRefs.current[i] = el; }} id={it.id} label={it.label}
+          <DockButton key={it.id} ref={(el) => { btnRefs.current[i] = el; }} id={it.id} label={it.label} locked={it.locked}
             separator={it.id === "launcher"} size={sizes[i] ?? base}
             active={activeId === it.id} pressed={open === it.id} onClick={() => activate(it, i)} />
         ))}
@@ -127,44 +135,52 @@ export function Dock({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHo
   );
 }
 
-function DockButton({ ref, id, label, size, active, pressed, separator, onClick }: {
+function DockButton({ ref, id, label, size, active, pressed, separator, locked, onClick }: {
   ref: (el: HTMLButtonElement | null) => void; id: string; label: string; size: number;
-  active?: boolean; pressed?: boolean; separator?: boolean; onClick: () => void;
+  active?: boolean; pressed?: boolean; separator?: boolean; locked?: boolean; onClick: () => void;
 }) {
   return (
     <>
       {separator && <span aria-hidden className="mx-1 mb-2 h-8 w-px self-end bg-hairline" />}
-      <button ref={ref} type="button" aria-label={label} aria-pressed={pressed} aria-current={active ? "page" : undefined} onClick={onClick}
+      <button ref={ref} type="button" aria-label={locked ? label + LOCKED_SUFFIX : label} aria-pressed={pressed} aria-current={active ? "page" : undefined} onClick={onClick}
         className="group relative flex flex-col items-center justify-end rounded-[14px] outline-none transition-[width,height] duration-100 ease-out"
         style={{ width: size, height: size + 6 }}>
-        <AppIcon spec={groupIcon(id)} size={size - 4}
-          className="drop-shadow-[0_1px_2px_rgba(0,0,0,.22)] transition-[filter] group-hover:brightness-105 group-active:brightness-90" />
+        <span className="relative flex">
+          <AppIcon spec={groupIcon(id)} size={size - 4}
+            className="drop-shadow-[0_1px_2px_rgba(0,0,0,.22)] transition-[filter] group-hover:brightness-105 group-active:brightness-90" />
+          {locked && <LockDot className="!right-0 !top-0" />}
+        </span>
         <span aria-hidden className={`mt-[3px] h-1 w-1 rounded-full ${active ? "bg-fg-2" : "bg-transparent"}`} />
         <span role="tooltip"
           className={`glass pointer-events-none absolute -top-9 whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-medium text-fg opacity-0 transition-opacity duration-150 ${pressed ? "" : "group-hover:opacity-100 group-hover:delay-[250ms] group-focus-visible:opacity-100"}`}>
-          {label}
+          {label}{locked && <span className="text-danger"> · tidak ada akses</span>}
         </span>
       </button>
     </>
   );
 }
 
-// HP: navigasi bawah ringkas (Beranda + 3 grup pertama + Semua aplikasi).
-export function MobileNav({ menu, showHome, onLauncher }: { menu: MenuGroup[]; showHome: boolean; onLauncher: () => void }) {
+// HP: navigasi bawah ringkas (Beranda + 3 grup + Semua aplikasi). Slot terbatas → grup yang bisa diakses didahulukan;
+// semua menu (termasuk yang bertitik merah) tetap lengkap di "Semua".
+export function MobileNav({ menu, homeLocked, onLauncher, onDenied }: { menu: NavGroup[]; homeLocked: boolean; onLauncher: () => void; onDenied: (label: string) => void }) {
   const pathname = usePathname();
   const router = useRouter();
+  const groups = [...menu.filter((g) => !g.locked), ...menu.filter((g) => g.locked)].slice(0, 3);
   const items: DockItem[] = [
-    ...(showHome ? [{ id: "home", label: "Beranda", icon: "home", href: "/" }] : []),
-    ...menu.slice(0, showHome ? 3 : 4).map((g) => ({ id: g.id, label: g.label, icon: g.icon, group: g })),
+    { id: "home", label: "Beranda", icon: "home", href: "/", locked: homeLocked },
+    ...groups.map((g) => ({ id: g.id, label: g.label, icon: g.icon, group: g, locked: g.locked })),
   ];
   const activeId = pathname === "/" ? "home" : menu.find((g) => g.children.some((c) => c.href === pathname))?.id;
   return (
     <nav aria-label="Menu utama" className="glass-strong fixed inset-x-0 bottom-0 z-(--z-dock) flex justify-around rounded-t-[20px] border-b-0 px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
       {[...items, { id: "launcher", label: "Semua", icon: "apps" }].map((it) => (
-        <button key={it.id} type="button" aria-label={it.label} aria-current={activeId === it.id ? "page" : undefined}
-          onClick={() => it.id === "launcher" ? onLauncher() : it.href ? router.push(it.href) : it.group ? (it.group.children.length === 1 ? router.push(it.group.children[0].href) : onLauncher()) : undefined}
+        <button key={it.id} type="button" aria-label={"locked" in it && it.locked ? it.label + LOCKED_SUFFIX : it.label} aria-current={activeId === it.id ? "page" : undefined}
+          onClick={() => it.id === "launcher" ? onLauncher() : "locked" in it && it.locked ? onDenied(it.label) : it.href ? router.push(it.href) : it.group ? (it.group.children.length === 1 && !it.group.children[0].locked ? router.push(it.group.children[0].href) : onLauncher()) : undefined}
           className={`flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 text-[10px] font-medium ${activeId === it.id ? "text-accent" : "text-fg-2"}`}>
-          <Icon name={groupIcon(it.id).glyph} size={22} strokeWidth={activeId === it.id ? 2.1 : 1.75} />
+          <span className="relative flex">
+            <Icon name={groupIcon(it.id).glyph} size={22} strokeWidth={activeId === it.id ? 2.1 : 1.75} />
+            {"locked" in it && it.locked && <LockDot className="!-right-1 !-top-0.5" />}
+          </span>
           {it.label}
         </button>
       ))}

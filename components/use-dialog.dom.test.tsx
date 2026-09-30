@@ -60,7 +60,7 @@ function Shell({ withPopover = false }: { withPopover?: boolean }) {
           <button type="button">Simpan</button>
         </Modal>
       </main>
-      <Spotlight open={spot} onClose={() => setSpot(false)} menu={[]} showHome canTagihan={false} />
+      <Spotlight open={spot} onClose={() => setSpot(false)} menu={[]} homeLocked={false} canTagihan={false} onDenied={() => {}} />
     </>
   );
 }

@@ -841,3 +841,18 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   sama; cetak & export Excel Presentasi identik pada data sintetis (bridge di-stub, tanpa tulis database).
 - Keterbatasan: SF Pro/⌘K belum diuji di Mac asli; zoom 200% hanya disetarakan dengan viewport 720×450 (bukan zoom
   browser sungguhan); data Presentasi produksi kosong di dev sehingga uji deck memakai data sintetis.
+
+## Semua menu tampil, menu tanpa akses bertitik merah (Fase 43, 2026-09-30)
+- Permintaan user: di AR Workspace semua akun melihat semua ikon menu; menu tanpa akses diberi titik kecil merah dan
+  saat diklik tetap di halaman sekarang dengan pesan "tidak memiliki akses". Portal Finance & AP tidak berubah.
+- `navMenu(access)` (lib/menu.ts) = seluruh MENU_REGISTRY dengan `locked = !canAccess(...)` per submenu dan
+  `group.locked` bila semua anak terkunci. ACL (`canAccess`, profile_menus, needs) tidak berubah; halaman tetap dijaga
+  `menuGuard` + RLS, jadi URL yang diketik langsung tetap menampilkan "Tidak ada akses".
+- Shell: layout mengirim `navMenu` + `homeLocked`; `ToastProvider` membungkus seluruh shell; `denyAccess` menampilkan
+  "Anda tidak memiliki akses ke “Grup › Menu”. Hubungi Super Admin untuk membuka akses." tanpa navigasi.
+  Dock (grup/Beranda/submenu), Launcher (ubin jadi tombol), Spotlight (bisa dicari, meta "Tidak ada akses") dan navigasi
+  bawah HP (grup yang bisa diakses didahulukan) memakai `LockDot` (components/lock-dot.tsx) + label aksesibel
+  "— tidak ada akses". Prefetch & pencarian BP/Invoice hanya untuk menu yang bisa diakses.
+- Uji: `navMenu` (lib/menu.test.ts), tes DOM `app/(shell)/shell/locked-menu.dom.test.tsx`, Playwright akun Ulfa
+  (Dock 10 ikon, Launcher 28 ubin: 17 bertitik merah = terkunci, 11 bisa dibuka; klik → pesan, URL tetap), Mando & SA
+  (tanpa titik), HP 390 terang/gelap.
