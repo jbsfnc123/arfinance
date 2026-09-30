@@ -65,7 +65,7 @@ export function ensure(name: DatasetName, opts: { force?: boolean } = {}): Promi
         // Data lama tetap ditampilkan selama versi baru diunduh.
         if (hit && !cur.data) set(name, { data: def.decode(hit.data) as never, token: hit.token, at: hit.at });
       }
-      const { data, error } = await sb().rpc(def.rpc as never);
+      const { data, error } = await sb().rpc(def.rpc as never, def.args as never);
       if (error) throw error;
       const raw = (data ?? {}) as Record<string, unknown>;
       const at = Date.now();

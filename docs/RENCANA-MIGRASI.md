@@ -856,3 +856,23 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
 - Uji: `navMenu` (lib/menu.test.ts), tes DOM `app/(shell)/shell/locked-menu.dom.test.tsx`, Playwright akun Ulfa
   (Dock 10 ikon, Launcher 28 ubin: 17 bertitik merah = terkunci, 11 bisa dibuka; klik → pesan, URL tetap), Mando & SA
   (tanpa titik), HP 390 terang/gelap.
+
+## Penanda warna baris Kertas Kerja Mitra10 & RKM (Fase 44, 2026-09-30)
+- Hanya `hideKey="m10-kk"` dan `hideKey="rkm-kk"`. Pilih baris (checkbox) → **Warna baris** → Biru / Mint / Lavender /
+  Hapus warna. Anotasi manual bersama: tidak mengubah/menafsirkan GR, Tukar Faktur, nominal, Keterangan, maupun ekspor.
+- **Database** (diterapkan ke produksi atas keputusan user, setelah uji lokal PGlite 37/37, backup snapshot, dan dry-run
+  ber-rollback di skema produksi): `0040_row_marks` = satu tabel `row_marks(module 'm10'|'rkm', worksheet_id, color
+  'blue'|'mint'|'lavender', updated_by, updated_at, PK (module, worksheet_id))`, RLS baca per `has_menu('rek.mitra10' /
+  'tukar.rkm')`, tanpa policy tulis, trigger `bump_version('row_marks')`, RPC `pack_row_marks(p_module)` dan
+  `row_marks_set(p_module, p_ids, p_color|null)` (atomik; semua id harus ada di worksheet modul; maks 5000).
+  `0041_row_marks_grants` mencabut hak tulis/TRUNCATE default Supabase (authenticated hanya SELECT).
+  Tidak ada perubahan pada m10_worksheet/rkm_worksheet/tabel faktur (hitungan & total identik sebelum/sesudah).
+  Rollback: `supabase/rollback/0040_row_marks_down.sql`.
+- Identitas: `worksheet.id` stabil (worksheet hanya ditambah saat No SJ baru, tidak dihapus/diganti); modul memisahkan id
+  serupa Mitra10/RKM.
+- Klien: dataset `m10Marks`/`rkmMarks` (registry dataset kini mendukung argumen RPC), hook `lib/ui/use-row-marks.ts`
+  (tampilan segera, hanya request terbaru yang menentukan, gagal → muat ulang dari server + pesan, "Warna tersimpan"
+  setelah konfirmasi server), `LocalTable` prop opsional `rowMark` (`tr[data-mark]`, `data-selected`) dan argumen
+  `actions(…, {hidden})`, token `--mark-*` terang/gelap di globals.css (selected menang, garis aksen 3px tetap),
+  `components/row-mark-button.tsx` (menu radio, Campuran, "N baris dipilih · M di luar filter", 44px di layar sentuh).
+- Keterbatasan: badge status (Done/Pending) di tema terang sudah < 4,5:1 sebelum fitur ini (±3,9); di baris bertint ±3,5.
