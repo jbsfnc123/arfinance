@@ -15,6 +15,8 @@ import { M10Upload } from "./m10-upload";
 import { useM10 } from "./use-m10";
 import { setRemarks } from "@/lib/modules/remarks";
 import { useViewState } from "@/lib/ui/view-state";
+import { useRowMarks } from "@/lib/ui/use-row-marks";
+import { RowMarkButton } from "@/components/row-mark-button";
 import { SiapTfButton } from "./siap-tf";
 
 const TABS = [
@@ -77,6 +79,7 @@ export function Mitra10View() {
   const [add, setAdd] = useState<AddKind>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const m = useM10();
+  const marks = useRowMarks("m10");
   const c = m.computed;
 
   const fail = (e: unknown) => toast(`Gagal menyimpan: ${(e as Error).message}`, "danger", 6000);
@@ -183,11 +186,15 @@ export function Mitra10View() {
               </span>
             )}
             selectable
-            actions={(sel, clear) => (
-              <span className="flex items-center gap-2">
+            // Penanda warna baris (anotasi bersama, Supabase row_marks); hanya Kertas Kerja.
+            rowMark={(r) => marks.map.get(r.id)}
+            actions={(sel, clear, info) => (
+              <span className="flex flex-wrap items-center gap-2">
                 <input list="m10-ket" value={ket} onChange={(e) => setKet(e.target.value)} placeholder="Keterangan (kosong = hapus)" className={`${inputCls} !w-56`} />
                 <datalist id="m10-ket"><option value="LTKP" /><option value="Litigasi" /><option value="new inbox" /></datalist>
                 <button type="button" className={btnGhost} onClick={() => { setKeterangan(sel, ket); clear(); }}>Simpan untuk {sel.length}</button>
+                <RowMarkButton ids={sel.map((r) => r.id)} hidden={info.hidden} marks={marks.map}
+                  onApply={(color) => void marks.setMarks(sel.map((r) => r.id), color)} />
               </span>
             )} />
         )}

@@ -1,5 +1,6 @@
 import { unpack, type Packed } from "./pack";
 import type { DatasetKey } from "@/lib/cache/versions";
+import type { RowMark } from "@/lib/modules/row-marks";
 
 // Definisi dataset lokal: RPC paket, token versi penentu, dan bentuk hasil setelah di-unpack.
 
@@ -48,6 +49,9 @@ export type Datasets = {
   // ERP khusus History Pembayaran (pack_erp_recent): invoice ber-tempo yang dibayar ±4 bulan terakhir + pembayarannya;
   // counts = jumlah semua pembayaran per bulan (YYYY-MM) untuk peringatan data belum di-upload.
   payhist: { invoices: ErpInvoice[]; payments: { invoice_no: string; payment_date: string; amount: number }[]; counts?: Record<string, number> };
+  // Penanda warna baris Kertas Kerja (row_marks, migrasi 0040) per modul.
+  m10Marks: { marks: RowMark[] };
+  rkmMarks: { marks: RowMark[] };
 };
 export type DatasetName = keyof Datasets;
 
@@ -69,7 +73,7 @@ export function decodeErp(r: Raw): Datasets["erp"] {
 }
 const tables = (raw: Raw, names: string[]) => Object.fromEntries(names.map((n) => [n, unpack(raw[n] as Packed)]));
 
-export const DATASETS: { [K in DatasetName]: { rpc: string; deps: DatasetKey[]; decode: (raw: Raw) => Datasets[K] } } = {
+export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string, unknown>; deps: DatasetKey[]; decode: (raw: Raw) => Datasets[K] } } = {
   aging: { rpc: "pack_aging", deps: ["aging"], decode: (r) => ({ month: (r.month as string) ?? null, uploadedAt: (r.uploadedAt as string) ?? null, lines: unpack<AgingLine>(r.lines as Packed) }) },
   activity: { rpc: "pack_activity", deps: ["activity"], decode: (r) => tables(r, ["notes", "promises", "exchanges"]) as Datasets["activity"] },
   targets: { rpc: "pack_targets", deps: ["targets"], decode: (r) => tables(r, ["targets"]) as Datasets["targets"] },
@@ -81,4 +85,6 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; deps: DatasetKey[]; 
   settings: { rpc: "pack_settings", deps: ["settings"], decode: (r) => r },
   remarks: { rpc: "pack_remarks", deps: ["remarks"], decode: (r) => tables(r, ["remarks"]) as Datasets["remarks"] },
   payhist: { rpc: "pack_erp_recent", deps: ["erp"], decode: (r) => ({ ...decodeErp(r), counts: (r.counts as Record<string, number>) ?? undefined }) },
+  m10Marks: { rpc: "pack_row_marks", args: { p_module: "m10" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
+  rkmMarks: { rpc: "pack_row_marks", args: { p_module: "rkm" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
 };

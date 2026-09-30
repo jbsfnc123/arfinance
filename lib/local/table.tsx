@@ -12,6 +12,7 @@ import { useScrollMemory, useViewState } from "@/lib/ui/view-state";
 import { btnGhost, card, inputCls, th } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { Icon } from "@/components/icons";
+import type { RowMarkColor } from "@/lib/modules/row-marks";
 
 // Tabel data standar: semua baris sudah ada di browser, jadi filter/cari/sort/export instan.
 // Tinggi mengikuti sisa layar (satu scrollbar per halaman), virtual scroll dengan tinggi baris terukur,
@@ -103,7 +104,8 @@ export function LocalTable<T>(props: {
   filters?: LFilter<T>[];
   loading?: boolean;
   selectable?: boolean;
-  actions?: (selected: T[], clear: () => void) => React.ReactNode;
+  // hidden = jumlah baris terpilih yang tidak tampil karena cari/filter (tetap termasuk target aksi).
+  actions?: (selected: T[], clear: () => void, info: { hidden: number }) => React.ReactNode;
   toolbar?: React.ReactNode;
   onEdit?: (row: T, key: keyof T & string, value: unknown) => void;
   onAdd?: () => void;
@@ -112,6 +114,8 @@ export function LocalTable<T>(props: {
   defaultHidden?: string[]; // kolom yang tersembunyi selama user belum mengatur sendiri
   stateKey?: string; // kunci state tampilan (cari/filter/urut/centang/scroll) yang diingat selama tab terbuka
   rowClass?: (r: T) => string;
+  // Penanda warna baris (opsional, default nonaktif): diturunkan dari record setiap render → aman untuk virtualisasi.
+  rowMark?: (r: T) => RowMarkColor | null | undefined;
   onRowClick?: (r: T) => void;
   emptyText?: string;
   fill?: boolean;      // default true: tinggi = sisa layar. false: pakai `maxHeight` (mis. di dalam modal)
@@ -211,6 +215,8 @@ export function LocalTable<T>(props: {
 
   const selected = props.rows.filter((r) => sel.has(props.rowKey(r)));
   const clear = () => setSel(new Set());
+  const shownKeys = selected.length ? new Set(rows.map(props.rowKey)) : null;
+  const hiddenSelected = shownKeys ? selected.filter((r) => !shownKeys.has(props.rowKey(r))).length : 0;
   const allSel = rows.length > 0 && rows.every((r) => sel.has(props.rowKey(r)));
   const sums = cols.some((c) => c.sum)
     ? Object.fromEntries(cols.filter((c) => c.sum).map((c) => [c.k, rows.reduce((a, r) => a + (Number(r[c.k]) || 0), 0)]))
@@ -256,7 +262,7 @@ export function LocalTable<T>(props: {
         {props.toolbar}
         {props.selectable && selected.length > 0 && (
           <>
-            {props.actions?.(selected, clear)}
+            {props.actions?.(selected, clear, { hidden: hiddenSelected })}
             {props.onDelete && (
               <button type="button" className={btnGhost} onClick={() => { if (confirm(`Hapus ${selected.length} baris?`)) { props.onDelete!(selected); clear(); } }}>
                 <Icon name="delete" size={16} />Hapus {selected.length}
@@ -359,6 +365,7 @@ export function LocalTable<T>(props: {
               const id = props.rowKey(r);
               return (
                 <tr key={vi.key} data-index={vi.index} ref={virt.measureElement} style={{ height: rowH }}
+                  data-mark={props.rowMark?.(r) || undefined} data-selected={sel.has(id) || undefined}
                   onClick={props.onRowClick ? () => props.onRowClick!(r) : undefined}
                   className={`${sel.has(id) ? "bg-selection hover:bg-selection-hover" : "hover:bg-fg/[0.04]"} ${props.onRowClick ? "cursor-pointer" : ""} ${props.rowClass?.(r) ?? ""}`}>
                   {props.selectable && (

@@ -52,6 +52,16 @@
   --note-blue: #0a84ff;
   --note-pink: #ff375f;
   --note-purple: #bf5af2;
+  /* Penanda warna baris Kertas Kerja (row_marks): latar, hover, garis aksen 3px */
+  --mark-blue-bg: #20344d;
+  --mark-blue-bg-hover: #263d59;
+  --mark-blue-accent: #64a8ff;
+  --mark-mint-bg: #213c32;
+  --mark-mint-bg-hover: #26453a;
+  --mark-mint-accent: #6bd492;
+  --mark-lavender-bg: #352b48;
+  --mark-lavender-bg-hover: #3d3253;
+  --mark-lavender-accent: #c89bff;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.28);
   --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.45);
@@ -130,6 +140,15 @@
   --note-blue: #007aff;
   --note-pink: #ff2d55;
   --note-purple: #af52de;
+  --mark-blue-bg: #e8f1ff;
+  --mark-blue-bg-hover: #dde9fd;
+  --mark-blue-accent: #007aff;
+  --mark-mint-bg: #e5f5ec;
+  --mark-mint-bg-hover: #d9efe2;
+  --mark-mint-accent: #248a3d;
+  --mark-lavender-bg: #f0e9ff;
+  --mark-lavender-bg-hover: #e7ddfc;
+  --mark-lavender-accent: #af52de;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 1px rgba(16, 24, 40, 0.03);
   --shadow-md: 0 4px 14px rgba(16, 24, 40, 0.08);
   --shadow-lg: 0 18px 50px rgba(16, 24, 40, 0.16);
@@ -247,6 +266,16 @@ body {
   padding-top: var(--cell-py);
   padding-bottom: var(--cell-py);
 }
+/* Penanda warna baris (LocalTable prop rowMark → tr[data-mark]). Urutan prioritas: normal = tint; hover = tint sedikit
+   lebih pekat; terpilih = latar selection project (tint tidak dipasang) dengan garis aksen tetap; fokus keyboard =
+   outline bawaan. Tint di sel (termasuk sel centang) agar menutupi seluruh baris; tanpa blur/gradien/shadow per baris. */
+tr[data-mark="blue"] { --mark-bg: var(--mark-blue-bg); --mark-bg-hover: var(--mark-blue-bg-hover); --mark-accent: var(--mark-blue-accent); }
+tr[data-mark="mint"] { --mark-bg: var(--mark-mint-bg); --mark-bg-hover: var(--mark-mint-bg-hover); --mark-accent: var(--mark-mint-accent); }
+tr[data-mark="lavender"] { --mark-bg: var(--mark-lavender-bg); --mark-bg-hover: var(--mark-lavender-bg-hover); --mark-accent: var(--mark-lavender-accent); }
+tr[data-mark]:not([data-selected]) > td { background-color: var(--mark-bg); }
+tr[data-mark]:not([data-selected]):hover > td { background-color: var(--mark-bg-hover); }
+tr[data-mark] > td:first-child { box-shadow: inset 3px 0 0 var(--mark-accent); }
+
 /* Baris tabel virtual: tinggi diatur rowHeight() (lib/ui/density.ts) → padding sel minimal agar tidak memaksa lebih tinggi. */
 [data-density="compact"] tbody tr[data-index] > td {
   padding-top: 0.125rem;
