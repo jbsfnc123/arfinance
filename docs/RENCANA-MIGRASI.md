@@ -875,4 +875,8 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   setelah konfirmasi server), `LocalTable` prop opsional `rowMark` (`tr[data-mark]`, `data-selected`) dan argumen
   `actions(…, {hidden})`, token `--mark-*` terang/gelap di globals.css (selected menang, garis aksen 3px tetap),
   `components/row-mark-button.tsx` (menu radio, Campuran, "N baris dipilih · M di luar filter", 44px di layar sentuh).
-- Keterbatasan: badge status (Done/Pending) di tema terang sudah < 4,5:1 sebelum fitur ini (±3,9); di baris bertint ±3,5.
+- Kontras badge (Fase 44b): di `tr[data-mark]` badge status memakai latar opak `color-mix(status 20%, --surface)` +
+  teks `--badge-{success,warning,danger}-fg` → Done 5,02 / Pending 5,06 (terang), 5,15 / 6,53 (gelap), sama pada
+  normal/hover/terpilih (diukur computed & piksel di browser; sebelumnya 3,05–3,6 di tema terang). Tes regresi
+  `lib/ui/badge-contrast.test.ts` menghitung dari token globals.css. Badge di baris tanpa warna & tabel lain tidak
+  diubah (di tema terang tetap ±3,9–4,0:1, keterbatasan lama).
