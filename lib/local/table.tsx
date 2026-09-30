@@ -393,7 +393,7 @@ export function LocalTable<T>(props: {
                             onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(null); }}
                             className="w-full min-w-24 rounded border border-accent bg-surface-2 px-1 py-0.5 text-sm outline-none" />
                         ) : c.render ? c.render(r) : c.badge && typeof v === "string" ? (
-                          <span className={`rounded-full px-2 py-0.5 text-xs ${c.badge[v] ?? "bg-surface-2"}`}>{v}</span>
+                          <span data-badge className={`rounded-full px-2 py-0.5 text-xs ${c.badge[v] ?? "bg-surface-2"}`}>{v}</span>
                         ) : text}
                       </td>
                     );

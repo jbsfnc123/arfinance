@@ -66,6 +66,19 @@ describe("LocalTable: penanda warna dari identitas record", () => {
   });
 });
 
+describe("LocalTable: badge status bertanda data-badge", () => {
+  it("kolom badge merender data-badge di baris bertanda maupun tidak", () => {
+    type B = { id: number; gr: string };
+    const rows: B[] = [{ id: 1, gr: "Done" }, { id: 2, gr: "Pending" }];
+    const marks = new Map<number, RowMarkColor>([[1, "blue"]]);
+    act(() => root.render(<LocalTable title="B" rows={rows} cols={[{ k: "gr", l: "GR", badge: { Done: "bg-success/20 text-success", Pending: "bg-warning/20 text-warning" } }]}
+      rowKey={(r) => r.id} stateKey="t4" search={["gr"]} rowMark={(r) => marks.get(r.id)} />));
+    const badges = [...host.querySelectorAll<HTMLElement>("[data-badge]")];
+    expect(badges.map((b) => [b.textContent, b.closest("tr")!.getAttribute("data-mark")])).toEqual([["Done", "blue"], ["Pending", null]]);
+    expect(badges[0].className).toContain("text-success"); // kelas status tidak berubah; kontras diatur CSS khusus tr[data-mark]
+  });
+});
+
 describe("RowMarkButton", () => {
   function Harness({ ids, marks, hidden = 0 }: { ids: number[]; marks: Map<number, RowMarkColor>; hidden?: number }) {
     const [last, setLast] = useState<string>("-");
