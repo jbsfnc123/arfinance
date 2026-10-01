@@ -14,7 +14,6 @@ import { chunkKeys, CLEANUP_CATEGORIES, CLEANUP_GROUP_LABEL, defaultCutoff, type
 
 type Overview = {
   categories: { category: string; count: number }[];
-  hold: { at: string; counts: { keterangan: number; tukar_ekspedisi: number; laporan_kolektor: number; total: number } } | null;
   agingAt: { month: string; at: string } | null;
   log: { at: string; mode: string; category: string; rows: number; by_name: string; detail: Record<string, unknown> | null }[];
 };
@@ -34,7 +33,6 @@ export function CleanupSection() {
   const [cat, setCat] = useState<CleanupCategory | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [pending, setPending] = useState<{ keys: string[] } | null>(null);
-  const [holdOpen, setHoldOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const loadOverview = useCallback(async () => {
@@ -73,15 +71,6 @@ export function CleanupSection() {
     }
   }
 
-  async function runHold() {
-    setBusy(true);
-    const { data, error } = await supabase.rpc("cleanup_run_pending" as never);
-    setBusy(false); setHoldOpen(false);
-    if (error) toast(`Gagal: ${error.message}`, "danger", 7000);
-    else toast(`Penghapusan otomatis dijalankan: ${n(Number((data as { deleted?: number })?.deleted ?? 0))} baris.`, "success", 7000);
-    await loadOverview();
-  }
-
   const count = (k: string) => Number(ov?.categories.find((c) => c.category === k)?.count ?? 0);
   const groups = (["aging", "teknis", "arsip"] as CleanupGroup[]).map((g) => ({ g, cats: CLEANUP_CATEGORIES.filter((c) => c.group === g) }));
 
@@ -98,23 +87,12 @@ export function CleanupSection() {
         </label>
       </div>
       <p className="text-xs text-fg-2">
-        Keterangan, Tukar Faktur, Ekspedisi, dan laporan kolektor tidak permanen: otomatis terhapus saat Aging baru diupload bila
-        invoice/SJ-nya sudah tidak ada (lunas). Bila satu upload akan menghapus lebih dari 30% data, penghapusan ditahan dan
-        menunggu konfirmasi di sini. Kategori lain dibersihkan manual: pilih kategori, periksa baris, centang, lalu hapus.
-        Kontak tidak pernah dihapus otomatis.
+        Data yang invoice/SJ-nya sudah tidak ada di Aging terbaru (lunas) — Keterangan, Tukar Faktur, Ekspedisi, laporan &amp;
+        jadwal kolektor, penerimaan SJ, dll. — otomatis masuk daftar di bawah, tetapi TIDAK dihapus otomatis. Pilih kategori,
+        periksa baris, centang, lalu hapus. Kontak tidak pernah masuk daftar ini.
       </p>
       {ovErr && <p className="text-sm text-danger" role="alert">Gagal memuat: {ovErr}</p>}
 
-      {ov?.hold && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/50 bg-warning/10 px-4 py-3 text-[13px]" role="alert">
-          <span>
-            <b>Penghapusan otomatis ditahan</b> sejak {fmtTimestamp(ov.hold.at)}: {n(ov.hold.counts.keterangan)} keterangan,{" "}
-            {n(ov.hold.counts.tukar_ekspedisi)} tukar faktur/ekspedisi, {n(ov.hold.counts.laporan_kolektor)} laporan kolektor
-            (dari {n(ov.hold.counts.total)} baris). Periksa apakah Aging terakhir sudah benar.
-          </span>
-          <button type="button" className={`${btnPrimary} ml-auto`} onClick={() => setHoldOpen(true)}>Tinjau &amp; jalankan…</button>
-        </div>
-      )}
 
       {groups.map(({ g, cats }) => (
         <div key={g}>
@@ -180,16 +158,6 @@ export function CleanupSection() {
           {cat?.risk && <p className="text-warning">Perhatian: {cat.risk}</p>}
           <p className="text-xs text-fg-2">Server hanya menghapus baris yang masih memenuhi syarat kategori ini. Penghapusan dicatat di riwayat.</p>
         </div>
-      </Modal>
-      <Modal open={holdOpen} title="Jalankan penghapusan yang ditahan" onClose={() => setHoldOpen(false)}
-        footer={(<>
-          <button type="button" className={btnGhost} onClick={() => setHoldOpen(false)} disabled={busy}>Batal</button>
-          <button type="button" className={`${btnPrimary} !bg-danger`} onClick={() => void runHold()} disabled={busy}>{busy ? "Menjalankan…" : "Ya, hapus"}</button>
-        </>)}>
-        <p className="text-sm">
-          Data keterangan, tukar faktur/ekspedisi, dan laporan kolektor untuk invoice yang tidak ada di Aging terbaru akan dihapus.
-          Jalankan hanya bila Aging terakhir sudah benar; bila file Aging keliru, upload ulang Aging yang benar dulu.
-        </p>
       </Modal>
     </section>
   );

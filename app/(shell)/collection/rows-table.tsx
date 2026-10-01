@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { rupiah } from "@/lib/format";
 import { cellText, COLUMN_DEFS, type CollectionRow, type CollectionSort, type ColumnKey } from "@/lib/modules/collection/view-model";
@@ -8,7 +8,7 @@ import { useFillHeight } from "@/lib/ui/fill-height";
 import { useScrollMemory } from "@/lib/ui/view-state";
 import { useDensity } from "@/lib/ui/prefs";
 import { rowHeight } from "@/lib/ui/density";
-import { btnGhost, card } from "@/components/ui";
+import { card } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { EmptyState } from "@/components/empty-state";
 
@@ -29,6 +29,7 @@ const AGING_BADGE: Record<string, string> = {
 export function RowsTable(props: {
   rows: CollectionRow[];
   columns: ColumnKey[];
+  wrap?: boolean; // Teks penuh (tombol di bilah filter, diingat selama tab terbuka)
   loading: boolean;
   selection: string[];
   setSelection: (fn: (prev: string[]) => string[]) => void;
@@ -43,7 +44,7 @@ export function RowsTable(props: {
   const scrollRef = useRef<HTMLDivElement>(null);
   const selected = useMemo(() => new Set(selection), [selection]);
   const drag = useRef<boolean | null>(null); // mode seret: true = centang, false = hapus centang
-  const [wrap, setWrap] = useState(false);
+  const wrap = !!props.wrap;
   useFillHeight(scrollRef, { reserve: 48, min: 280 });
   useScrollMemory(scrollRef, props.scrollKey ?? "collection:scroll", !props.loading && rows.length > 0); // 48 = baris status di bawah tabel + tepi kartu
 
@@ -181,10 +182,6 @@ export function RowsTable(props: {
       </div>
       <div className="flex items-center gap-3 border-t border-hairline px-4 py-2 text-xs text-fg-2">
         Menampilkan {rows.length.toLocaleString("id-ID")} baris (sesuai filter)
-        <button type="button" className={`${btnGhost} !py-0.5 ${wrap ? "border-accent text-accent" : ""}`} aria-pressed={wrap}
-          title="Tampilkan teks panjang secara utuh" onClick={() => setWrap(!wrap)}>
-          <Icon name="wrap_text" size={16} />Teks penuh
-        </button>
         {selection.length > 0 && (
           <button type="button" className="text-danger hover:underline" onClick={() => setSelection(() => [])}>
             Hapus semua pilihan ({selection.length})

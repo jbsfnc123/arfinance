@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { chunkKeys, CLEANUP_CATEGORIES, defaultCutoff } from "./cleanup";
 
 describe("katalog pembersihan", () => {
-  it("kunci kategori sama persis dengan SQL (cleanup_overview & cleanup_candidates di migrasi 0046)", () => {
-    const sql = readFileSync("supabase/migrations/0046_data_lifecycle.sql", "utf8");
+  it("kunci kategori sama persis dengan SQL (cleanup_overview & cleanup_candidates, definisi terbaru di migrasi 0047)", () => {
+    const sql = readFileSync("supabase/migrations/0047_manual_cleanup_receive_date.sql", "utf8");
     const overview = sql.match(/foreach c in array array\[([\s\S]*?)\] loop/)![1].match(/'([a-z_]+)'/g)!.map((s) => s.slice(1, -1));
     expect(CLEANUP_CATEGORIES.map((c) => c.key)).toEqual(overview);
     for (const c of CLEANUP_CATEGORIES) {
@@ -13,7 +13,7 @@ describe("katalog pembersihan", () => {
     }
   });
   it("kategori berbasis tanggal batas = yang memakai p_cutoff di SQL", () => {
-    const sql = readFileSync("supabase/migrations/0046_data_lifecycle.sql", "utf8");
+    const sql = readFileSync("supabase/migrations/0047_manual_cleanup_receive_date.sql", "utf8");
     for (const c of CLEANUP_CATEGORIES) {
       const block = sql.split(`when '${c.key}' then return query`)[1].split(/\n  when '|\n  else /)[0];
       expect(block.includes("p_cutoff"), c.key).toBe(c.usesCutoff);

@@ -89,7 +89,6 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
 
   async function submit() {
     if (!selectedInv.length) return;
-    if (doneCount > 0 && !photo) return toast("Foto tanda terima wajib untuk invoice yang Done.", "warning");
     if (!tanggal) return toast("Tanggal diterima wajib diisi.", "warning");
     setBusy(true);
     try {
@@ -252,7 +251,7 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
             })}
 
             <label className="block text-sm">
-              <span className="text-fg-2">Foto Tanda Terima {doneCount > 0 && <span className="text-danger">*</span>}</span>
+              <span className="text-fg-2">Foto Tanda Terima <span className="text-xs">(opsional)</span></span>
               <input type="file" accept="image/*" capture="environment" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} className={`${inputCls} mt-1 min-h-11`} />
             </label>
             <label className="block text-sm">

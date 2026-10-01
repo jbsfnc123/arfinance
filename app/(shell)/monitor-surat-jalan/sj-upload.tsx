@@ -109,7 +109,7 @@ export function SjUpload({ s }: { s: SjState }) {
             <li>Hanya SJ No. yang ada di No SJ <b>Aging terbaru</b> yang disimpan (No SJ gabungan di aging dipecah). SJ lain dilewati.</li>
             <li>Per SJ dipakai baris <b>pertama</b> di file dengan Receiver yang diakui dan Receive Date yang valid.</li>
             <li>Setiap upload hanya mengisi SJ yang <b>belum punya Receive Date</b>; data yang sudah tersimpan tidak ditimpa.</li>
-            <li>SJ yang tidak ada lagi di Aging terbaru (mis. lunas) ikut dihapus datanya saat aging diperbarui.</li>
+            <li>SJ yang tidak ada lagi di Aging terbaru (mis. lunas) masuk daftar Pembersihan Data (Finance › Database) untuk dihapus Super Admin.</li>
             <li>Upload bersifat utuh: gagal = tidak ada yang tersimpan, aman diulang.</li>
           </ul>
         </section>

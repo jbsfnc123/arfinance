@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agingCards, applyExchange, categoryCounts, dueRecap, EMPTY_FILTERS, enrichRow, filterRows,
-  groupByBp, optionCounts, sortRows, type RawRow,
+  groupByBp, optionCounts, sortRows, type RawRow, receiveSjOf, withReceive, DEFAULT_COLUMNS, cellText,
 } from "./view-model";
 
 const TODAY = "2026-09-25";
@@ -105,5 +105,26 @@ describe("urut dari header Daftar Tagihan", () => {
     const before = ids(data);
     sortRows(data, { k: "open_amt", dir: -1 });
     expect(ids(data)).toBe(before);
+  });
+});
+
+describe("Receive Date SJ (Monitor Surat Jalan) & kolom default", () => {
+  const rec = new Map([["SJ/1/XXVI/TRA", "2026-09-05"], ["SJ/2/XXVI/TRA", "2026-09-09"], ["MR/9/XXVI/TRA", "2026-09-01"]]);
+  it("SJ tunggal, gabungan lengkap → tanggal terakhir; gabungan sebagian → ditandai; belum ada → kosong", () => {
+    expect(receiveSjOf("sj/1/xxvi/tra", rec)).toEqual({ text: "05/09/2026", date: "2026-09-05" });
+    expect(receiveSjOf("SJ/1/XXVI/TRA-SJ/2/XXVI/TRA", rec)).toEqual({ text: "09/09/2026", date: "2026-09-09" });
+    expect(receiveSjOf("SJ/2/XXVI/TRA-SJ/3/XXVI/TRA-", rec)).toEqual({ text: "09/09/2026 (sebagian 1/2)", date: "2026-09-09" });
+    expect(receiveSjOf("SJ/7/XXVI/TRA", rec)).toEqual({ text: "", date: null });
+    expect(receiveSjOf("", rec)).toEqual({ text: "", date: null });
+    expect(receiveSjOf("MR/9/XXVI/TRA", rec).date).toBe("2026-09-01");
+  });
+  it("withReceive mengisi kolom, ikut pencarian & urut sebagai tanggal", () => {
+    const rs = withReceive([raw({ invoice_no: "X", no_sj: "SJ/2/XXVI/TRA" }), raw({ invoice_no: "Y", no_sj: "SJ/1/XXVI/TRA" }), raw({ invoice_no: "Z" })].map((r) => enrichRow(r, TODAY)), rec);
+    expect(rs.map((r) => cellText(r, "receive_sj"))).toEqual(["09/09/2026", "05/09/2026", ""]);
+    expect(rs[0].search).toContain("09/09/2026");
+    expect(sortRows(rs, { k: "receive_sj", dir: 1 }).map((r) => r.invoice_no)).toEqual(["Y", "X", "Z"]);
+  });
+  it("kolom default sesuai permintaan user", () => {
+    expect(DEFAULT_COLUMNS).toEqual(["business_partner", "invoice_no", "invoice_date", "due_date", "open_amt", "keterangan", "tanggal_tukar"]);
   });
 });

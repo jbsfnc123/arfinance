@@ -15,6 +15,8 @@ export function FilterBar(props: {
   filters: Filters;
   setFilters: (f: Filters) => void;
   columns: ColumnKey[];
+  wrap: boolean;
+  setWrap: (v: boolean) => void;
   setColumns: (c: ColumnKey[]) => void;
   shown: number;
 }) {
@@ -89,6 +91,11 @@ export function FilterBar(props: {
             </div>
           )}
         </div>
+        <button type="button" className={`${btnGhost} ${props.wrap ? "border-accent text-accent" : ""}`} aria-pressed={props.wrap}
+          title="Tampilkan teks panjang (Business Partner, Keterangan, dll.) secara utuh" onClick={() => props.setWrap(!props.wrap)}>
+          <Icon name="wrap_text" size={16} />
+          Teks penuh
+        </button>
         <span className="ml-auto text-xs text-fg-2">
           {props.shown.toLocaleString("id-ID")} dari {rows.length.toLocaleString("id-ID")} invoice
         </span>
