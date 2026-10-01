@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseCsv, parseSjCsv, parseSjDate, receiptCandidates, SJ_HEADERS } from "./parse";
 import {
-  activeSet, buildRows, defaultPeriod, FLAG, filterRows, fmtAvg, receiverImpact, receiverNames, STATUS_DONE, STATUS_OPEN, summarize, trendSeries,
+  activeSet, buildRows, defaultPeriod, FLAG, filterChoices, filterRows, fmtAvg, receiverImpact, receiverNames, STATUS_DONE, STATUS_OPEN, summarize, trendSeries,
   type SjAging, type SjReceipt,
 } from "./compute";
 
@@ -46,12 +46,13 @@ describe("baris per SJ aging", () => {
 });
 
 describe("ringkasan", () => {
-  const aging = [ag("A", "2026-09-01"), ag("B", "2026-09-02", { area: "Bandung" }), ag("C", "2026-09-03"), ag("D", "2026-09-10"), ag("E", "2026-09-28")];
+  const aging = [ag("A", "2026-09-01"), ag("B", "2026-09-02", { area: "Bandung", marketing: "02-Modern", payment_group: "PG-B" }), ag("C", "2026-09-03", { marketing: "02-Modern", payment_group: "PG-C" }), ag("D", "2026-09-10"), ag("E", "2026-09-28")];
   const rows = buildRows(aging, [rc("A", "2026-09-04", "Wienda Aswar"), rc("B", "2026-09-03", "Bintang Anugia Arragi"), rc("C", "2026-09-01", "Wienda Aswar")], REC, TODAY);
   it("rata-rata dari durasi valid (negatif dikecualikan), sampel & dikecualikan, total = jumlah baris", () => {
     const s = summarize(rows);
     expect([s.total, s.done, s.open, s.avg, s.sample, s.excluded]).toEqual([5, 3, 2, 2, 2, 1]); // (3 + 1) / 2
-    expect(s.byReceiver.find((x) => x.receiver === "Wienda Aswar")).toMatchObject({ count: 2, avg: 3, sample: 1 });
+    expect(s.byMarketing.find((x) => x.marketing === "02-Modern")).toMatchObject({ total: 2, done: 2, open: 0, avg: 1 });
+    expect(s.byMarketing.find((x) => x.marketing === "(tanpa Marketing)")).toMatchObject({ total: 3, done: 1, open: 2, avg: 3 });
     expect(s.byArea.find((x) => x.area === "Bandung")).toMatchObject({ total: 1, done: 1, avg: 1 });
     expect(s.oldestOpen?.sj_key).toBe("D");
     expect(s.ageBuckets.map((b) => b.count)).toEqual([1, 0, 0, 1, 0]); // E 2 hari, D 20 hari
@@ -61,10 +62,19 @@ describe("ringkasan", () => {
     expect(fmtAvg(summarize(buildRows([ag("Z", "2026-09-01")], [], REC, TODAY)).avg)).toBe("—");
     expect(fmtAvg(2)).toBe("2,0 hari");
   });
-  it("filter periode (Invoice Date) & Area dipakai bersama; periode bawaan = bulan Invoice Date terbaru", () => {
-    expect(filterRows(rows, { from: "2026-09-02", to: "2026-09-10", area: "" }).map((r) => r.sj_key)).toEqual(["B", "C", "D"]);
-    expect(filterRows(rows, { from: "", to: "", area: "Bandung" }).map((r) => r.sj_key)).toEqual(["B"]);
+  it("filter periode (Invoice Date), Marketing & Payment Group dipakai bersama; periode bawaan = bulan Invoice Date terbaru", () => {
+    const F = { from: "", to: "", marketing: "", pg: "" };
+    expect(filterRows(rows, { ...F, from: "2026-09-02", to: "2026-09-10" }).map((r) => r.sj_key)).toEqual(["B", "C", "D"]);
+    expect(filterRows(rows, { ...F, marketing: "02-Modern" }).map((r) => r.sj_key)).toEqual(["B", "C"]);
+    expect(filterRows(rows, { ...F, marketing: "02-Modern", pg: "PG-C" }).map((r) => r.sj_key)).toEqual(["C"]);
     expect(defaultPeriod(rows, TODAY)).toEqual({ from: "2026-09-01", to: "2026-09-30" });
+  });
+  it("opsi filter dinamis: Marketing mengikuti Payment Group & periode, dan sebaliknya", () => {
+    const F = { from: "", to: "", marketing: "", pg: "" };
+    expect(filterChoices(rows, F).marketing).toEqual([{ value: "02-Modern", n: 2 }]);
+    expect(filterChoices(rows, { ...F, pg: "PG-B" }).marketing).toEqual([{ value: "02-Modern", n: 1 }]);
+    expect(filterChoices(rows, { ...F, marketing: "02-Modern" }).pg.map((o) => o.value)).toEqual(["PG-B", "PG-C"]);
+    expect(filterChoices(rows, { ...F, from: "2026-09-03", to: "2026-09-03", pg: "PG-B" }).pg).toEqual([{ value: "PG-C", n: 1 }, { value: "PG-B", n: 0 }].sort((a, b) => a.value.localeCompare(b.value)));
   });
   it("tren harian ≤ 45 hari, selain itu mingguan", () => {
     expect(trendSeries(summarize(rows).trend).every((t) => !t.weekly)).toBe(true);

@@ -54,6 +54,28 @@ describe("Monitor Surat Jalan — tampilan", () => {
     expect(text()).toContain("Belum diterima");
   });
 
+  it("Kertas Kerja: kolom default sesuai permintaan; filter Marketing & Payment Group (tanpa Area) mengubah KPI", () => {
+    h.data = base({ aging: [
+      { ...ag("SJ/1", "2026-09-01"), marketing: "01-Trad", payment_group: "PG1" },
+      { ...ag("SJ/2", "2026-09-03"), marketing: "02-Modern", payment_group: "PG2" },
+      { ...ag("TEST/3", "2026-09-05"), marketing: "02-Modern", payment_group: "PG3" },
+    ] });
+    act(() => root.render(<SjView />));
+    expect(host.querySelector("select[aria-label='Area']")).toBeNull();
+    const mk = host.querySelector<HTMLSelectElement>("select[aria-label='Marketing']")!;
+    expect([...mk.options].map((o) => o.textContent)).toEqual(["Marketing: semua (2)", "01-Trad (1)", "02-Modern (2)"]);
+    act(() => { mk.value = "02-Modern"; mk.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(text()).toContain("SJ di Aging2");
+    const pg = host.querySelector<HTMLSelectElement>("select[aria-label='Payment Group']")!;
+    expect([...pg.options].map((o) => o.value)).toEqual(["", "PG2", "PG3"]); // dinamis: hanya PG milik 02-Modern
+    expect(text()).toContain("Per Marketing");
+    expect(text()).not.toContain("10 SJ belum diterima terlama");
+    tab("Kertas Kerja");
+    const heads = [...host.querySelectorAll("thead th")].map((t) => t.textContent?.trim()).filter(Boolean);
+    expect(heads.slice(0, 7).join("|")).toMatch(/^SJ No\..*Invoice No.*Invoice Date.*Business Partner.*Status.*Receiver.*Receive Date/);
+    expect(heads.some((h2) => /^(Area|Marketing|Payment Group|Penanda)/.test(h2!))).toBe(false);
+  });
+
   it("tanpa penerimaan: rata-rata '—' dan ajakan upload, bukan angka 0", () => {
     h.data = base({ receipts: [], canManage: true });
     act(() => root.render(<SjView />));

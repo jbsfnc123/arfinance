@@ -73,7 +73,7 @@ export function SjView() {
   );
 }
 
-/** Filter periode Invoice Date (Aging) + Area — dipakai bersama Dashboard & Kertas Kerja. */
+/** Filter periode Invoice Date (Aging) + Marketing + Payment Group (dinamis) — dipakai bersama Dashboard & Kertas Kerja. */
 export function PeriodFilter({ s }: { s: SjState }) {
   const f = s.filter;
   return (
@@ -84,9 +84,13 @@ export function PeriodFilter({ s }: { s: SjState }) {
       <span className="text-fg-2">s/d</span>
       <input type="date" aria-label="Invoice Date sampai" value={f.to} min={f.from || undefined}
         onChange={(e) => s.setPeriod(f.from, e.target.value)} className={`${inputCls} !w-auto`} />
-      <select aria-label="Area" value={f.area} onChange={(e) => s.setArea(e.target.value)} className={`${inputCls} !w-auto`}>
-        <option value="">Area: semua</option>
-        {s.areas.map((a) => <option key={a} value={a}>{a}</option>)}
+      <select aria-label="Marketing" value={f.marketing} onChange={(e) => s.setMarketing(e.target.value)} className={`${inputCls} !w-auto max-w-64`}>
+        <option value="">Marketing: semua ({s.choices.marketing.length})</option>
+        {s.choices.marketing.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
+      </select>
+      <select aria-label="Payment Group" value={f.pg} onChange={(e) => s.setPg(e.target.value)} className={`${inputCls} !w-auto max-w-64`}>
+        <option value="">Payment Group: semua ({s.choices.pg.length})</option>
+        {s.choices.pg.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
       </select>
       {(f.from || f.to) && <button type="button" className={btnGhost} onClick={() => s.setPeriod("", "")}>Semua periode</button>}
       {!s.isDefaultPeriod && <button type="button" className={btnGhost} onClick={s.resetPeriod}>Bulan terbaru</button>}
@@ -98,5 +102,5 @@ export function PeriodFilter({ s }: { s: SjState }) {
 export function periodText(s: SjState) {
   const f = s.filter;
   const p = f.from || f.to ? `${f.from ? fmtDate(f.from) : "awal"} – ${f.to ? fmtDate(f.to) : "akhir"}` : "semua periode";
-  return `Periode Invoice Date: ${p}${s.isDefaultPeriod && (f.from || f.to) ? " (bulan terbaru)" : ""} · Area: ${f.area || "semua"}`;
+  return `Periode Invoice Date: ${p}${s.isDefaultPeriod && (f.from || f.to) ? " (bulan terbaru)" : ""} · Marketing: ${f.marketing || "semua"} · Payment Group: ${f.pg || "semua"}`;
 }

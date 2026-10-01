@@ -3,11 +3,11 @@
 import { useMemo } from "react";
 import { useDataset } from "@/lib/local/store";
 import { todayJakarta } from "@/lib/parsers/date";
-import { activeSet, buildRows, defaultPeriod, filterRows, receiverNames, type SjFilter } from "@/lib/modules/sj/compute";
+import { activeSet, buildRows, defaultPeriod, filterChoices, filterRows, receiverNames, type SjFilter } from "@/lib/modules/sj/compute";
 import { useViewState } from "@/lib/ui/view-state";
 
 // Data Monitor Surat Jalan di browser: SJ aging terbaru + penerimaan tersimpan + daftar Receiver → satu baris per SJ.
-// Dashboard & Kertas Kerja memakai filter periode/Area yang SAMA (state bersama) sehingga angka selalu cocok.
+// Dashboard & Kertas Kerja memakai filter periode/Marketing/Payment Group yang SAMA (state bersama) sehingga angka selalu cocok.
 export function useSj() {
   const ds = useDataset("sj");
   const today = todayJakarta();
@@ -20,17 +20,20 @@ export function useSj() {
 
   // null = belum diatur user → periode bawaan (bulan Invoice Date terbaru). "" = semua.
   const [period, setPeriod] = useViewState<{ from: string; to: string } | null>("sj:period", null);
-  const [area, setArea] = useViewState("sj:area", "");
+  const [marketing, setMarketing] = useViewState("sj:marketing", "");
+  const [pg, setPg] = useViewState("sj:pg", "");
   const dflt = useMemo(() => defaultPeriod(rows, today), [rows, today]);
   const from = period ? period.from : dflt.from, to = period ? period.to : dflt.to;
-  const filter = useMemo<SjFilter>(() => ({ from, to, area }), [from, to, area]);
+  const filter = useMemo<SjFilter>(() => ({ from, to, marketing, pg }), [from, to, marketing, pg]);
   const filtered = useMemo(() => filterRows(rows, filter), [rows, filter]);
+  const choices = useMemo(() => filterChoices(rows, filter), [rows, filter]);
 
   return {
-    ds, today, recognized, rows, filtered, agingKeys, receiptKeys, areas, filter,
+    ds, today, recognized, rows, filtered, agingKeys, receiptKeys, areas, filter, choices,
     setPeriod: (from: string, to: string) => setPeriod({ from, to }),
     resetPeriod: () => setPeriod(null),
-    setArea,
+    setMarketing,
+    setPg,
     isDefaultPeriod: period === null,
     canManage: data?.canManage === true,
     lastUpload: data?.uploads[0] ?? null,
