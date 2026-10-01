@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
-// Monitor Surat Jalan: tiga tab (Dashboard / Kertas Kerja / Upload & Setting), kontrol tulis per peran, rata-rata "—",
-// alur upload (pratinjau → potongan → commit → hasil dari server) dan gagal di tengah (tidak ada hasil palsu).
+// Monitor Surat Jalan (Fase 46): daftar = SJ aging terbaru; upload hanya mengirim SJ yang cocok aging & belum punya
+// Receive Date (baris pertama dengan Receiver diakui); kontrol tulis per peran; rata-rata "—"; gagal = tidak ada hasil palsu.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { Datasets } from "@/lib/local/datasets";
-import type { SjEvent } from "@/lib/modules/sj/compute";
+import type { SjAging, SjReceipt } from "@/lib/modules/sj/compute";
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count, getItemKey }: { count: number; getItemKey: (i: number) => string | number }) => ({
@@ -22,17 +22,14 @@ vi.mock("@/lib/parsers/date", async (orig) => ({ ...(await orig<typeof import("@
 import { SjView } from "./sj-view";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-let id = 1;
-const ev = (sj: string, receiver: string | null, receive: string | null, o: Partial<SjEvent> = {}): SjEvent => ({
-  id: id++, seq: 1, row_no: id, batch_id: 1, sj_no: sj, sj_key: sj.toUpperCase(), area: "Jakarta", tanggal_sj: "2026-09-01",
-  tanggal_sj_raw: "01 Sep 2026", business_partner: "Toko A", locator: "L1", send_date: null, sender: null, receive_date: receive,
-  receive_date_raw: receive ?? "-", receiver, faktur: "Ya", send_receipt_doc_no: null, ...o,
-});
+const ag = (sj_key: string, invoice_date: string): SjAging => ({ sj_key, invoice_date, invoice_no: `INV-${sj_key}`, business_partner: "Toko A", area: "Jakarta", invoices: 1 });
+const rc = (sj_key: string, receive_date: string, receiver: string): SjReceipt => ({ sj_key, sj_no: sj_key, receive_date, receiver, file_name: "a.csv", recorded_at: "2026-09-30T01:00:00Z" });
 const base = (o: Partial<Datasets["sj"]> = {}): Datasets["sj"] => ({
-  events: [ev("SJ/1", "Wienda Aswar", "2026-09-04"), ev("SJ/2", null, null), ev("SJ/2", "Marselia Angelia", "2026-09-05")],
+  aging: [ag("SJ/1", "2026-09-01"), ag("SJ/2", "2026-09-03"), ag("TEST/3", "2026-09-05")],
+  receipts: [rc("SJ/1", "2026-09-04", "Wienda Aswar")],
   receivers: [{ id: 1, name: "Bintang Anugia Arragi", active: true }, { id: 2, name: "Wienda Aswar", active: true }],
-  batches: [{ id: 1, file_name: "uji.csv", rows_total: 3, rows_new: 3, rows_dup: 0, rows_bad: 0, published_at: "2026-09-30T02:00:00Z", uploader: "Mando" }],
-  log: [], canManage: false, ...o,
+  log: [], uploads: [{ at: "2026-09-30T02:00:00Z", file_name: "lama.csv", rows: 1, uploader: "Mando" }],
+  agingAt: { month: "2026-09", at: "2026-09-30T01:00:00Z" }, canManage: false, ...o,
 });
 
 let host: HTMLDivElement, root: Root;
@@ -41,34 +38,35 @@ afterEach(() => { act(() => root.unmount()); host.remove(); vi.clearAllMocks(); 
 const tab = (label: string) => act(() => { [...host.querySelectorAll<HTMLButtonElement>("[role=tab]")].find((b) => b.textContent?.includes(label))!.click(); });
 const text = () => host.textContent ?? "";
 const flush = () => act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); await new Promise((r) => setTimeout(r, 0)); });
+const btn = (start: string) => [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.startsWith(start));
 
 describe("Monitor Surat Jalan — tampilan", () => {
-  it("Dashboard: KPI dari filter yang sama dengan Kertas Kerja, status teks, periode tampil", () => {
+  it("Dashboard dari SJ aging: KPI = baris Kertas Kerja, durasi dari Invoice Date, periode tampil", () => {
     h.data = base();
     act(() => root.render(<SjView />));
-    expect(text()).toContain("Periode Tanggal SJ: 01/09/2026 – 30/09/2026 (bulan terbaru)");
-    expect(text()).toContain("Total SJ unik2");
-    expect(text()).toContain("3,0 hari"); // SJ/1: 1 → 4 Sep
-    expect(text()).toContain("Hanya Receiver di luar daftar1");
+    expect(text()).toContain("Periode Invoice Date: 01/09/2026 – 30/09/2026 (bulan terbaru)");
+    expect(text()).toContain("SJ di Aging3");
+    expect(text()).toContain("3,0 hari"); // SJ/1: Invoice 1 Sep → Receive 4 Sep
+    expect(text()).toContain("Aging September 2026");
     tab("Kertas Kerja");
-    const rows = host.querySelectorAll("tbody tr[data-index]");
-    expect(rows.length).toBe(2);
+    expect(host.querySelectorAll("tbody tr[data-index]").length).toBe(3);
     expect(text()).toContain("Sudah diterima");
     expect(text()).toContain("Belum diterima");
   });
 
-  it("tanpa sampel durasi → rata-rata '—', bukan 0 hari", () => {
-    h.data = base({ events: [ev("SJ/9", null, null)] });
+  it("tanpa penerimaan: rata-rata '—' dan ajakan upload, bukan angka 0", () => {
+    h.data = base({ receipts: [], canManage: true });
     act(() => root.render(<SjView />));
+    expect(text()).toContain("Belum ada data penerimaan");
     const kpi = [...host.querySelectorAll("div")].find((d) => d.firstElementChild?.textContent === "Rata-rata waktu penerimaan");
     expect(kpi?.textContent).toContain("—");
     expect(kpi?.textContent).not.toContain("0 hari");
   });
 
-  it("kosong: pesan jelas, bukan angka nol", () => {
-    h.data = base({ events: [], batches: [] });
+  it("aging kosong: pesan jelas", () => {
+    h.data = base({ aging: [], receipts: [] });
     act(() => root.render(<SjView />));
-    expect(text()).toContain("Belum ada data serah terima");
+    expect(text()).toContain("Aging belum ada");
   });
 
   it("non-Controller: upload & pengaturan Receiver nonaktif dengan penjelasan", () => {
@@ -78,12 +76,9 @@ describe("Monitor Surat Jalan — tampilan", () => {
     expect(host.querySelector<HTMLInputElement>("input[type=file]")!.disabled).toBe(true);
     expect(text()).toContain("hanya untuk Controller dan Super Admin");
     expect(host.querySelector("input[placeholder='Nama Receiver baru']")).toBeNull();
-    expect([...host.querySelectorAll("button")].some((b) => b.textContent === "Nonaktifkan…")).toBe(false);
   });
-});
 
-describe("Monitor Surat Jalan — memuat", () => {
-  it("Upload & Setting saat data belum termuat: 'Memuat', bukan pesan tidak berhak", () => {
+  it("saat data belum termuat: 'Memuat', bukan pesan tidak berhak", () => {
     h.data = null; h.loading = true;
     act(() => root.render(<SjView />));
     tab("Upload & Setting");
@@ -94,79 +89,77 @@ describe("Monitor Surat Jalan — memuat", () => {
 });
 
 describe("Monitor Surat Jalan — upload", () => {
-  const CSV = [
-    "Area,SJ No.,Tanggal SJ,Business Partner,Locator,Send Date,Sender,Receive Date,Receiver,Jumlah Hari,Faktur,Description,No. Route,Shipper 1,No. Plat,Driver,Shipper 2,Send Receipt Doc No",
-    "Jakarta,TEST/1,01 Sep 2026,Toko A,L1,02 Sep 2026,Siti,03 Sep 2026,Wienda Aswar,2,Ya,\"baris\nkedua\",R1,PT X,B 1,Budi,,101",
-    "Jakarta,,01 Sep 2026,Toko A,L1,-,-,-,-,-,Ya,,R1,PT X,B 1,Budi,,102",
-    "Jakarta,TEST/2,01 Sep 2026,Toko B,L1,-,-,-,-,-,Ya,,R1,PT X,B 1,Budi,,103",
+  const HEAD = "Area,SJ No.,Tanggal SJ,Business Partner,Locator,Send Date,Sender,Receive Date,Receiver,Jumlah Hari,Faktur,Description,No. Route,Shipper 1,No. Plat,Driver,Shipper 2,Send Receipt Doc No";
+  const L = (sj: string, rdate: string, recv: string) => `Jakarta,${sj},01 Sep 2026,Toko A,L1,02 Sep 2026,Siti,${rdate},${recv},-,Ya,,R1,PT X,B 1,Budi,,1`;
+  const CSV = [HEAD,
+    L("SJ/1", "05 Sep 2026", "Bintang Anugia Arragi"),   // sudah punya Receive Date → dilewati
+    L("sj/2", "-", "-"),
+    L("SJ/2", "06 Sep 2026", "Marselia Angelia"),         // tidak diakui
+    L("SJ/2", "07 Sep 2026", "Wienda Aswar"),             // ← disimpan
+    L("TEST/3", "08 Sep 2026", "Bintang Anugia Arragi"),  // ← disimpan
+    L("SJ/99", "08 Sep 2026", "Wienda Aswar"),            // tidak ada di aging
   ].join("\n");
   const pickFile = async () => {
     const input = host.querySelector<HTMLInputElement>("input[type=file]")!;
-    const file = new File([CSV], "uji.csv", { type: "text/csv" });
-    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    Object.defineProperty(input, "files", { value: [new File([CSV], "uji.csv", { type: "text/csv" })], configurable: true });
     await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
     await flush();
   };
 
-  it("pratinjau → Import: baris sumber dikirim dengan nomor baris, hasil dari server ditampilkan", async () => {
+  it("pratinjau relasi aging → kirim hanya SJ aging tanpa Receive Date; hasil dari server", async () => {
     h.data = base({ canManage: true });
-    h.rpc.mockImplementation(async (fn: string) => {
-      if (fn === "sj_upload_begin") return { data: { batch: 7, seenAt: null }, error: null };
-      if (fn === "sj_upload_rows") return { data: 2, error: null };
-      if (fn === "sj_upload_commit") return { data: { batch: 7, total: 2, new: 1, dup: 1, bad: 1 }, error: null };
-      return { data: null, error: null };
-    });
+    h.rpc.mockResolvedValue({ data: { sent: 2, saved: 2, existing: 0, notInAging: 0, notRecognized: 0, badDate: 0 }, error: null });
     act(() => root.render(<SjView />));
     tab("Upload & Setting");
     await pickFile();
-    expect(text()).toContain("Pratinjau: uji.csv");
-    expect(text()).toContain("Baris bermasalah (tidak diimpor)1");
-    expect(text()).toContain("No. SJ kosong");
-    await act(async () => { [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.startsWith("Import 2"))!.click(); });
+    expect(text()).toContain("SJ dengan penerimaan diakui4");
+    expect(text()).toContain("· tidak ada di Aging (dilewati)1");
+    expect(text()).toContain("· sudah punya Receive Date (dilewati)1");
+    expect(text()).toContain("Akan disimpan2");
+    expect(text()).toContain("Marselia Angelia — 1 baris");
+    await act(async () => { btn("Simpan 2 Receive Date")!.click(); });
     await flush();
-    const begin = h.rpc.mock.calls.find((c) => c[0] === "sj_upload_begin")![1];
-    expect(begin).toMatchObject({ p_file_name: "uji.csv", p_rows_total: 2, p_rows_bad: 1 });
-    const sent = h.rpc.mock.calls.find((c) => c[0] === "sj_upload_rows")![1].p_rows;
-    expect(sent.map((r: { line: number; sj_no: string }) => [r.line, r.sj_no])).toEqual([[2, "TEST/1"], [5, "TEST/2"]]);
+    const [fn, args] = h.rpc.mock.calls[0];
+    expect(fn).toBe("sj_receipts_apply");
+    expect(args.p_file_name).toBe("uji.csv");
+    expect(args.p_rows).toEqual([
+      { sj_key: "SJ/2", sj_no: "SJ/2", receive_date: "2026-09-07", receiver: "Wienda Aswar" },
+      { sj_key: "TEST/3", sj_no: "TEST/3", receive_date: "2026-09-08", receiver: "Bintang Anugia Arragi" },
+    ]);
     expect(text()).toContain("Hasil upload (dikonfirmasi server)");
-    expect(text()).toContain("Kejadian baru disimpan1");
-    expect(text()).toContain("Identik, dilewati1");
+    expect(text()).toContain("Receive Date disimpan2");
     expect(h.reload).toHaveBeenCalled();
   });
 
-  it("gagal di tengah: pesan jelas, tidak ada hasil 'berhasil', bisa diulang", async () => {
+  it("gagal: pesan jelas, tidak ada hasil 'berhasil', bisa diulang", async () => {
     h.data = base({ canManage: true });
-    h.rpc.mockImplementation(async (fn: string) => (fn === "sj_upload_begin"
-      ? { data: { batch: 8, seenAt: null }, error: null }
-      : { data: null, error: { message: "koneksi terputus" } }));
+    h.rpc.mockResolvedValue({ data: null, error: { message: "koneksi terputus" } });
     act(() => root.render(<SjView />));
     tab("Upload & Setting");
     await pickFile();
-    await act(async () => { [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.startsWith("Import"))!.click(); });
+    await act(async () => { btn("Simpan 2")!.click(); });
     await flush();
-    expect(text()).toContain("Upload gagal, tidak ada data yang ditampilkan: koneksi terputus");
+    expect(text()).toContain("Upload gagal, tidak ada data yang tersimpan: koneksi terputus");
     expect(text()).not.toContain("Hasil upload");
-    expect(h.rpc.mock.calls.some((c) => c[0] === "sj_upload_commit")).toBe(false);
-    expect([...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.startsWith("Import"))!.disabled).toBe(false);
+    expect(btn("Simpan 2")!.disabled).toBe(false);
   });
 
-  it("Receiver: duplikat setelah normalisasi ditolak di form; pratinjau dampak sebelum simpan", async () => {
+  it("Receiver: duplikat ternormalisasi ditolak; pratinjau dampak (menonaktifkan Wienda mengubah 1 SJ)", async () => {
     h.data = base({ canManage: true });
-    h.rpc.mockResolvedValue({ data: { id: 3, name: "Marselia Angelia" }, error: null });
+    h.rpc.mockResolvedValue({ data: { id: 2, name: "Wienda Aswar" }, error: null });
     act(() => root.render(<SjView />));
     tab("Upload & Setting");
     const input = host.querySelector<HTMLInputElement>("input[placeholder='Nama Receiver baru']")!;
-    const type = (v: string) => act(() => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, v);
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "  WIENDA   aswar ");
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    type("  WIENDA   aswar ");
     expect(text()).toContain('Nama "Wienda Aswar" sudah ada di daftar');
-    type("Marselia Angelia");
-    act(() => { [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === "Tambah…")!.click(); });
+    const li = [...host.querySelectorAll("li")].find((x) => x.textContent?.startsWith("Wienda Aswar"))!;
+    act(() => { [...li.querySelectorAll("button")].find((b) => b.textContent === "Nonaktifkan…")!.click(); });
     expect(document.body.textContent).toContain("1 SJ berubah status");
     await act(async () => { [...document.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === "Simpan perubahan")!.click(); });
     await flush();
-    expect(h.rpc).toHaveBeenCalledWith("sj_receiver_save", { p_id: null, p_name: "Marselia Angelia", p_active: true });
+    expect(h.rpc).toHaveBeenCalledWith("sj_receiver_save", { p_id: 2, p_name: "Wienda Aswar", p_active: false });
   });
 });

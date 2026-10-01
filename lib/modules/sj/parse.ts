@@ -6,7 +6,7 @@ export const SJ_HEADERS = [
   "Area", "SJ No.", "Tanggal SJ", "Business Partner", "Locator", "Send Date", "Sender", "Receive Date", "Receiver",
   "Jumlah Hari", "Faktur", "Description", "No. Route", "Shipper 1", "No. Plat", "Driver", "Shipper 2", "Send Receipt Doc No",
 ] as const;
-const REQUIRED = ["SJ No.", "Tanggal SJ", "Receive Date", "Receiver"] as const;
+const REQUIRED = ["SJ No.", "Receive Date", "Receiver"] as const; // Fase 46: hanya SJ No., Receive Date & Receiver yang dipakai
 
 /** Nama kolom di database/payload untuk tiap header CSV. */
 export const SJ_FIELD: Record<(typeof SJ_HEADERS)[number], string> = {
@@ -104,4 +104,18 @@ export function parseSjCsv(text: string): SjParseResult {
       withReceiver: rows.filter((r) => r.receiver).length, dateIssues,
     },
   };
+}
+
+/** Kandidat penerimaan dari satu file: per SJ, baris PERTAMA (urutan file) dengan Receiver diakui & Receive Date valid. */
+export type SjCandidate = { sj_key: string; sj_no: string; receive_date: string; receiver: string; line: number };
+export function receiptCandidates(parsed: Pick<SjParseResult, "rows" | "lines">, recognized: ReadonlySet<string>): SjCandidate[] {
+  const out = new Map<string, SjCandidate>();
+  parsed.rows.forEach((r, i) => {
+    const key = r.sj_no.trim().toUpperCase();
+    if (out.has(key) || !r.receiver || !r.receive_date) return;
+    const name = r.receiver.trim().replace(/\s+/g, " ");
+    if (!recognized.has(name.toLowerCase())) return;
+    out.set(key, { sj_key: key, sj_no: r.sj_no, receive_date: r.receive_date, receiver: name, line: parsed.lines[i] });
+  });
+  return [...out.values()];
 }

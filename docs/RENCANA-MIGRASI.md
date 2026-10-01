@@ -940,3 +940,33 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
 - Ukur (build produksi, Event Timing, INP maks per ketukan): Monitor SJ 18.805 SJ sintetis 416 → 24 ms, History
   Pembayaran 160 → 16 ms, Mitra10 Receiving/Kertas Kerja ±30 → 16–32 ms. CPU diperlambat 4×: handler ≤ ±120 ms; puncak
   sesekali 200–450 ms di tabel 18 rb baris (render latar satu komponen belum bisa disela).
+
+
+## Monitor Surat Jalan model baru: relasi Aging (Fase 46, 2026-10-01)
+- Permintaan user: hanya SJ No. yang ada di No SJ **Aging** yang disimpan; yang disimpan per SJ hanya **Receive Date &
+  Receiver**; setiap upload hanya mengisi SJ yang **belum punya Receive Date**; filter Receiver yang diakui tetap; struktur
+  & data lama dihapus, diganti model baru yang kosong. Keputusan user: tanggal awal = **Invoice Date aging**; daftar =
+  **semua No SJ di Aging terbaru**; SJ yang keluar dari aging → **penerimaannya ikut dihapus**.
+- **Database** (`0045_monitor_sj_v2`, diterapkan ke produksi setelah PGlite 27/27, snapshot, dry-run ber-rollback dengan
+  data upload user & salinan aging penuh): hapus `sj_events`, `sj_batches`, `private.sj_stage`, `sj_publish_seq`, RPC
+  upload lama, baris `import_log` module `sj` (data lama: 25.513 baris + 1 upload staging yang tidak selesai). Tetap:
+  `sj_receivers`, `sj_receiver_log`, `sj_receiver_save`, `sj_can_manage`. Baru:
+  - `private.sj_aging_keys()` — kunci SJ dari snapshot aging terbaru (`order by month desc`), No SJ dipecah di setiap
+    `SJ/` (sama dengan `splitSj`), per kunci Invoice Date terkecil, invoice pertama, BP, Area, jumlah invoice (24.618 kunci).
+  - `sj_receipts(sj_key PK, sj_no, receive_date, receiver, file_name, recorded_at, recorded_by)` — RLS baca per menu,
+    authenticated hanya SELECT, `bump_version('sj')`.
+  - `sj_receipts_apply(p_file_name, p_rows)` — kelola saja, maks 60.000, atomik; server menyaring ulang (aging terbaru,
+    Receiver aktif, tanggal valid), `on conflict do nothing` (Receive Date tidak ditimpa), `import_log('sj')`.
+  - Trigger `sj_after_aging` AFTER INSERT (statement) pada `ar_aging_lines` → `sj_prune()` menghapus penerimaan SJ yang
+    tidak ada di aging terbaru (hanya INSERT agar commit ulang aging bulan yang sama tidak menghapus keliru). Tambahan
+    waktu commit aging ±0,1–0,25 dtk.
+  - `pack_sj()` → aging, receipts, receivers, log, uploads, agingAt, canManage (kosong 2,8 MB / 0,4 dtk).
+  - Rollback: `supabase/rollback/0045_monitor_sj_v2_down.sql` (data lama tidak bisa dikembalikan).
+- **Klien**: `lib/modules/sj/compute.ts` ditulis ulang (`buildRows` per SJ aging, durasi = Receive Date − Invoice Date,
+  umur = hari ini − Invoice Date, Receiver nonaktif → Belum diterima + penanda, nama Receiver baku dari daftar,
+  `receiverImpact` atas data tersimpan); `parse.ts` `receiptCandidates` (per SJ baris pertama dengan Receiver diakui &
+  Receive Date valid; kolom wajib kini SJ No., Receive Date, Receiver); dataset `sj` deps `["sj","aging"]`. UI: filter
+  periode Invoice Date, banner "Belum ada data penerimaan", Kertas Kerja per SJ aging (Invoice No, ekspor bawaan; modal
+  riwayat dihapus), Upload: pratinjau cocok aging / sudah ada / akan disimpan → satu RPC → hasil server.
+- File contoh (pratinjau saja): 13.240 SJ dengan penerimaan diakui → 9.532 cocok aging terbaru (akan disimpan), 3.708 tidak
+  ada di aging. Model di produksi dibiarkan **kosong**; data uji Playwright dihapus.

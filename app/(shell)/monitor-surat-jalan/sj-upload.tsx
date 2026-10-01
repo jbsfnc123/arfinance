@@ -6,88 +6,81 @@ import { Modal } from "@/components/modal";
 import { TableBox } from "@/components/table-box";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, emptyTd, inputCls, td, th } from "@/components/ui";
-import { fmtTimestamp } from "@/lib/format";
-import { parseSjCsv, SJ_HEADERS, type SjParseResult } from "@/lib/modules/sj/parse";
+import { fmtDate, fmtTimestamp } from "@/lib/format";
+import { parseSjCsv, receiptCandidates, SJ_HEADERS, type SjCandidate, type SjParseResult } from "@/lib/modules/sj/parse";
 import { activeSet, normName, receiverImpact, type SjReceiver } from "@/lib/modules/sj/compute";
 import type { SjState } from "./use-sj";
 
-const CHUNK = 2000;
-const MAX_ROWS = 60000; // batas server per upload (commit atomik tetap di bawah batas waktu query)
-const REQUIRED = new Set(["SJ No.", "Tanggal SJ", "Receive Date", "Receiver"]);
+const MAX_ROWS = 60000; // batas server per upload
+const REQUIRED = new Set(["SJ No.", "Receive Date", "Receiver"]);
 const n = (v: number) => v.toLocaleString("id-ID");
 
-async function sha256(file: File) {
-  const buf = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+type Parsed = SjParseResult & { file: File };
+type Result = { sent: number; saved: number; existing: number; notInAging: number; notRecognized: number; badDate: number; file: string };
+
+/** Pratinjau: kandidat penerimaan dibagi menurut relasi aging & data tersimpan (perkiraan; hasil final dari server). */
+export function previewCandidates(cands: readonly SjCandidate[], agingKeys: ReadonlySet<string>, receiptKeys: ReadonlySet<string>) {
+  const inAging = cands.filter((c) => agingKeys.has(c.sj_key));
+  const toSave = inAging.filter((c) => !receiptKeys.has(c.sj_key));
+  return { inAging: inAging.length, notInAging: cands.length - inAging.length, existing: inAging.length - toSave.length, toSave };
 }
 
-type Parsed = SjParseResult & { file: File; sha: string };
-type Result = { batch: number; total: number; new: number; dup: number; bad: number; seenAt: string | null; file: string };
-
-// Upload & Setting: file → parse & validasi di browser → pratinjau → Import bertahap (staging) → commit atomik di server.
-// Hasil yang ditampilkan adalah hitungan dari server. Kontrol tulis hanya untuk Controller/Super Admin (server tetap menolak).
+// Upload & Setting: file → parse di browser → kandidat (per SJ: baris pertama dengan Receiver diakui & Receive Date valid)
+// → pratinjau relasi aging → satu RPC atomik. Server menyaring ulang (aging terbaru, Receiver aktif, tanggal) dan tidak
+// menimpa Receive Date yang sudah ada. Kontrol tulis hanya untuk Controller/Super Admin (server tetap menolak).
 export function SjUpload({ s }: { s: SjState }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [parsed, setParsed] = useState<Parsed | null>(null);
   const [parseErr, setParseErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<"parse" | "import" | null>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [importErr, setImportErr] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
   const can = s.canManage;
-  const ready = !!s.ds.data; // sebelum data termuat: hak akses & daftar Receiver belum diketahui (jangan tampil "tidak berhak")
+  const ready = !!s.ds.data; // sebelum data termuat: hak akses, aging & daftar Receiver belum diketahui
 
   async function pick(file: File | undefined) {
     setParsed(null); setParseErr(null); setResult(null); setImportErr(null);
     if (!file) return;
     setBusy("parse");
     try {
-      const [text, sha] = await Promise.all([file.text(), sha256(file)]);
-      const p = parseSjCsv(text);
-      if (!p.rows.length) throw new Error("Tidak ada baris data yang bisa diimpor.");
+      const p = parseSjCsv(await file.text());
+      if (!p.rows.length) throw new Error("Tidak ada baris data yang bisa dibaca.");
       if (p.rows.length > MAX_ROWS) throw new Error(`File berisi ${n(p.rows.length)} baris; maksimal ${n(MAX_ROWS)} per upload. Pecah file per periode lalu upload bergantian.`);
-      setParsed({ ...p, file, sha });
+      setParsed({ ...p, file });
     } catch (e) {
       setParseErr((e as Error).message);
     } finally { setBusy(null); }
   }
 
+  const cands = useMemo(() => (parsed && ready ? receiptCandidates(parsed, s.recognized) : null), [parsed, ready, s.recognized]);
+  const prev = useMemo(() => (cands ? previewCandidates(cands, s.agingKeys, s.receiptKeys) : null), [cands, s.agingKeys, s.receiptKeys]);
+
   async function runImport() {
-    if (!parsed || !can) return;
-    setBusy("import"); setImportErr(null); setProgress({ done: 0, total: parsed.rows.length });
-    const call = async <T,>(fn: string, args: Record<string, unknown>) => {
-      const { data, error } = await supabase.rpc(fn as never, args as never);
-      if (error) throw new Error(error.message);
-      return data as T;
-    };
+    if (!parsed || !can || !prev) return;
+    setBusy("import"); setImportErr(null);
     try {
-      const b = await call<{ batch: number; seenAt: string | null }>("sj_upload_begin", {
-        p_file_name: parsed.file.name, p_sha256: parsed.sha, p_rows_total: parsed.rows.length, p_rows_bad: parsed.bad.length,
-      });
-      for (let i = 0; i < parsed.rows.length; i += CHUNK) {
-        const chunk = parsed.rows.slice(i, i + CHUNK).map((r, j) => ({ ...r, line: parsed.lines[i + j] }));
-        await call("sj_upload_rows", { p_batch: b.batch, p_offset: i, p_rows: chunk });
-        setProgress({ done: Math.min(i + CHUNK, parsed.rows.length), total: parsed.rows.length });
-      }
-      const r = await call<Omit<Result, "seenAt" | "file">>("sj_upload_commit", { p_batch: b.batch });
-      setResult({ ...r, seenAt: b.seenAt, file: parsed.file.name });
+      // Hanya kandidat yang cocok aging & belum punya Receive Date yang dikirim; server tetap memeriksa ulang.
+      const rows = prev.toSave.map(({ sj_key, sj_no, receive_date, receiver }) => ({ sj_key, sj_no, receive_date, receiver }));
+      const { data, error } = await supabase.rpc("sj_receipts_apply" as never, { p_file_name: parsed.file.name, p_rows: rows } as never);
+      if (error) throw new Error(error.message);
+      const r = data as Omit<Result, "file">;
+      setResult({ ...r, file: parsed.file.name });
       setParsed(null); setInputKey((k) => k + 1);
       await s.ds.reload();
-      toast(`Upload selesai: ${n(r.new)} kejadian baru, ${n(r.dup)} identik dilewati.`, "success", 8000);
+      toast(`Upload selesai: ${n(r.saved)} SJ mendapat Receive Date.`, "success", 8000);
     } catch (e) {
-      // Batch yang gagal tidak pernah terpublikasi; ulangi aman (kejadian identik dilewati).
       setImportErr((e as Error).message);
-    } finally { setBusy(null); setProgress(null); }
+    } finally { setBusy(null); }
   }
 
   const unknownReceivers = useMemo(() => {
-    if (!parsed || !s.ds.data) return null;
+    if (!parsed || !ready) return null;
     const m = new Map<string, number>();
     for (const r of parsed.rows) if (r.receiver && !s.recognized.has(normName(r.receiver))) m.set(r.receiver.trim(), (m.get(r.receiver.trim()) ?? 0) + 1);
     return [...m].sort((a, b) => b[1] - a[1]);
-  }, [parsed, s.ds.data, s.recognized]);
+  }, [parsed, ready, s.recognized]);
 
   return (
     <div className="space-y-4">
@@ -102,8 +95,8 @@ export function SjUpload({ s }: { s: SjState }) {
         <section className={`${card} space-y-3 p-4`}>
           <h2 className="font-medium">Upload Laporan Serah Terima Surat Jalan</h2>
           <p className="text-xs text-fg-2">
-            File CSV <i>LaporanSerahTerimaSuratJalan</i> (18 kolom, pemisah koma, maks. 60.000 baris per upload). File dibaca dan divalidasi di browser dulu; data
-            baru tampil setelah seluruh upload selesai.
+            File CSV <i>LaporanSerahTerimaSuratJalan</i> (pemisah koma, maks. 60.000 baris). Yang disimpan per SJ hanya
+            <b> Receive Date</b> dan <b>Receiver</b>.
           </p>
           <label className="block text-sm">
             <span className="sr-only">Pilih file CSV</span>
@@ -113,10 +106,11 @@ export function SjUpload({ s }: { s: SjState }) {
           {busy === "parse" && <p className="text-sm text-accent" role="status">Membaca & memvalidasi file…</p>}
           {parseErr && <p className="text-sm text-danger" role="alert">{parseErr}</p>}
           <ul id="sj-upload-policy" className="list-disc space-y-0.5 pl-5 text-xs text-fg-2">
-            <li>Satu baris CSV = satu kejadian kirim/terima. SJ yang sama bisa muncul beberapa kali (riwayat) — semuanya disimpan.</li>
-            <li>Upload ulang file yang sama atau yang tumpang tindih tidak menggandakan data: baris yang identik persis dilewati, baris baru ditambahkan.</li>
-            <li>Upload tidak pernah menghapus atau mengubah data lama. Penerimaan pertama dari upload yang lebih awal tetap menjadi acuan.</li>
-            <li>Upload yang gagal di tengah jalan tidak ditampilkan sama sekali dan aman diulang.</li>
+            <li>Hanya SJ No. yang ada di No SJ <b>Aging terbaru</b> yang disimpan (No SJ gabungan di aging dipecah). SJ lain dilewati.</li>
+            <li>Per SJ dipakai baris <b>pertama</b> di file dengan Receiver yang diakui dan Receive Date yang valid.</li>
+            <li>Setiap upload hanya mengisi SJ yang <b>belum punya Receive Date</b>; data yang sudah tersimpan tidak ditimpa.</li>
+            <li>SJ yang tidak ada lagi di Aging terbaru (mis. lunas) ikut dihapus datanya saat aging diperbarui.</li>
+            <li>Upload bersifat utuh: gagal = tidak ada yang tersimpan, aman diulang.</li>
           </ul>
         </section>
 
@@ -130,32 +124,25 @@ export function SjUpload({ s }: { s: SjState }) {
             <span className="text-xs text-fg-2">{(parsed.file.size / 1024 / 1024).toLocaleString("id-ID", { maximumFractionDigits: 1 })} MB</span>
             <div className="ml-auto flex gap-2">
               <button type="button" className={btnGhost} disabled={busy !== null} onClick={() => { setParsed(null); setInputKey((k) => k + 1); }}>Batal</button>
-              <button type="button" className={btnPrimary} disabled={!ready || !can || busy !== null} onClick={() => void runImport()}>
-                Import {n(parsed.rows.length)} baris
+              <button type="button" className={btnPrimary} disabled={!ready || !can || busy !== null || !prev?.toSave.length} onClick={() => void runImport()}>
+                {busy === "import" ? "Menyimpan…" : `Simpan ${n(prev?.toSave.length ?? 0)} Receive Date`}
               </button>
             </div>
           </div>
-          {progress && (
-            <div role="progressbar" aria-label="Progres upload" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.done}
-              aria-valuetext={`${n(progress.done)} dari ${n(progress.total)} baris terkirim`}>
-              <div className="h-2 overflow-hidden rounded-full bg-fill-3">
-                <div className="h-full bg-accent transition-[width]" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
-              </div>
-              <p className="mt-1 text-xs text-fg-2">{n(progress.done)} / {n(progress.total)} baris terkirim ke staging…</p>
-            </div>
-          )}
           {importErr && (
             <p className="rounded-lg bg-danger/10 px-3 py-2 text-[13px]" role="alert">
-              <b className="text-danger">Upload gagal, tidak ada data yang ditampilkan:</b> {importErr} — tekan Import lagi untuk mengulang.
+              <b className="text-danger">Upload gagal, tidak ada data yang tersimpan:</b> {importErr} — tekan Simpan lagi untuk mengulang.
             </p>
           )}
           <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
             <Stat k="Baris data dibaca" v={n(parsed.stats.records)} />
-            <Stat k="Siap diimpor" v={n(parsed.rows.length)} />
-            <Stat k="Baris bermasalah (tidak diimpor)" v={n(parsed.bad.length)} />
-            <Stat k="SJ unik" v={n(parsed.stats.uniqueSj)} />
-            <Stat k="SJ muncul lebih dari sekali" v={n(parsed.stats.repeatedSj)} />
-            <Stat k="Baris dengan Receiver" v={n(parsed.stats.withReceiver)} />
+            <Stat k="SJ unik di file" v={n(parsed.stats.uniqueSj)} />
+            <Stat k="SJ dengan penerimaan diakui" v={cands ? n(cands.length) : "…"} />
+            <Stat k="· cocok Aging terbaru" v={prev ? n(prev.inAging) : "…"} />
+            <Stat k="· tidak ada di Aging (dilewati)" v={prev ? n(prev.notInAging) : "…"} />
+            <Stat k="· sudah punya Receive Date (dilewati)" v={prev ? n(prev.existing) : "…"} />
+            <Stat k="Akan disimpan" v={prev ? n(prev.toSave.length) : "…"} />
+            <Stat k="Baris bermasalah (No. SJ kosong / kolom)" v={n(parsed.bad.length)} />
             <Stat k="Baris dengan masalah tanggal" v={n(parsed.stats.dateIssues)} />
           </dl>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -170,8 +157,8 @@ export function SjUpload({ s }: { s: SjState }) {
                       return (
                         <tr key={h} className="border-b border-line/50">
                           <td className={td}>{h}</td>
-                          <td className={`${td} ${found ? "" : REQUIRED.has(h) ? "text-danger" : "text-warning"}`}>
-                            {found ? "Ditemukan" : REQUIRED.has(h) ? "Tidak ada (wajib)" : "Tidak ada (dikosongkan)"}{REQUIRED.has(h) && found ? " · wajib" : ""}
+                          <td className={`${td} ${found ? "" : REQUIRED.has(h) ? "text-danger" : "text-fg-2"}`}>
+                            {REQUIRED.has(h) ? (found ? "Ditemukan · dipakai" : "Tidak ada (wajib)") : found ? "Ditemukan · tidak disimpan" : "Tidak ada"}
                           </td>
                         </tr>
                       );
@@ -185,45 +172,27 @@ export function SjUpload({ s }: { s: SjState }) {
             </div>
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-medium">Receiver di luar daftar</h3>
+                <h3 className="text-sm font-medium">Receiver di luar daftar (tidak disimpan)</h3>
                 {unknownReceivers === null ? <p className="mt-1 text-[13px] text-fg-2">Menunggu daftar Receiver…</p> : unknownReceivers.length ? (
                   <ul className="mt-1 text-[13px]">
-                    {unknownReceivers.slice(0, 10).map(([name, c]) => <li key={name}>{name} — {n(c)} baris (tidak diakui sebagai penerimaan)</li>)}
+                    {unknownReceivers.slice(0, 10).map(([name, c]) => <li key={name}>{name} — {n(c)} baris</li>)}
                   </ul>
                 ) : <p className="mt-1 text-[13px] text-fg-2">Tidak ada.</p>}
               </div>
               <div>
-                <h3 className="text-sm font-medium">Baris bermasalah</h3>
-                {parsed.bad.length ? (
+                <h3 className="text-sm font-medium">Contoh yang akan disimpan</h3>
+                {prev?.toSave.length ? (
                   <TableBox bare fill={false} maxHeight="max-h-[25vh]" className="mt-1">
                     <table className="w-full text-[13px]">
-                      <thead><tr className="border-b border-line"><th className={th}>Baris file</th><th className={th}>Alasan</th></tr></thead>
-                      <tbody>{parsed.bad.slice(0, 200).map((b) => <tr key={b.line} className="border-b border-line/50"><td className={td}>{b.line}</td><td className={td}>{b.reason}</td></tr>)}</tbody>
+                      <thead><tr className="border-b border-line"><th className={th}>Baris</th><th className={th}>SJ No.</th><th className={th}>Receive Date</th><th className={th}>Receiver</th></tr></thead>
+                      <tbody>{prev.toSave.slice(0, 8).map((c) => (
+                        <tr key={c.sj_key} className="border-b border-line/50"><td className={td}>{c.line}</td><td className={td}>{c.sj_no}</td><td className={td}>{fmtDate(c.receive_date)}</td><td className={td}>{c.receiver}</td></tr>
+                      ))}</tbody>
                     </table>
                   </TableBox>
-                ) : <p className="mt-1 text-[13px] text-fg-2">Tidak ada.</p>}
+                ) : <p className="mt-1 text-[13px] text-fg-2">{prev ? "Tidak ada SJ baru yang bisa diisi dari file ini." : "Menunggu data…"}</p>}
               </div>
             </div>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium">Contoh 5 baris pertama</h3>
-            <TableBox bare fill={false} maxHeight="max-h-[30vh]" className="mt-1">
-              <table className="w-full text-[13px]">
-                <thead><tr className="border-b border-line">
-                  <th className={th}>Baris</th><th className={th}>SJ No.</th><th className={th}>Tanggal SJ</th><th className={th}>Area</th>
-                  <th className={th}>Receiver</th><th className={th}>Receive Date</th>
-                </tr></thead>
-                <tbody>
-                  {parsed.rows.slice(0, 5).map((r, i) => (
-                    <tr key={i} className="border-b border-line/50">
-                      <td className={td}>{parsed.lines[i]}</td><td className={td}>{r.sj_no}</td>
-                      <td className={td}>{r.tanggal_sj_raw} → {r.tanggal_sj ?? "tidak valid"}</td><td className={td}>{r.area}</td>
-                      <td className={td}>{r.receiver ?? "—"}</td><td className={td}>{r.receive_date ?? (r.receive_date_raw === "-" ? "—" : `${r.receive_date_raw} (tidak valid)`)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableBox>
           </div>
         </section>
       )}
@@ -231,13 +200,14 @@ export function SjUpload({ s }: { s: SjState }) {
       {result && (
         <section className={`${card} p-4`} role="status" aria-label="Hasil upload">
           <h2 className="font-medium">Hasil upload (dikonfirmasi server): {result.file}</h2>
-          <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
-            <Stat k="Baris dikirim" v={n(result.total)} />
-            <Stat k="Kejadian baru disimpan" v={n(result.new)} />
-            <Stat k="Identik, dilewati" v={n(result.dup)} />
-            <Stat k="Bermasalah, tidak diimpor" v={n(result.bad)} />
+          <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
+            <Stat k="SJ dikirim" v={n(result.sent)} />
+            <Stat k="Receive Date disimpan" v={n(result.saved)} />
+            <Stat k="Sudah ada, tidak ditimpa" v={n(result.existing)} />
+            <Stat k="Tidak ada di Aging" v={n(result.notInAging)} />
+            <Stat k="Receiver tidak diakui" v={n(result.notRecognized)} />
+            <Stat k="Tanggal tidak valid" v={n(result.badDate)} />
           </dl>
-          {result.seenAt && <p className="mt-2 text-xs text-fg-2">File yang sama persis pernah diunggah pada {fmtTimestamp(result.seenAt)}.</p>}
         </section>
       )}
 
@@ -255,26 +225,24 @@ function Stat({ k, v }: { k: string; v: string }) {
 }
 
 function UploadHistory({ s }: { s: SjState }) {
-  const batches = s.ds.data?.batches ?? [];
+  const uploads = s.ds.data?.uploads ?? [];
   return (
     <section className={`${card} overflow-hidden`}>
       <h2 className="px-4 pt-3 text-sm font-medium">Riwayat upload</h2>
       <TableBox bare fill={false} maxHeight="max-h-[40vh]" className="mt-2">
         <table className="w-full text-sm tabular-nums">
           <thead><tr className="border-b border-line">
-            <th className={th}>Waktu</th><th className={th}>File</th><th className={th}>Oleh</th><th className={`${th} text-right`}>Baris</th>
-            <th className={`${th} text-right`}>Baru</th><th className={`${th} text-right`}>Identik</th><th className={`${th} text-right`}>Bermasalah</th>
+            <th className={th}>Waktu</th><th className={th}>File</th><th className={th}>Oleh</th><th className={`${th} text-right`}>Receive Date disimpan</th>
           </tr></thead>
           <tbody>
-            {batches.map((b) => (
-              <tr key={b.id} className="border-b border-line/50">
-                <td className={td}>{fmtTimestamp(b.published_at)}</td>
-                <td className={`${td} max-w-[18rem] truncate`} title={b.file_name}>{b.file_name}</td>
-                <td className={td}>{b.uploader}</td><td className={`${td} text-right`}>{n(b.rows_total)}</td>
-                <td className={`${td} text-right`}>{n(b.rows_new)}</td><td className={`${td} text-right`}>{n(b.rows_dup)}</td><td className={`${td} text-right`}>{n(b.rows_bad)}</td>
+            {uploads.map((u, i) => (
+              <tr key={i} className="border-b border-line/50">
+                <td className={td}>{fmtTimestamp(u.at)}</td>
+                <td className={`${td} max-w-[18rem] truncate`} title={u.file_name}>{u.file_name}</td>
+                <td className={td}>{u.uploader}</td><td className={`${td} text-right`}>{n(u.rows ?? 0)}</td>
               </tr>
             ))}
-            {!batches.length && <tr><td className={emptyTd} colSpan={7}>{s.loading ? "Memuat…" : "Belum ada upload."}</td></tr>}
+            {!uploads.length && <tr><td className={emptyTd} colSpan={4}>{s.loading ? "Memuat…" : "Belum ada upload."}</td></tr>}
           </tbody>
         </table>
       </TableBox>
@@ -312,8 +280,8 @@ function ReceiverSettings({ s }: { s: SjState }) {
     const next: SjReceiver[] = pending.id === null
       ? [...receivers, { id: -1, name: pending.name, active: pending.active }]
       : receivers.map((r) => (r.id === pending.id ? { ...r, name: pending.name, active: pending.active } : r));
-    return receiverImpact(s.ds.data.events, s.recognized, activeSet(next), s.today);
-  }, [pending, receivers, s.ds.data, s.recognized, s.today]);
+    return receiverImpact(s.ds.data.receipts, s.agingKeys, s.recognized, activeSet(next));
+  }, [pending, receivers, s.ds.data, s.agingKeys, s.recognized]);
 
   async function confirm() {
     if (!pending) return;
@@ -330,8 +298,9 @@ function ReceiverSettings({ s }: { s: SjState }) {
     <section className={`${card} space-y-3 p-4`}>
       <h2 className="font-medium">Receiver yang diakui</h2>
       <p className="text-xs text-fg-2">
-        SJ dianggap sudah diterima bila salah satu baris sumbernya berisi nama aktif di daftar ini (tanpa beda huruf besar/kecil dan
-        spasi berlebih; tanpa pencocokan mirip). Perubahan langsung memengaruhi status, acuan, dan rata-rata.
+        Saat upload, hanya baris dengan Receiver aktif di daftar ini yang disimpan (tanpa beda huruf besar/kecil dan spasi
+        berlebih; tanpa pencocokan mirip). Menonaktifkan Receiver membuat SJ yang diterimanya kembali &ldquo;Belum diterima&rdquo;; menambah
+        Receiver berlaku untuk upload berikutnya.
       </p>
       {!s.ds.data && <p className="text-sm text-fg-2">Memuat daftar Receiver…</p>}
       <ul className="divide-y divide-line/50 text-sm">
@@ -405,10 +374,10 @@ function ReceiverSettings({ s }: { s: SjState }) {
             <p><b>{pending.label}:</b> {pending.name.trim().replace(/\s+/g, " ")}</p>
             <p className="font-medium">Dampak pada data saat ini:</p>
             <ul className="list-disc pl-5">
-              <li>{n(impact?.statusChanged ?? 0)} SJ berubah status (Sudah ↔ Belum diterima)</li>
-              <li>{n(impact?.refChanged ?? 0)} SJ berubah acuan penerimaan (Receiver / Receive Date / durasi)</li>
+              <li>{n(impact?.statusChanged ?? 0)} SJ berubah status (Sudah ↔ Belum diterima) pada data tersimpan</li>
             </ul>
-            <p className="text-xs text-fg-2">Riwayat baris sumber tidak diubah atau dihapus. Perubahan dicatat di jejak perubahan.</p>
+            <p className="text-xs text-fg-2">Data penerimaan tersimpan tidak diubah atau dihapus; Receiver baru berlaku untuk upload
+              berikutnya. Perubahan dicatat di jejak perubahan.</p>
           </div>
         )}
       </Modal>
