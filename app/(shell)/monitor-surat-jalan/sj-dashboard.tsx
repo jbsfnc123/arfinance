@@ -94,22 +94,22 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className={`${card} overflow-hidden`}>
-          <h2 className="px-4 pt-3 text-sm font-medium">Per Receiver (penerimaan acuan)</h2>
+          <h2 className="px-4 pt-3 text-sm font-medium">Per Marketing</h2>
           <TableBox bare fill={false} maxHeight="max-h-[50vh]" className="mt-2">
             <table className="w-full text-sm tabular-nums">
-              <thead><tr className="border-b border-line"><th className={th}>Receiver</th><th className={`${th} text-right`}>SJ</th><th className={`${th} text-right`}>Rata-rata</th><th className={`${th} text-right`}>Sampel</th></tr></thead>
+              <thead><tr className="border-b border-line"><th className={th}>Marketing</th><th className={`${th} text-right`}>SJ</th><th className={`${th} text-right`}>Sudah</th><th className={`${th} text-right`}>Belum</th><th className={`${th} text-right`}>% Sudah</th><th className={`${th} text-right`}>Rata-rata</th></tr></thead>
               <tbody>
-                {sum.byReceiver.map((r) => (
-                  <tr key={r.receiver} className="border-b border-line/50">
-                    <td className={td}>{r.receiver}</td><td className={`${td} text-right`}>{n(r.count)}</td>
-                    <td className={`${td} text-right`}>{fmtAvg(r.avg)}</td><td className={`${td} text-right`}>{n(r.sample)}</td>
+                {sum.byMarketing.map((m) => (
+                  <tr key={m.marketing} className="border-b border-line/50">
+                    <td className={td}>{m.marketing}</td><td className={`${td} text-right`}>{n(m.total)}</td><td className={`${td} text-right`}>{n(m.done)}</td>
+                    <td className={`${td} text-right`}>{n(m.open)}</td><td className={`${td} text-right`}>{pct1(m.pct)}</td><td className={`${td} text-right`}>{fmtAvg(m.avg)}</td>
                   </tr>
                 ))}
-                {!sum.byReceiver.length && <tr><td className={emptyTd} colSpan={4}>Belum ada SJ yang diterima.</td></tr>}
+                {!sum.byMarketing.length && <tr><td className={emptyTd} colSpan={6}>Tidak ada SJ pada periode ini.</td></tr>}
               </tbody>
-              {sum.byReceiver.length > 0 && (
-                <tfoot><tr className="font-medium"><td className={td}>Semua (rata-rata seluruh SJ)</td><td className={`${td} text-right`}>{n(sum.done)}</td>
-                  <td className={`${td} text-right`}>{fmtAvg(sum.avg)}</td><td className={`${td} text-right`}>{n(sum.sample)}</td></tr></tfoot>
+              {sum.byMarketing.length > 0 && (
+                <tfoot><tr className="font-medium"><td className={td}>Semua</td><td className={`${td} text-right`}>{n(sum.total)}</td><td className={`${td} text-right`}>{n(sum.done)}</td>
+                  <td className={`${td} text-right`}>{n(sum.open)}</td><td className={`${td} text-right`}>{pct1(sum.pct)}</td><td className={`${td} text-right`}>{fmtAvg(sum.avg)}</td></tr></tfoot>
               )}
             </table>
           </TableBox>
@@ -132,31 +132,6 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
           </TableBox>
         </section>
       </div>
-
-      <section className={`${card} overflow-hidden`}>
-        <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
-          <h2 className="text-sm font-medium">10 SJ belum diterima terlama</h2>
-          {sum.open > 0 && <button type="button" className="ml-auto text-xs text-accent underline" onClick={() => openKk({ quick: "open" })}>Semua yang belum diterima ({n(sum.open)})</button>}
-        </div>
-        <TableBox bare fill={false} maxHeight="max-h-[50vh]" className="mt-2">
-          <table className="w-full text-sm tabular-nums">
-            <thead><tr className="border-b border-line"><th className={th}>SJ No.</th><th className={th}>Invoice Date</th><th className={th}>Area</th><th className={th}>Business Partner</th><th className={`${th} text-right`}>Umur</th></tr></thead>
-            <tbody>
-              {sum.topOpen.map((r) => (
-                <tr key={r.sj_key} className="border-b border-line/50">
-                  <td className={td}>
-                    <button type="button" className="text-accent underline" onClick={() => openKk({ focus: r.sj_key })} aria-label={`Buka ${r.sj_no} di Kertas Kerja`}>{r.sj_no}</button>
-                  </td>
-                  <td className={td}>{fmtDate(r.invoice_date)}</td><td className={td}>{r.area}</td>
-                  <td className={`${td} max-w-[18rem] truncate`} title={r.business_partner ?? ""}>{r.business_partner}</td>
-                  <td className={`${td} text-right`}>{n(r.umur!)} hari</td>
-                </tr>
-              ))}
-              {!sum.topOpen.length && <tr><td className={emptyTd} colSpan={5}>Semua SJ pada periode ini sudah diterima.</td></tr>}
-            </tbody>
-          </table>
-        </TableBox>
-      </section>
     </div>
   );
 }

@@ -13,10 +13,12 @@ const WAIT = "bg-warning/20 text-warning";
 
 const COLS: LCol<SjRow>[] = [
   { k: "sj_no", l: "SJ No." },
-  { k: "invoice_date", l: "Invoice Date", d: true },
   { k: "invoice_no", l: "Invoice No", text: (r) => (r.invoices > 1 ? `${r.invoice_no ?? ""} (+${r.invoices - 1})` : r.invoice_no ?? "") },
+  { k: "invoice_date", l: "Invoice Date", d: true },
   { k: "business_partner", l: "Business Partner", w: 240 },
   { k: "area", l: "Area" },
+  { k: "marketing", l: "Marketing" },
+  { k: "payment_group", l: "Payment Group" },
   { k: "status", l: "Status", badge: { [STATUS_DONE]: OK, [STATUS_OPEN]: WAIT } },
   { k: "receiver", l: "Receiver" },
   { k: "receive_date", l: "Receive Date", d: true },
@@ -60,13 +62,12 @@ export function SjWorksheet({ s, quick, setQuick, focus, setFocus }: {
           </div>
         </>
       )}
-      <LocalTable title="Kertas Kerja Surat Jalan" hideKey="sj-kk2" stateKey="sj-kk2" rows={rows} cols={COLS} rowKey={(r) => r.sj_key}
+      <LocalTable title="Kertas Kerja Surat Jalan" hideKey="sj-kk3" stateKey="sj-kk3" defaultHidden={["area", "marketing", "payment_group", "durasi", "umur", "flag_text"]} rows={rows} cols={COLS} rowKey={(r) => r.sj_key}
         loading={s.loading} defaultSort={{ k: "invoice_date", dir: -1 }}
-        search={["sj_no", "invoice_no", "business_partner", "area", "receiver", "flag_text"]}
+        search={["sj_no", "invoice_no", "business_partner", "area", "marketing", "payment_group", "receiver", "flag_text"]}
         filters={[
           { k: "status", l: "Status", options: [STATUS_DONE, STATUS_OPEN] },
           { k: "receiver", l: "Receiver", options: receivers },
-          { k: "area", l: "Area", options: s.areas },
         ]}
         emptyText="Tidak ada SJ yang cocok dengan filter." />
     </div>

@@ -10,7 +10,10 @@
 //   Durasi = Receive Date − Invoice Date (hari kalender); negatif / tanggal masa depan → masalah data, keluar dari
 //   rata-rata (tidak dijadikan 0). Umur belum diterima = hari ini (Asia/Jakarta) − Invoice Date.
 
-export type SjAging = { sj_key: string; invoice_date: string | null; invoice_no: string | null; business_partner: string | null; area: string | null; invoices: number };
+export type SjAging = {
+  sj_key: string; invoice_date: string | null; invoice_no: string | null; business_partner: string | null; area: string | null; invoices: number;
+  marketing?: string | null; payment_group?: string | null;
+};
 export type SjReceipt = { sj_key: string; sj_no: string; receive_date: string; receiver: string; file_name: string | null; recorded_at: string };
 export type SjReceiver = { id: number; name: string; active: boolean };
 
@@ -25,7 +28,7 @@ export const FLAG = {
 
 export type SjRow = {
   sj_key: string; sj_no: string; invoice_date: string | null; invoice_no: string | null; invoices: number;
-  business_partner: string | null; area: string | null;
+  business_partner: string | null; area: string | null; marketing: string; payment_group: string;
   status: typeof STATUS_DONE | typeof STATUS_OPEN;
   receiver: string | null; receive_date: string | null;
   durasi: number | null; umur: number | null; flags: string[]; flag_text: string; perlu_cek: boolean;
@@ -62,7 +65,7 @@ export function buildRows(
     } else if (!ok && tgl && !future(tgl)) umur = daysBetween(tgl, today);
     return {
       sj_key: a.sj_key, sj_no: rc?.sj_no ?? a.sj_key, invoice_date: tgl, invoice_no: a.invoice_no, invoices: a.invoices,
-      business_partner: a.business_partner, area: a.area,
+      business_partner: a.business_partner, area: a.area, marketing: a.marketing ?? "", payment_group: a.payment_group ?? "",
       status: ok ? STATUS_DONE : STATUS_OPEN, receiver: ok ? names.get(normName(rc!.receiver)) ?? rc!.receiver : null, receive_date: ok ? rc!.receive_date : null,
       durasi, umur, flags, flag_text: flags.join(", "), perlu_cek: flags.length > 0,
     };
@@ -70,12 +73,28 @@ export function buildRows(
 }
 
 // ── Filter bersama (Dashboard & Kertas Kerja) ─────────────────────────
-export type SjFilter = { from: string; to: string; area: string };
+export type SjFilter = { from: string; to: string; marketing: string; pg: string };
+const inPeriod = (r: SjRow, f: SjFilter) =>
+  (!f.from || (r.invoice_date !== null && r.invoice_date >= f.from)) && (!f.to || (r.invoice_date !== null && r.invoice_date <= f.to));
 export function filterRows(rows: readonly SjRow[], f: SjFilter): SjRow[] {
-  return rows.filter((r) =>
-    (!f.from || (r.invoice_date !== null && r.invoice_date >= f.from)) &&
-    (!f.to || (r.invoice_date !== null && r.invoice_date <= f.to)) &&
-    (!f.area || r.area === f.area));
+  return rows.filter((r) => inPeriod(r, f) && (!f.marketing || r.marketing === f.marketing) && (!f.pg || r.payment_group === f.pg));
+}
+
+/**
+ * Opsi filter dinamis: Marketing dihitung dari baris yang lolos periode + Payment Group terpilih, dan sebaliknya
+ * (dengan jumlah SJ). Pilihan aktif tetap ada walau jumlahnya 0 agar bisa dikosongkan.
+ */
+export function filterChoices(rows: readonly SjRow[], f: SjFilter) {
+  const count = (pick: (r: SjRow) => string, keep: (r: SjRow) => boolean, active: string) => {
+    const m = new Map<string, number>();
+    for (const r of rows) if (inPeriod(r, f) && keep(r)) { const v = pick(r); if (v) m.set(v, (m.get(v) ?? 0) + 1); }
+    if (active && !m.has(active)) m.set(active, 0);
+    return [...m].sort((a, b) => a[0].localeCompare(b[0], "id")).map(([value, n]) => ({ value, n }));
+  };
+  return {
+    marketing: count((r) => r.marketing, (r) => !f.pg || r.payment_group === f.pg, f.marketing),
+    pg: count((r) => r.payment_group, (r) => !f.marketing || r.marketing === f.marketing, f.pg),
+  };
 }
 
 /** Periode bawaan: bulan Invoice Date terbaru (yang tidak di masa depan). */
@@ -99,13 +118,25 @@ export type SjSummary = {
   quality: { dateIssues: number; noInvoiceDate: number; inactive: number };
   trend: { date: string; done: number; open: number }[];
   ageBuckets: { label: string; count: number }[];
-  byReceiver: { receiver: string; count: number; avg: number | null; sample: number }[];
+  byMarketing: { marketing: string; total: number; done: number; open: number; pct: number; avg: number | null }[];
   byArea: { area: string; total: number; done: number; open: number; pct: number; avg: number | null }[];
-  topOpen: SjRow[];
 };
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 const r1 = (v: number | null) => (v === null ? null : Math.round(v * 10) / 10);
+
+/** Rekap per kelompok (Marketing / Area): total, sudah, belum, % sudah, rata-rata durasi. Urut total terbesar. */
+function group(rows: readonly SjRow[], key: (r: SjRow) => string) {
+  const m = new Map<string, { total: number; done: number; durs: number[] }>();
+  for (const r of rows) {
+    const k = key(r);
+    const g = m.get(k) ?? { total: 0, done: 0, durs: [] };
+    g.total++; if (r.status === STATUS_DONE) { g.done++; if (r.durasi !== null) g.durs.push(r.durasi); }
+    m.set(k, g);
+  }
+  return [...m].map(([k, g]) => [k, { total: g.total, done: g.done, open: g.total - g.done, pct: (g.done / g.total) * 100, avg: r1(mean(g.durs)) }] as const)
+    .sort((a, b) => b[1].total - a[1].total);
+}
 
 /** Ringkasan dari baris hasil filter yang sama dengan Kertas Kerja. */
 export function summarize(rows: readonly SjRow[]): SjSummary {
@@ -119,20 +150,6 @@ export function summarize(rows: readonly SjRow[]): SjSummary {
     if (r.status === STATUS_DONE) t.done++; else t.open++;
     trendMap.set(r.invoice_date, t);
   }
-  const recMap = new Map<string, { count: number; durs: number[] }>();
-  for (const r of done) {
-    const k = r.receiver ?? "-";
-    const m = recMap.get(k) ?? { count: 0, durs: [] };
-    m.count++; if (r.durasi !== null) m.durs.push(r.durasi);
-    recMap.set(k, m);
-  }
-  const areaMap = new Map<string, { total: number; done: number; durs: number[] }>();
-  for (const r of rows) {
-    const k = r.area || "(tanpa Area)";
-    const a = areaMap.get(k) ?? { total: 0, done: 0, durs: [] };
-    a.total++; if (r.status === STATUS_DONE) { a.done++; if (r.durasi !== null) a.durs.push(r.durasi); }
-    areaMap.set(k, a);
-  }
   const openSorted = open.filter((r) => r.umur !== null).sort((a, b) => b.umur! - a.umur! || a.sj_no.localeCompare(b.sj_no));
   return {
     total: rows.length, done: done.length, open: open.length, pct: rows.length ? (done.length / rows.length) * 100 : null,
@@ -144,10 +161,8 @@ export function summarize(rows: readonly SjRow[]): SjSummary {
     },
     trend: [...trendMap].sort(([a], [b]) => a.localeCompare(b)).map(([date, t]) => ({ date, ...t })),
     ageBuckets: AGE_BUCKETS.map((b) => ({ label: b.label, count: open.filter((r) => r.umur !== null && r.umur >= b.min && r.umur <= b.max).length })),
-    byReceiver: [...recMap].map(([receiver, m]) => ({ receiver, count: m.count, avg: r1(mean(m.durs)), sample: m.durs.length })).sort((a, b) => b.count - a.count),
-    byArea: [...areaMap].map(([area, a]) => ({ area, total: a.total, done: a.done, open: a.total - a.done, pct: (a.done / a.total) * 100, avg: r1(mean(a.durs)) }))
-      .sort((a, b) => b.total - a.total),
-    topOpen: openSorted.slice(0, 10),
+    byMarketing: group(rows, (r) => r.marketing || "(tanpa Marketing)").map(([marketing, a]) => ({ marketing, ...a })),
+    byArea: group(rows, (r) => r.area || "(tanpa Area)").map(([area, a]) => ({ area, ...a })),
   };
 }
 
