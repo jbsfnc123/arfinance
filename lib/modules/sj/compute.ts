@@ -3,7 +3,7 @@
 // Model (keputusan user 2026-10-01):
 // - Daftar yang dipantau = semua No SJ di Aging terbaru (No SJ gabungan "SJ/a-SJ/b" dipecah; server: sj_aging_keys).
 // - Per SJ hanya disimpan Receive Date & Receiver (tabel sj_receipts); upload berikutnya hanya mengisi SJ yang belum punya
-//   Receive Date. SJ yang keluar dari aging terbaru → penerimaannya dihapus (trigger server).
+//   Receive Date. SJ yang keluar dari aging terbaru → penerimaannya masuk daftar Pembersihan Data (Fase 48, manual).
 // - Receiver diakui = nama aktif di daftar (trim + spasi tunggal + tanpa beda kapital, tanpa fuzzy). Filter berlaku saat
 //   upload DAN saat menampilkan: penerimaan oleh Receiver yang kemudian dinonaktifkan dihitung Belum diterima.
 // - Tanggal awal = Invoice Date aging (terkecil bila satu SJ punya beberapa invoice).

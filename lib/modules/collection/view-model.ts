@@ -1,6 +1,7 @@
 import { agingOf, AGING_BUCKETS, type AgingBucket } from "./aging";
 import { fmtDate, monthKey } from "@/lib/format";
 import { compareCells } from "@/lib/local/table";
+import { splitSj } from "./revision";
 
 // Logika tampilan halaman Collection, di-port dari Aplikasi Utama/Script.html
 // (renderCollAgingCards, rekap tukar/jatuh tempo, rowPassesOtherFilters, kategori).
@@ -34,6 +35,8 @@ export type CollectionRow = {
   ket_tukar: string;      // keterangan sumber tukar faktur (internal)
   resi: string;
   foto_path: string | null;
+  receive_sj: string;            // Receive Date SJ dari Monitor Surat Jalan (teks tampil)
+  receive_sj_date: string | null; // tanggal terakhir yang diterima (untuk urut)
   // turunan
   days: number | null;
   aging: AgingBucket;
@@ -64,6 +67,8 @@ export function enrichRow(r: RawRow, today: string): CollectionRow {
     ket_tukar: r.keterangan_tukar ?? "",
     resi: r.resi ?? "",
     foto_path: r.foto_path,
+    receive_sj: "",
+    receive_sj_date: null,
     days,
     aging: bucket,
     search: "",
@@ -94,11 +99,33 @@ export function applyExchange(
   });
 }
 
+// ── Receive Date SJ (Monitor Surat Jalan) ──────────────────────────
+/**
+ * Receive Date untuk No SJ invoice. No SJ gabungan ("SJ/a-SJ/b") dipecah: tampil tanggal TERAKHIR yang diterima; bila
+ * baru sebagian SJ diterima, ditandai "(sebagian x/y)".
+ */
+export function receiveSjOf(noSj: string, received: ReadonlyMap<string, string>): { text: string; date: string | null } {
+  const keys = splitSj(noSj);
+  if (!keys.length) return { text: "", date: null };
+  const dates = keys.map((k) => received.get(k)).filter((d): d is string => !!d);
+  if (!dates.length) return { text: "", date: null };
+  const last = dates.reduce((a, b) => (b > a ? b : a));
+  return { text: dates.length < keys.length ? `${fmtDate(last)} (sebagian ${dates.length}/${keys.length})` : fmtDate(last), date: last };
+}
+
+export function withReceive(rows: CollectionRow[], received: ReadonlyMap<string, string>): CollectionRow[] {
+  if (!received.size) return rows;
+  return rows.map((r) => {
+    const { text, date } = receiveSjOf(r.no_sj, received);
+    return text === r.receive_sj ? r : withSearch({ ...r, receive_sj: text, receive_sj_date: date });
+  });
+}
+
 // ── Kolom tabel ─────────────────────────────────────────────────────
 export type ColumnKey =
   | "payment_group" | "marketing" | "business_partner" | "invoice_no" | "invoice_date" | "due_date"
   | "janji_bayar" | "aging" | "open_amt" | "bp_value" | "no_po" | "no_sj"
-  | "tanggal_tukar" | "metode_tukar" | "status_tukar" | "keterangan" | "no_resi";
+  | "receive_sj" | "tanggal_tukar" | "metode_tukar" | "status_tukar" | "keterangan" | "no_resi";
 
 export const COLUMN_DEFS: { key: ColumnKey; label: string; default?: boolean; money?: boolean }[] = [
   { key: "payment_group", label: "Payment Group" },
@@ -107,16 +134,17 @@ export const COLUMN_DEFS: { key: ColumnKey; label: string; default?: boolean; mo
   { key: "invoice_no", label: "No Invoice", default: true },
   { key: "invoice_date", label: "Invoice Date", default: true },
   { key: "due_date", label: "Due Date", default: true },
-  { key: "janji_bayar", label: "Janji Bayar", default: true },
-  { key: "aging", label: "Aging", default: true },
+  { key: "janji_bayar", label: "Janji Bayar" },
+  { key: "aging", label: "Aging" },
   { key: "open_amt", label: "Nominal", default: true, money: true },
   { key: "bp_value", label: "Value" },
   { key: "no_po", label: "No PO" },
   { key: "no_sj", label: "No SJ" },
-  { key: "tanggal_tukar", label: "Tgl Tukar Faktur" },
+  { key: "receive_sj", label: "Receive Date SJ" },
+  { key: "keterangan", label: "Keterangan", default: true },
+  { key: "tanggal_tukar", label: "Tgl Tukar Faktur", default: true },
   { key: "metode_tukar", label: "Metode Tukar Faktur" },
   { key: "status_tukar", label: "Status Tukar Faktur" },
-  { key: "keterangan", label: "Keterangan", default: true },
   { key: "no_resi", label: "No Resi (Ekspedisi)" },
 ];
 
@@ -130,6 +158,7 @@ const DATE_KEYS = new Set<ColumnKey>(["invoice_date", "due_date", "janji_bayar",
 function sortValue(r: CollectionRow, k: ColumnKey): unknown {
   if (k === "open_amt") return r.open_amt;
   if (k === "aging") return r.days;
+  if (k === "receive_sj") return r.receive_sj_date;
   if (DATE_KEYS.has(k)) return r[k as "invoice_date" | "due_date" | "janji_bayar" | "tanggal_tukar"];
   return cellText(r, k);
 }

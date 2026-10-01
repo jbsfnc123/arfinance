@@ -9,7 +9,7 @@ import { arOf, collectionRowsOf } from "@/lib/local/derived";
 import { setRemarks, useRemarks } from "@/lib/modules/remarks";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, rupiah } from "@/lib/format";
-import {
+import { withReceive,
   applyExchange, DEFAULT_COLUMNS, EMPTY_FILTERS, filterRows, sortRows, withSearch,
   type CollectionRow, type CollectionSort, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
@@ -38,6 +38,7 @@ export function CollectionView(props: {
   const aging = useDataset("aging");
   const activity = useDataset("activity");
   const settings = useDataset("settings");
+  const sjReceive = useDataset("sjReceive");
   const remarks = useRemarks();
   // Pengaturan (template WA, waktu update) dari dataset lokal — halaman server tanpa query tambahan.
   const lastUpdate = (settings.data?.last_tagihan_update as string | undefined) ?? aging.data?.uploadedAt ?? null;
@@ -59,8 +60,12 @@ export function CollectionView(props: {
   const [selection, setSelection] = useViewState<string[]>(`collection:${coll}:sel`, []);
 
   // Hitungan dibagi antar halaman (lib/local/derived): tidak diulang saat kembali ke menu ini.
-  const base = useMemo(() => (coll && activity.data ? collectionRowsOf(ar, activity.data, remarks.map, coll, todayJakarta()) : []),
+  const plain = useMemo(() => (coll && activity.data ? collectionRowsOf(ar, activity.data, remarks.map, coll, todayJakarta()) : []),
     [ar, activity.data, coll, remarks.map]);
+  // Kolom Receive Date SJ dari Monitor Surat Jalan (kosong bila data penerimaan belum ada / tidak berhak).
+  const received = useMemo(() => new Map((sjReceive.data?.rows ?? []).map((x) => [x.sj_key, x.receive_date])), [sjReceive.data]);
+  const base = useMemo(() => withReceive(plain, received), [plain, received]);
+  const [wrap, setWrap] = useViewState("collection:wrap", false);
 
   const [overrides, setOverrides] = useState<{ base: CollectionRow[]; map: Map<string, CollectionRow> }>({ base, map: new Map() });
   if (overrides.base !== base) setOverrides({ base, map: new Map() }); // data versi baru → override lama dibuang
@@ -179,6 +184,8 @@ export function CollectionView(props: {
         columns={columns}
         setColumns={setColumns}
         shown={filtered.length}
+        wrap={wrap}
+        setWrap={setWrap}
       />
 
       <RowsTable
@@ -186,6 +193,7 @@ export function CollectionView(props: {
         scrollKey={`collection:${coll}:scroll`}
         rows={sorted}
         columns={columns}
+        wrap={wrap}
         loading={loading}
         sort={activeSort}
         onSort={(k) => setSort(activeSort?.k === k ? (activeSort.dir === 1 ? { k, dir: -1 } : null) : { k, dir: 1 })}

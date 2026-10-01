@@ -1,4 +1,5 @@
-// Pembersihan database (Fase 47) — katalog kategori. Kunci HARUS sama dengan private.cleanup_candidates (migrasi 0046).
+// Pembersihan database (Fase 47; Fase 48: semua penghapusan MANUAL, tidak ada lagi hapus otomatis saat upload Aging) —
+// katalog kategori. Kunci HARUS sama dengan private.cleanup_candidates (migrasi 0046).
 // group "aging"  = data yang relasinya ke Aging terbaru (invoice/SJ sudah lunas / tidak ada lagi di aging).
 // group "teknis" = sisa proses (staging upload gagal, log).
 // group "arsip"  = data riwayat berbasis umur: hanya baris SEBELUM tanggal batas (cutoff) yang menjadi kandidat.
@@ -8,17 +9,19 @@ export type CleanupCategory = { key: string; label: string; desc: string; group:
 
 export const CLEANUP_CATEGORIES: readonly CleanupCategory[] = [
   { key: "keterangan", group: "aging", usesCutoff: false, label: "Keterangan invoice",
-    desc: "Keterangan (Collection, Mitra10, RKM, Hold, impor lama) untuk SJ/invoice yang tidak ada di Aging terbaru. Biasanya terhapus otomatis." },
+    desc: "Keterangan (Collection, Mitra10, RKM, Hold, impor lama) untuk SJ/invoice yang tidak ada di Aging terbaru." },
   { key: "tukar_ekspedisi", group: "aging", usesCutoff: false, label: "Tukar Faktur & Ekspedisi",
-    desc: "Status tukar faktur (Kolektor, Ekspedisi/resi, WA, Email) untuk invoice yang sudah lunas. Biasanya terhapus otomatis." },
+    desc: "Status tukar faktur (Kolektor, Ekspedisi/resi, WA, Email) untuk invoice yang sudah lunas." },
   { key: "laporan_kolektor", group: "aging", usesCutoff: false, label: "Laporan harian kolektor",
-    desc: "Hasil kunjungan kolektor (Done/Pending) untuk invoice yang sudah lunas. Biasanya terhapus otomatis." },
+    desc: "Hasil kunjungan kolektor (Done/Pending) untuk invoice yang sudah lunas." },
   { key: "jadwal_kolektor", group: "aging", usesCutoff: false, label: "Jadwal kolektor",
     desc: "Jadwal tukar faktur yang invoicenya sudah tidak ada di Aging." },
   { key: "catatan", group: "aging", usesCutoff: false, label: "Catatan collection",
     desc: "Catatan (Reminder, No Respon, Case, Administratif) untuk invoice yang sudah lunas." },
   { key: "janji_bayar", group: "aging", usesCutoff: false, label: "Janji bayar", desc: "Janji bayar untuk invoice yang sudah lunas." },
   { key: "hold_faktur", group: "aging", usesCutoff: false, label: "Hold faktur pajak", desc: "Hold faktur pajak untuk invoice yang sudah lunas." },
+  { key: "penerimaan_sj", group: "aging", usesCutoff: false, label: "Penerimaan SJ (Monitor SJ)",
+    desc: "Receive Date & Receiver Monitor Surat Jalan untuk No SJ yang tidak ada lagi di Aging terbaru." },
   { key: "staging_upload", group: "teknis", usesCutoff: false, label: "Upload terbengkalai",
     desc: "Upload (Aging/ERP/Target) yang gagal atau ditinggal > 1 hari dan tidak pernah tersimpan. Aman dihapus." },
   { key: "riwayat_upload", group: "teknis", usesCutoff: true, label: "Riwayat upload",
