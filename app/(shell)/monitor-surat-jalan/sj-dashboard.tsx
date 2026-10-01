@@ -51,18 +51,18 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
       <p className="text-sm text-fg-2">{periodText(s)}</p>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Kpi label="Total SJ unik" value={n(sum.total)} sub={`${n(sum.quality.sourceRows)} baris sumber`} />
+        <Kpi label="SJ di Aging" value={n(sum.total)} sub="No SJ unik (gabungan dipecah)" />
         <Kpi label={STATUS_DONE} value={n(sum.done)} sub={pct1(sum.pct)} />
         <Kpi label={STATUS_OPEN} value={n(sum.open)} sub={sum.total ? pct1(100 - (sum.pct ?? 0)) : "—"}
           onClick={sum.open ? () => openKk({ quick: "open" }) : undefined} />
         <Kpi label="Rata-rata waktu penerimaan" value={fmtAvg(sum.avg)} strong
           sub={`${n(sum.sample)} SJ dihitung${sum.excluded ? ` · ${n(sum.excluded)} dikecualikan (tanggal bermasalah)` : ""}`} />
-        <Kpi label="Belum diterima terlama" value={oldest ? `${n(oldest.umur!)} hari` : "—"} sub={oldest ? `${oldest.sj_no} · ${fmtDate(oldest.tanggal_sj)}` : "Tidak ada"}
+        <Kpi label="Belum diterima terlama" value={oldest ? `${n(oldest.umur!)} hari` : "—"} sub={oldest ? `${oldest.sj_no} · ${fmtDate(oldest.invoice_date)}` : "Tidak ada"}
           onClick={oldest ? () => openKk({ focus: oldest.sj_key }) : undefined} />
       </div>
       <p className="text-xs text-fg-2">
-        Rata-rata waktu penerimaan = Receive Date penerimaan pertama yang diakui − Tanggal SJ (hari kalender), satu nilai per SJ.
-        Durasi negatif, tanggal masa depan, dan Receive Date kosong tidak dihitung.
+        Rata-rata waktu penerimaan = Receive Date tersimpan (Receiver yang diakui) − Invoice Date di Aging (hari kalender), satu
+        nilai per SJ. Durasi negatif dan tanggal masa depan tidak dihitung. Umur belum diterima = hari ini − Invoice Date.
       </p>
 
       <section className={`${card} p-4`}>
@@ -71,16 +71,16 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
           <button type="button" className="ml-auto text-xs text-accent underline" onClick={() => openKk({ quick: "cek" })}>Lihat SJ yang perlu diperiksa</button>
         </div>
         <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <Line k="Laporan penerimaan ganda" v={sum.quality.multi} />
-          <Line k="Hanya Receiver di luar daftar" v={sum.quality.onlyOther} />
-          <Line k="Masalah tanggal" v={sum.quality.dateIssues} />
-          <Line k="Baris sumber → SJ unik" v={`${n(sum.quality.sourceRows)} → ${n(sum.quality.unique)}`} />
+          <Line k="Masalah tanggal (negatif / masa depan)" v={sum.quality.dateIssues} />
+          <Line k="Invoice Date kosong" v={sum.quality.noInvoiceDate} />
+          <Line k="Receiver tidak aktif lagi" v={sum.quality.inactive} />
+          <Line k="Penerimaan tersimpan (semua periode)" v={s.ds.data?.receipts.length ?? 0} />
         </dl>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <section className={`${card} p-4`}>
-          <h2 className="text-sm font-medium">Tren {trend[0]?.weekly ? "mingguan" : "harian"} per Tanggal SJ</h2>
+          <h2 className="text-sm font-medium">Tren {trend[0]?.weekly ? "mingguan" : "harian"} per Invoice Date</h2>
           {trend.length ? <Chart height={280} option={trendOpt} /> : <p className="py-10 text-center text-sm text-fg-2">Tidak ada SJ pada periode ini.</p>}
         </section>
         <section className={`${card} p-4`}>
@@ -140,14 +140,14 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
         </div>
         <TableBox bare fill={false} maxHeight="max-h-[50vh]" className="mt-2">
           <table className="w-full text-sm tabular-nums">
-            <thead><tr className="border-b border-line"><th className={th}>SJ No.</th><th className={th}>Tanggal SJ</th><th className={th}>Area</th><th className={th}>Business Partner</th><th className={`${th} text-right`}>Umur</th></tr></thead>
+            <thead><tr className="border-b border-line"><th className={th}>SJ No.</th><th className={th}>Invoice Date</th><th className={th}>Area</th><th className={th}>Business Partner</th><th className={`${th} text-right`}>Umur</th></tr></thead>
             <tbody>
               {sum.topOpen.map((r) => (
                 <tr key={r.sj_key} className="border-b border-line/50">
                   <td className={td}>
                     <button type="button" className="text-accent underline" onClick={() => openKk({ focus: r.sj_key })} aria-label={`Buka ${r.sj_no} di Kertas Kerja`}>{r.sj_no}</button>
                   </td>
-                  <td className={td}>{fmtDate(r.tanggal_sj)}</td><td className={td}>{r.area}</td>
+                  <td className={td}>{fmtDate(r.invoice_date)}</td><td className={td}>{r.area}</td>
                   <td className={`${td} max-w-[18rem] truncate`} title={r.business_partner ?? ""}>{r.business_partner}</td>
                   <td className={`${td} text-right`}>{n(r.umur!)} hari</td>
                 </tr>
