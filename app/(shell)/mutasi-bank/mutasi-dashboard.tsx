@@ -7,6 +7,8 @@ import { mutasiRaw } from "@/lib/modules/mutasi/compute";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel, rupiah } from "@/lib/format";
 import { buildMutasi, type MutasiRaw } from "@/lib/modules/mutasi/dashboard";
+import { allocationOf } from "@/lib/modules/mutasi/allocation";
+import { AllocationFlow } from "./allocation-flow";
 import { Chart } from "@/components/chart";
 import { chartTheme, seriesColors } from "@/lib/ui/palette";
 import { useResolvedTheme } from "@/lib/ui/prefs";
@@ -29,6 +31,9 @@ export function MutasiDashboard() {
   [month, today, mutasi.data, erp.data, targets.data]);
 
   const v = raw ? buildMutasi(raw, today) : null;
+  const alloc = useMemo(() => (mutasi.data && erp.data && targets.data
+    ? allocationOf({ month, mutasi: mutasi.data, erp: erp.data, targets: targets.data.targets }) : null),
+  [month, mutasi.data, erp.data, targets.data]);
   const theme = useResolvedTheme();
   const sc = seriesColors(theme), ct = chartTheme();
   const days = v?.daily.map((d) => String(Number(d.date.slice(8)))) ?? [];
@@ -50,6 +55,8 @@ export function MutasiDashboard() {
           {(raw?.months?.length ? raw.months : [month]).map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
       </div>
+
+      {alloc && <AllocationFlow a={alloc} />}
 
       {v && raw && (
         <>
