@@ -10,7 +10,7 @@ import { Modal } from "@/components/modal";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { Icon } from "@/components/icons";
 
-export type Contact = { business_partner: string; nama: string | null; no_wa: string };
+export type Contact = { id?: number; business_partner: string; nama: string | null; no_wa: string; kode_bp?: string | null };
 
 export const NOTE_CATEGORIES = ["Janji Bayar", "Reminder", "No Respon", "Case", "Administratif"] as const;
 
@@ -135,7 +135,7 @@ export function ContactsModal(props: {
   onSave: (list: Contact[]) => Promise<boolean>;
 }) {
   const [q, setQ] = useState("");
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState<Contact>({ business_partner: "", nama: "", no_wa: "" });
   const [batch, setBatch] = useState<Contact[] | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -143,7 +143,7 @@ export function ContactsModal(props: {
   const list = useMemo(() => {
     const needle = q.toLowerCase();
     return props.contacts
-      .filter((c) => `${c.nama ?? ""} ${c.business_partner} ${c.no_wa}`.toLowerCase().includes(needle))
+      .filter((c) => `${c.nama ?? ""} ${c.business_partner} ${c.no_wa} ${c.kode_bp ?? ""}`.toLowerCase().includes(needle))
       .sort((a, b) => Number(b.business_partner === props.firstBp) - Number(a.business_partner === props.firstBp));
   }, [props.contacts, props.firstBp, q]);
 
@@ -189,8 +189,8 @@ export function ContactsModal(props: {
 
       <ul className="mt-3 divide-y divide-line">
         {(showAll ? list : list.slice(0, 200)).map((c) => (
-          <li key={c.business_partner} className="py-2">
-            {editing === c.business_partner ? (
+          <li key={c.id ?? `${c.business_partner}|${c.no_wa}`} className="py-2">
+            {editing !== null && editing === c.id ? (
               <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2">
                 <input value={draft.nama ?? ""} onChange={(e) => setDraft({ ...draft, nama: e.target.value })} placeholder="Nama" className={inputCls} />
                 <input value={draft.no_wa} onChange={(e) => setDraft({ ...draft, no_wa: e.target.value })} placeholder="No WA" className={inputCls} />
@@ -208,9 +208,9 @@ export function ContactsModal(props: {
               <div className="flex items-center gap-2">
                 <button type="button" className="min-w-0 flex-1 text-left" onClick={() => { props.onPick(c.no_wa); props.onClose(); }}>
                   <div className="truncate text-sm">{c.nama || c.business_partner}</div>
-                  <div className="truncate text-xs text-fg-2">{c.business_partner} · {c.no_wa}</div>
+                  <div className="truncate text-xs text-fg-2">{c.business_partner}{c.kode_bp ? ` (${c.kode_bp})` : ""} · {c.no_wa}</div>
                 </button>
-                <button type="button" className="text-fg-2 hover:text-fg" onClick={() => { setEditing(c.business_partner); setDraft(c); }} aria-label="Ubah kontak">
+                <button type="button" className="text-fg-2 hover:text-fg" onClick={() => { setEditing(c.id ?? null); setDraft(c); }} aria-label="Ubah kontak">
                   <Icon name="edit" size={20} />
                 </button>
               </div>

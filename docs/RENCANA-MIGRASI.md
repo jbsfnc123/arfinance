@@ -970,3 +970,33 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   riwayat dihapus), Upload: pratinjau cocok aging / sudah ada / akan disimpan → satu RPC → hasil server.
 - File contoh (pratinjau saja): 13.240 SJ dengan penerimaan diakui → 9.532 cocok aging terbaru (akan disimpan), 3.708 tidak
   ada di aging. Model di produksi dibiarkan **kosong**; data uji Playwright dihapus.
+
+
+## Siklus data, impor Database Lama & Pembersihan (Fase 47, 2026-10-01)
+- **Arsitektur relasi**: Aging terbaru (`ar_aging_snapshots` order by month desc) adalah acuan "data hidup". Tabel
+  operasional diikat ke Aging lewat kunci alami (tanpa FK, karena aging diganti tiap upload):
+  invoice (`upper(trim(invoice_no))`) → `invoice_exchanges`, `courier_updates`, `courier_schedules`, `notes`,
+  `payment_promises`, `tax_invoice_holds`; ref keterangan (`remark_ref(no_sj, invoice_no)`) → `invoice_remarks`;
+  No SJ (dipecah) → `sj_receipts` (Fase 46). Helper: `private.aging_latest_id()`, `aging_invoice_keys()`, `aging_remark_refs()`.
+- **Tidak permanen** (keputusan user): Keterangan, Tukar Faktur & Ekspedisi, laporan harian kolektor dihapus otomatis
+  oleh trigger `ephemeral_after_aging` (AFTER INSERT `ar_aging_lines`, seperti `sj_after_aging`) → `prune_ephemeral`.
+  **Pengaman**: bila satu upload akan menghapus > 30% (dan > 20 baris) → ditahan di `private.cleanup_hold`, muncul sebagai
+  banner di halaman Pembersihan; Super Admin menjalankan `cleanup_run_pending()`. Aging kosong → tidak menghapus apa pun.
+- **Kontak**: `contacts` kini `id` PK + `kode_bp`, beberapa orang/nomor per BP (unik per BP + digit No WA), simpan lewat
+  RPC `contacts_save` (ber-id = ubah, tanpa id = tambah/gabung). Collection: nomor otomatis = kontak pertama BP. Permanen.
+- **Pembersihan manual** (Finance › Database, khusus Super Admin): `cleanup_overview(cutoff)`, `cleanup_preview`,
+  `cleanup_delete(category, keys, cutoff)` (server hanya menghapus key yang MASIH memenuhi syarat), audit `cleanup_log`.
+  Kategori (`lib/modules/cleanup.ts`, tes memastikan sama dengan SQL): keterangan / tukar & ekspedisi / laporan kolektor /
+  jadwal kolektor / catatan / janji bayar / hold faktur (di luar aging); upload terbengkalai (> 1 hari), riwayat upload &
+  log login (sebelum tanggal batas); pembayaran ERP, invoice ERP (di luar aging & tanpa pembayaran setelah batas), mutasi
+  bank (sebelum tanggal batas). Ringkasan ±2,5 dtk.
+- **Migrasi** `0046_data_lifecycle` (produksi, setelah PGlite 26/26; data eksisting 100% masih di aging → tidak ada yang
+  terhapus saat penerapan). Rollback: `supabase/rollback/0046_data_lifecycle_down.sql`. Backup JSON tabel terdampak
+  disimpan di luar repo sebelum migrasi.
+- **Impor `Inject Database Lama.xlsx`** (fungsi sementara service-role, dihapus setelah dipakai; data tidak di-commit):
+  hanya data yang invoice/SJ-nya ada di Aging terbaru, tanpa menimpa data yang ada, dedup per invoice:
+  Keterangan 13 dari 51 (38 sudah lunas, tidak disimpan sesuai aturan), Tukar Faktur 1.782 invoice → `invoice_exchanges`
+  Kolektor + `courier_updates` (Done, kode & kurir), Ekspedisi 403 invoice (resi 12 digit utuh), Kontak 85 dari 87
+  (2 nomor ganda untuk BP yang sama), 82 BP, 15 Kode BP.
+- Catatan: 2 upload ERP terbengkalai (28.060 baris, ±28 MB staging, 30/09/2026) tampil di kategori "Upload terbengkalai"
+  untuk dihapus Super Admin bila sudah tidak diperlukan.
