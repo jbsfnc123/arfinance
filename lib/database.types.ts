@@ -64,6 +64,8 @@ export type Database = {
       contacts: {
         Row: {
           business_partner: string
+          id: number
+          kode_bp: string | null
           nama: string | null
           no_wa: string
           updated_at: string
@@ -71,6 +73,7 @@ export type Database = {
         }
         Insert: {
           business_partner: string
+          kode_bp?: string | null
           nama?: string | null
           no_wa: string
           updated_at?: string
@@ -78,6 +81,7 @@ export type Database = {
         }
         Update: {
           business_partner?: string
+          kode_bp?: string | null
           nama?: string | null
           no_wa?: string
           updated_at?: string

@@ -5,6 +5,7 @@ import { fmtTimestamp } from "@/lib/format";
 import { card, emptyTd, td, th } from "@/components/ui";
 import { fmtBytes, QUOTA, quotaState, SUPABASE_PLAN, SUPABASE_USAGE_URL, type UsageReport } from "@/lib/modules/usage";
 import { TableBox } from "@/components/table-box";
+import { CleanupSection } from "./cleanup";
 
 // Pengganti modal "Database" (peta arsitektur) di aplikasi lama: isi tabel & riwayat import.
 // Fase 7: laporan ERP disimpan sekali di tabel inti; menu lain membaca lewat view.
@@ -16,8 +17,10 @@ const TABLES = [
   { table: "ar_targets", desc: "Target bulanan → Dashboard Controller & Mutasi" },
   { table: "notes", desc: "Catatan collection (Reminder, No Respon, Case, Administratif)" },
   { table: "payment_promises", desc: "Janji bayar" },
-  { table: "invoice_exchanges", desc: "Tukar faktur (Kolektor, Ekspedisi, Sistem, WA, Email)" },
-  { table: "contacts", desc: "Kontak WA per Business Partner" },
+  { table: "invoice_exchanges", desc: "Tukar faktur (Kolektor, Ekspedisi, Sistem, WA, Email) — tidak permanen" },
+  { table: "invoice_remarks", desc: "Keterangan invoice bersama (tidak permanen: hilang bila SJ/invoice keluar dari Aging)" },
+  { table: "courier_updates", desc: "Laporan harian kolektor (tidak permanen)" },
+  { table: "contacts", desc: "Kontak WA per Business Partner (bisa beberapa orang per BP, permanen)" },
   { table: "deck_derived", desc: "Agregat Presentasi per bulan (dihitung ulang dari tabel inti)" },
   { table: "profiles", desc: "Akun (login PIN)" },
   { table: "roles", desc: "Role & jenis akses" },
@@ -48,6 +51,8 @@ export default async function DatabasePage() {
       </div>
 
       {usage ? <UsageSection u={usage as unknown as UsageReport} /> : null}
+
+      <CleanupSection />
 
       <section className={`${card} overflow-hidden`}>
         <table className="w-full text-sm">

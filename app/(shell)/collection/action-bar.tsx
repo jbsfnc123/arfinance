@@ -42,7 +42,7 @@ export function ActionBar(props: {
   const loadContacts = useCallback(async () => {
     const out: Contact[] = [];
     for (let from = 0; ; from += 1000) {
-      const { data, error } = await supabase.from("contacts").select("business_partner, nama, no_wa").order("business_partner").range(from, from + 999);
+      const { data, error } = await supabase.from("contacts").select("id, business_partner, nama, no_wa, kode_bp").order("business_partner").order("id").range(from, from + 999);
       if (error || !data) break;
       out.push(...data);
       if (data.length < 1000) break;
@@ -55,7 +55,12 @@ export function ActionBar(props: {
     setDeviceTpl(readDeviceTemplate());
   }, [loadContacts]);
 
-  const byBp = useMemo(() => new Map(contacts.map((c) => [c.business_partner, c.no_wa])), [contacts]);
+  // Beberapa kontak per BP (Fase 47): nomor otomatis = kontak pertama BP tersebut.
+  const byBp = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of contacts) if (!m.has(c.business_partner)) m.set(c.business_partner, c.no_wa);
+    return m;
+  }, [contacts]);
   const firstBp = selected[0]?.business_partner ?? "";
   // Nomor WA otomatis dari kontak BP pertama, kecuali pengguna mengetik/memilih sendiri.
   const phone = manualPhone ?? byBp.get(firstBp) ?? "";
@@ -68,17 +73,12 @@ export function ActionBar(props: {
     props.clear();
   }
 
+  // Simpan lewat RPC contacts_save: baris ber-id diubah; tanpa id ditambah (nomor yang sama untuk BP yang sama = ubah).
   async function upsertContacts(list: Contact[]) {
-    const withName = list.filter((c) => c.nama?.trim());
-    const noName = list.filter((c) => !c.nama?.trim()).map(({ business_partner, no_wa }) => ({ business_partner, no_wa }));
-    const now = new Date().toISOString();
-    for (const part of [withName, noName]) {
-      if (!part.length) continue;
-      const { error } = await supabase.from("contacts").upsert(part.map((c) => ({ ...c, updated_at: now })), { onConflict: "business_partner" });
-      if (error) {
-        toast(`Gagal menyimpan kontak: ${error.message}`, "danger");
-        return false;
-      }
+    const { error } = await supabase.rpc("contacts_save" as never, { p_rows: list } as never);
+    if (error) {
+      toast(`Gagal menyimpan kontak: ${error.message}`, "danger");
+      return false;
     }
     await loadContacts();
     return true;
