@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
-import { useDataset } from "@/lib/local/store";
-import { arOf, spvSummaryOf } from "@/lib/local/derived";
+import { useCollectionPeriod } from "./use-period";
+import { ClosingControls } from "./closing-controls";
+import { closingReport } from "@/lib/modules/collection/closing";
 import { allocationSeries, reconcileCollected } from "@/lib/modules/collection/reconcile";
 import { DataTableModal, type TableSpec } from "@/components/data-table-modal";
 import { todayJakarta } from "@/lib/parsers/date";
@@ -19,34 +20,19 @@ import { Skeleton, SkeletonChart } from "@/components/skeleton";
 import { useViewState } from "@/lib/ui/view-state";
 import { Icon } from "@/components/icons";
 
-// Dashboard Collection — halaman referensi desain Fase 39. Hanya lapisan tampilan yang berubah: semua angka tetap
-// dihitung di browser oleh spvSummaryOf / allocationSeries / reconcileCollected (tidak disentuh).
+// Periode Open membaca sumber terikat; Closed memakai snapshot dan evaluator versi 1.
 export function DashboardView() {
   const [picked, setMonth] = useViewState<string | null>("dash-coll:month", null);
-  const aging = useDataset("aging");
-  const targets = useDataset("targets");
-  const activity = useDataset("activity");
-  const settings = useDataset("settings");
-  const erp = useDataset("erp");
-  // Bulan target dari dataset lokal (tanpa query server); default bulan berjalan atau target terbaru.
-  const months = useMemo(() => [...new Set((targets.data?.targets ?? []).map((t) => t.month))].sort().reverse(), [targets.data]);
   const current = todayJakarta().slice(0, 7);
-  const month = picked ?? (months.includes(current) ? current : months[0] ?? current);
-  // Ringkasan dihitung di browser (port get_spv_summary), dibagi antar halaman lewat memo global.
-  const data: SpvSummary | null = useMemo(() => {
-    if (!aging.data || !targets.data || !activity.data) return null;
-    const lastUpd = (settings.data?.last_tagihan_update as string | undefined) ?? aging.data.uploadedAt;
-    return spvSummaryOf(month, todayJakarta(), targets.data, arOf(aging.data.lines, settings.data ?? null), activity.data, lastUpd, aging.data.lines);
-  }, [month, aging.data, targets.data, activity.data, settings.data]);
-  // Alokasi Target & rekonsiliasi dari pembayaran ERP (data Mutasi vs Realisasi).
-  const alloc = useMemo(() => (targets.data && erp.data
-    ? allocationSeries({ month, today: todayJakarta(), targets: targets.data.targets, payments: erp.data.payments }) : null),
-  [month, targets.data, erp.data]);
-  const recon = useMemo(() => (targets.data && erp.data && aging.data
-    ? reconcileCollected({ month, targets: targets.data.targets, agingAll: aging.data.lines, payments: erp.data.payments }) : null),
-  [month, targets.data, erp.data, aging.data]);
-  const loading = !data || aging.loading || targets.loading;
-  const reload = () => { void aging.reload(); void targets.reload(); void activity.reload(); };
+  const month = picked ?? current;
+  const period = useCollectionPeriod(month);
+  const months = period.data?.months ?? [month];
+  const report = useMemo(() => period.data ? closingReport(period.data.source) : null, [period.data]);
+  const data = report?.data ?? null;
+  const alloc = report?.alloc ?? null;
+  const recon = report?.recon ?? null;
+  const loading = period.loading;
+  const reload = () => { void period.reload(); };
   const noData = !data && !loading;
 
   return (
@@ -70,6 +56,9 @@ export function DashboardView() {
           </button>
         </div>
       </header>
+
+      {period.data && <ClosingControls key={`${month}:${period.data.revision}:${period.data.status}`} period={period.data} onChange={period.reload} />}
+      {period.error && <p role="alert" className="mt-4 text-sm text-danger">Gagal memuat periode: {period.error}</p>}
 
       {noData ? (
         <EmptyState icon="monitoring" title="Tidak ada data" hint="Belum ada data aging/target untuk ditampilkan. Upload lewat Pengaturan → Pusat Upload Data." />
