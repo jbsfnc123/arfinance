@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { readAllSheets, readFirstSheetRows } from "@/lib/xlsx-client";
 import { parseGrCsv, parseKwCsv, parseSchedule } from "@/lib/modules/m10/parse";
-import { runUpload } from "@/lib/uploads/run";
+import { AgingPeriodFields } from "@/components/aging-period-fields";
 import { todayJakarta } from "@/lib/parsers/date";
+import { runUpload } from "@/lib/uploads/run";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls } from "@/components/ui";
 
@@ -18,6 +19,8 @@ const KW_USER_KEY = "m10.kwUsername";
 export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
+  const [agingMonth,setAgingMonth]=useState(todayJakarta().slice(0,7));
+  const [agingDate,setAgingDate]=useState("");
   const [busy, setBusy] = useState<Kind | null>(null);
   const [taxName, setTaxName] = useState("");
   // Username terakhir disimpan per browser (dulu sel A1 sheet KW Update).
@@ -37,7 +40,7 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
       let msg = "";
       if (kind === "aging") {
         // Laporan aging bersama: disimpan sekali, dipakai Collection, Mitra10, Presentasi.
-        const r = await runUpload(supabase, "aging", file, await readAllSheets(file));
+        const r = await runUpload(supabase, "aging", file, await readAllSheets(file), {month:agingMonth,reportDate:agingDate});
         msg = r.message;
       } else if (kind === "gr") {
         const { rows, lines, sjCount } = parseGrCsv(await file.text(), Number(todayJakarta().slice(0, 4)));
@@ -92,6 +95,7 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
           <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={inputCls} placeholder="Filter Tax Name" />
           <button type="button" className={btnGhost} onClick={saveTax}>Simpan</button>
         </div>
+        <AgingPeriodFields month={agingMonth} date={agingDate} onMonth={setAgingMonth} onDate={setAgingDate} disabled={busy!==null} />
         {fileInput("aging", ".xls,.xlsx,.xlsm,.xlsb")}
       </div>
 
