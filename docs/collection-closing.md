@@ -12,7 +12,7 @@ A period initially uses current Aging until explicitly bound by an upload. After
 
 ## Data and invariants
 
-- `collection_periods`: state, revision and compact Aging projection used by the period. Keep the projection on close so reopening and correcting target membership can resolve invoices without using today's Aging.
+- `collection_periods`: state, revision and Aging binding. Open periods keep a small snapshot reference; the referenced raw snapshot is exempt from retention. Closing copies the compact full projection so reopening and correcting target membership remain independent of raw snapshot retention.
 - `collection_closings`: immutable revision, cut-off, authoritative database source, preview checksum, actor and timestamp. Only target-related Aging lines/replacements, target rows, aggregated payments and dashboard activity fields are included. No original spreadsheet is copied.
 - `collection_closing_log`: append-only close/reopen reason and actor.
 - `ar_aging_snapshots.report_date`: explicitly supplied date; NULL denotes legacy inference.
@@ -28,6 +28,8 @@ Closed dashboard reads do not depend on the retention of original Aging snapshot
 `npm test` includes a PGlite/Postgres integration suite applying the migration over copies of the actual production upload functions. Cases cover stale previews, idempotent retry, target protection, upload rollback, September/October isolation, ERP and activity corrections, Aging retention, role checks, immutable history, reopening, multi-SJ revisions, and 9,000 targets / 22,000 Aging lines. PGlite is single-connection: these tests cover ordered interleavings, not a multi-session stress test.
 
 Browser verification uses the actual Dashboard/Closing components and RPC SQL through a local PGlite adapter with synthetic data, without production credentials. It covers confirmation, refresh, month switching, history XLSX, reopen/reclose, and narrow dark-theme layout. XLSX totals are compared with the displayed report. Run `npx tsc --noEmit`, `npm run lint`, and `npm run build` before deployment.
+
+Dashboard Collection caches each period in IndexedDB by user and database version. It checks the small version table on entry, avoids repeated report fetches on focus/interval, and deduplicates simultaneous requests. Closed periods depend only on the closing version, while Open periods also track Aging, targets, ERP, activity and settings. Manual Refresh bypasses the cache.
 
 ## Release and recovery
 
