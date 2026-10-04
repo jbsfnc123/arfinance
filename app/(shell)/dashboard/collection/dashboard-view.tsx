@@ -57,7 +57,7 @@ export function DashboardView() {
         </div>
       </header>
 
-      {period.data && <ClosingControls key={`${month}:${period.data.revision}:${period.data.status}`} period={period.data} onChange={period.reload} />}
+      {period.data && !period.loading && <ClosingControls key={`${month}:${period.data.revision}:${period.data.status}`} period={period.data} onChange={period.reload} />}
       {period.error && <p role="alert" className="mt-4 text-sm text-danger">Gagal memuat periode: {period.error}</p>}
 
       {noData ? (

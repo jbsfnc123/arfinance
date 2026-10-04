@@ -31,29 +31,41 @@ async function evict() {
 }
 
 export type CachedResult<T> = { data: T; fromCache: boolean; token: string; at: number };
+const pending = new Map<string, Promise<CachedResult<unknown>>>();
 
 export async function cachedQuery<T>(
   supabase: SupabaseClient<Database>,
-  opt: { key: string; deps: readonly DatasetKey[]; load: () => Promise<T>; force?: boolean },
+  opt: { key: string; deps: readonly DatasetKey[]; load: () => Promise<T>; force?: boolean; depsFor?: (data: T) => readonly DatasetKey[] },
 ): Promise<CachedResult<T>> {
   const k = `${await userId(supabase)}:${opt.key}`;
-  const token = await getToken(supabase, opt.deps);
+  const hit = !opt.force ? await idbGet<T>(k) : null;
+  const checkedDeps = hit && opt.depsFor ? opt.depsFor(hit.data) : opt.deps;
+  const token = await getToken(supabase, checkedDeps, !!opt.force);
   if (!opt.force) {
-    const hit = await idbGet<T>(k);
     if (hit && hit.token === token) {
       void idbTouch(k, 0);
       return { data: hit.data, fromCache: true, token, at: hit.at };
     }
   }
-  const data = await opt.load();
-  const at = Date.now();
-  let size = 0;
-  try { size = JSON.stringify(data)?.length ?? 0; } catch { size = MAX_ENTRY + 1; }
-  if (size <= MAX_ENTRY) {
-    await idbPut(k, { token, data, at }, size);
-    void evict();
-  }
-  return { data, fromCache: false, token, at };
+  const pendingKey = `${k}:${token}`;
+  const existing = pending.get(pendingKey);
+  if (existing) return existing as Promise<CachedResult<T>>;
+  const request = (async (): Promise<CachedResult<T>> => {
+    const data = await opt.load();
+    const afterDeps = opt.depsFor?.(data) ?? opt.deps;
+    const sameDeps = afterDeps.length === checkedDeps.length && afterDeps.every((d,i) => d === checkedDeps[i]);
+    const savedToken = sameDeps ? token : await getToken(supabase, afterDeps, true);
+    const at = Date.now();
+    let size = 0;
+    try { size = JSON.stringify(data)?.length ?? 0; } catch { size = MAX_ENTRY + 1; }
+    if (size <= MAX_ENTRY) {
+      await idbPut(k, { token: savedToken, data, at }, size);
+      void evict();
+    }
+    return { data, fromCache: false, token: savedToken, at };
+  })().finally(() => { pending.delete(pendingKey); });
+  pending.set(pendingKey, request);
+  return request;
 }
 
 // Hook: tampilkan data cache segera (stale-while-revalidate), perbarui bila token berubah,
@@ -62,13 +74,15 @@ export function useCachedQuery<T>(
   key: string | null,
   deps: readonly DatasetKey[],
   load: () => Promise<T>,
-  opts: { live?: boolean } = {},
+  opts: { live?: boolean; depsFor?: (data: T) => readonly DatasetKey[] } = {},
 ) {
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState<{ key: string | null; data: T | null; fromCache: boolean; at: number | null; error: Error | null; loading: boolean }>(
     { key: null, data: null, fromCache: false, at: null, error: null, loading: true });
   const loadRef = useRef(load);
+  const depsForRef = useRef(opts.depsFor);
   useEffect(() => { loadRef.current = load; });
+  useEffect(() => { depsForRef.current = opts.depsFor; });
   const depsKey = deps.join(",");
   const [nonce, setNonce] = useState(0);
   const forceRef = useRef(false);
@@ -88,7 +102,7 @@ export function useCachedQuery<T>(
         const stale = await idbGet<T>(`${s.session?.user.id ?? "anon"}:${key}`);
         if (stale && !cancelled) setState((p) => (p.data ? p : { ...p, data: stale.data, fromCache: true, at: stale.at }));
       }
-      const res = await cachedQuery(supabase, { key, deps: depsKey.split(",") as DatasetKey[], load: () => loadRef.current(), force });
+      const res = await cachedQuery(supabase, { key, deps: depsKey.split(",") as DatasetKey[], depsFor: (data) => depsForRef.current?.(data) ?? depsKey.split(",") as DatasetKey[], load: () => loadRef.current(), force });
       if (!cancelled) setState({ key, data: res.data, fromCache: res.fromCache, at: res.at, error: null, loading: false });
     })().catch((e: Error) => { if (!cancelled) setState((p) => ({ ...p, error: e, loading: false })); });
     return () => { cancelled = true; };
@@ -96,7 +110,7 @@ export function useCachedQuery<T>(
 
   useEffect(() => {
     if (opts.live === false || !key) return;
-    const deps = new Set(depsKey.split(","));
+    const deps = new Set(state.data && opts.depsFor ? opts.depsFor(state.data) : depsKey.split(","));
     let t: ReturnType<typeof setTimeout> | undefined;
     const off = onVersionChange((k) => {
       if (!deps.has(k)) return;
@@ -104,7 +118,7 @@ export function useCachedQuery<T>(
       t = setTimeout(() => setNonce((n) => n + 1), 1500);
     });
     return () => { off(); clearTimeout(t); };
-  }, [key, depsKey, opts.live]);
+  }, [key, depsKey, opts.live, opts.depsFor, state.data]);
 
   const reload = useCallback((force = true) => { forceRef.current = force; setNonce((n) => n + 1); }, []);
   return { data: state.data, fromCache: state.fromCache, at: state.at, error: state.error, loading: state.loading, reload };

@@ -8,7 +8,7 @@ import { downloadXlsxSheets } from "@/lib/xlsx-client";
 import { Modal } from "@/components/modal";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
 
-export function ClosingControls({period,onChange}:{period:CollectionPeriod;onChange:()=>Promise<void>}) {
+export function ClosingControls({period,onChange}:{period:CollectionPeriod;onChange:()=>void|Promise<void>}) {
   const [mode,setMode]=useState<"preview"|"history"|"reopen"|null>(null);
   const [preview,setPreview]=useState<ClosingPreview|null>(null);
   const [busy,setBusy]=useState(false), [error,setError]=useState("");

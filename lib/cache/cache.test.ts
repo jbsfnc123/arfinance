@@ -49,4 +49,26 @@ describe("cache bertoken versi", () => {
     const again = await cachedQuery(fakeSupabase({ aging: "t9" }), { key: "big", deps: ["aging"], load });
     expect(again.fromCache).toBe(false);
   }, 10000);
+
+  it("periode Closed memakai cache saat Aging Oktober berubah, lalu menyegarkan saat versi closing berubah", async () => {
+    const v = { aging: "a1", collection_closing: "c1" };
+    const load = vi.fn(async () => ({ status: "closed" as const, revision: 1 }));
+    const depsFor = (data: { status: "closed" | "open" }) => data.status === "closed" ? ["collection_closing"] as const : ["aging", "collection_closing"] as const;
+    const opt = { key: "collection-period:2026-09", deps: ["aging", "collection_closing"] as const, depsFor, load };
+    await cachedQuery(fakeSupabase(v), opt);
+    await later();
+    v.aging = "a2";
+    expect((await cachedQuery(fakeSupabase(v), opt)).fromCache).toBe(true);
+    await later();
+    v.collection_closing = "c2";
+    expect((await cachedQuery(fakeSupabase(v), opt)).fromCache).toBe(false);
+    expect(load).toHaveBeenCalledTimes(2);
+  }, 12000);
+
+  it("dua pemasangan dashboard serentak hanya memuat satu laporan", async () => {
+    const load = vi.fn(async () => ({ status: "open" }));
+    const opt = { key: "collection-period:2026-10", deps: ["aging"] as const, load };
+    await Promise.all([cachedQuery(fakeSupabase({aging:"v1"}), opt),cachedQuery(fakeSupabase({aging:"v1"}), opt)]);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
 });

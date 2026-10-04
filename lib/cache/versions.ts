@@ -4,7 +4,7 @@ import type { Database } from "@/lib/database.types";
 // Token versi dataset (tabel data_versions, dinaikkan trigger di database setiap ada
 // upload/perubahan). Satu request ringan menggantikan query data yang berat.
 export type DatasetKey =
-  | "aging" | "erp" | "targets" | "activity" | "mutasi" | "m10" | "rkm" | "settings" | "deck" | "tukar" | "faktur" | "cekharga" | "remarks" | "row_marks" | "sj";
+  | "aging" | "erp" | "targets" | "activity" | "collection_closing" | "mutasi" | "m10" | "rkm" | "settings" | "deck" | "tukar" | "faktur" | "cekharga" | "remarks" | "row_marks" | "sj";
 
 const MEMO_MS = 2000;
 let memo: { at: number; map: Map<string, string> } | null = null;
@@ -35,9 +35,9 @@ export function makeToken(map: Map<string, string>, deps: readonly string[]) {
   return deps.map((k) => `${k}@${map.get(k) ?? "-"}`).join("|");
 }
 
-export async function getToken(supabase: SupabaseClient<Database>, deps: readonly string[]) {
+export async function getToken(supabase: SupabaseClient<Database>, deps: readonly string[], fresh = false) {
   subscribe(supabase);
-  if (!memo || Date.now() - memo.at > MEMO_MS) {
+  if (fresh || !memo || Date.now() - memo.at > MEMO_MS) {
     inflight ??= fetchAll(supabase).finally(() => { inflight = null; });
     memo = { at: Date.now(), map: await inflight };
   }

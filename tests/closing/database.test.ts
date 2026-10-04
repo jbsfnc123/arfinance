@@ -21,6 +21,7 @@ beforeAll(async()=>{
  await db.exec(readFileSync("tests/closing/production-functions.sql","utf8"));
  await db.exec(readFileSync("supabase/migrations/20261004095247_collection_monthly_closing.sql","utf8"));
  await db.exec(readFileSync("supabase/migrations/20261004151000_collection_source_payment_join.sql","utf8"));
+ await db.exec(readFileSync("supabase/migrations/20261004154911_collection_aging_upload_reference.sql","utf8"));
  await db.exec(`insert into ar_targets values('2026-09','INV1',1000,'M','C','BP','2026-09-10','JKT','SJ/1/XXVI/TRA'),('2026-10','INV1',600,'M','C','BP','2026-09-10','JKT','SJ/1/XXVI/TRA');
  insert into erp_payments values('INV1','2026-09-15',400),('OTHER','2026-09-15',50);
  insert into payment_promises values(1,'INV1','2026-09-28');`);
@@ -56,7 +57,13 @@ describe("database closing with actual production upload functions",()=>{
  it("October upload, late ERP correction, aging cleanup and promises cannot alter September",async()=>{
   const frozen=await get();const before=closingReport(frozen.source);
   await upload('2026-10','2026-10-01',200);
+  const pointer=await value<{data:{snapshotId:number;lines?:unknown[]}}>("select aging_data data from collection_periods where month='2026-10'");
+  expect(pointer.data.snapshotId).toBeTruthy();expect(pointer.data.lines).toBeUndefined();
   await db.exec("update erp_payments set amount=999; update payment_promises set promise_date='2026-11-30'; delete from ar_aging_snapshots where month='2026-09';");
+  expect((await get('2026-10')).source.aging?.asOf).toBe('2026-10-01');
+  await db.exec("insert into ar_aging_snapshots(month,as_of,file_name) values('2026-07','2026-07-31','July'),('2026-08','2026-08-31','August'); insert into collection_periods(month,aging_data) values('2026-07',jsonb_build_object('snapshotId',(select id from ar_aging_snapshots where month='2026-07')));");
+  await upload('2026-10','2026-10-01',200);
+  expect((await value<{n:number}>("select count(*)::int n from ar_aging_snapshots where month='2026-07'")).n).toBe(1);
   expect((await get('2026-10')).source.aging?.asOf).toBe('2026-10-01');
   expect(closingReport((await get()).source)).toEqual(before);
   expect((await get()).source).toEqual(frozen.source);
@@ -94,7 +101,7 @@ describe("database closing with actual production upload functions",()=>{
   expect(closingReport(first).alloc.totalAllocT).toBe(400);
   await db.exec(readFileSync("supabase/migrations/20261004151000_collection_source_payment_join.sql","utf8"));
  await db.exec(`insert into ar_targets values('2026-07','OLD',2000,'M','C','BP','2026-07-10','JKT','SJ/A-SJ/B');
-    insert into ar_aging_snapshots(month,as_of,file_name,report_date) values('2026-07','2026-07-31','July','2026-07-31');
+    insert into ar_aging_snapshots(month,as_of,file_name,report_date) values('2026-07','2026-07-31','July','2026-07-31') on conflict (month) do update set report_date=excluded.report_date;
     insert into ar_aging_lines(snapshot_id,line_no,invoice_no,no_sj,open_amt,due_date)
     select id,1,'NEW','SJ/A-SJ/B',500,'2026-07-10'::date from ar_aging_snapshots where month='2026-07';
     update collection_periods set aging_data=private.collection_aging((select id from ar_aging_snapshots where month='2026-07')) where month='2026-07';`);
