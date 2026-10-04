@@ -20,6 +20,7 @@ beforeAll(async()=>{
  await db.exec(readFileSync("tests/closing/schema.sql","utf8"));
  await db.exec(readFileSync("tests/closing/production-functions.sql","utf8"));
  await db.exec(readFileSync("supabase/migrations/20261004095247_collection_monthly_closing.sql","utf8"));
+ await db.exec(readFileSync("supabase/migrations/20261004151000_collection_source_payment_join.sql","utf8"));
  await db.exec(`insert into ar_targets values('2026-09','INV1',1000,'M','C','BP','2026-09-10','JKT','SJ/1/XXVI/TRA'),('2026-10','INV1',600,'M','C','BP','2026-09-10','JKT','SJ/1/XXVI/TRA');
  insert into erp_payments values('INV1','2026-09-15',400),('OTHER','2026-09-15',50);
  insert into payment_promises values(1,'INV1','2026-09-28');`);
@@ -91,7 +92,8 @@ describe("database closing with actual production upload functions",()=>{
  it("retains revision source exports and joins multi-SJ replacements without duplicate sums",async()=>{
   const first=(await value<{v:CollectionPeriod["source"]}>("select collection_closing_source('2026-09',1) v")).v;
   expect(closingReport(first).alloc.totalAllocT).toBe(400);
-  await db.exec(`insert into ar_targets values('2026-07','OLD',2000,'M','C','BP','2026-07-10','JKT','SJ/A-SJ/B');
+  await db.exec(readFileSync("supabase/migrations/20261004151000_collection_source_payment_join.sql","utf8"));
+ await db.exec(`insert into ar_targets values('2026-07','OLD',2000,'M','C','BP','2026-07-10','JKT','SJ/A-SJ/B');
     insert into ar_aging_snapshots(month,as_of,file_name,report_date) values('2026-07','2026-07-31','July','2026-07-31');
     insert into ar_aging_lines(snapshot_id,line_no,invoice_no,no_sj,open_amt,due_date)
     select id,1,'NEW','SJ/A-SJ/B',500,'2026-07-10'::date from ar_aging_snapshots where month='2026-07';
@@ -101,7 +103,8 @@ describe("database closing with actual production upload functions",()=>{
   expect(report.recon.categories.find(c=>c.category==='revisi')?.rows[0].pengganti).toBe('NEW');
  });
  it("handles monthly volume with compact source projection",async()=>{
-  await db.exec(`insert into ar_targets(month,invoice_no,target,no_sj) select '2026-06','I'||g,10000,'SJ/'||g from generate_series(1,9000) g;
+  await db.exec(readFileSync("supabase/migrations/20261004151000_collection_source_payment_join.sql","utf8"));
+ await db.exec(`insert into ar_targets(month,invoice_no,target,no_sj) select '2026-06','I'||g,10000,'SJ/'||g from generate_series(1,9000) g;
     insert into ar_aging_snapshots(month,as_of,file_name,report_date) values('2026-06','2026-06-30','June','2026-06-30');
     insert into ar_aging_lines(snapshot_id,line_no,invoice_no,no_sj,open_amt,due_date)
     select s.id,g,'I'||g,'SJ/'||g,4000,'2026-06-15'::date from ar_aging_snapshots s cross join generate_series(1,22000) g where s.month='2026-06';
