@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { rupiah, monthLabel } from "@/lib/format";
+import { todayJakarta } from "@/lib/parsers/date";
 import { parseTarget } from "@/lib/modules/collection/parse-target";
 import { parseMutasiWorkbook } from "@/lib/modules/mutasi/parse";
 import { parseAging, parseErp, type FileKind, type Sheet } from "./parse";
@@ -14,7 +15,7 @@ const months = (ms: string[]) => ms.map(monthLabel).join(", ");
 export function summarize(kind: FileKind, sheets: Sheet[]): Summary {
   if (kind === "aging") {
     const a = parseAging(sheets);
-    return `${fmtN(a.rows.length)} baris · snapshot ${monthLabel(a.month)} · total Open Amt ${rupiah(a.total)}`;
+    return `${fmtN(a.rows.length)} baris · invoice terbaru ${monthLabel(a.month)} (tanggal laporan dipilih saat upload) · total Open Amt ${rupiah(a.total)}`;
   }
   if (kind === "erp") {
     const e = parseErp(sheets);
@@ -29,10 +30,12 @@ export function summarize(kind: FileKind, sheets: Sheet[]): Summary {
 }
 
 // Simpan satu file sesuai jenisnya. Semua tombol upload (Pusat Upload & modul) lewat sini.
-export async function runUpload(supabase: SupabaseClient<Database>, kind: FileKind, file: File, sheets: Sheet[], opt: { month?: string } = {}) {
+export async function runUpload(supabase: SupabaseClient<Database>, kind: FileKind, file: File, sheets: Sheet[], opt: { month?: string; reportDate?: string } = {}) {
   if (kind === "aging") {
+    if (!opt.month || !opt.reportDate || opt.reportDate.slice(0,7)!==opt.month || opt.reportDate>todayJakarta())
+      throw new Error("Isi tanggal laporan Aging dan bulan Collection tujuan yang sesuai sebelum upload.");
     const a = parseAging(sheets);
-    const { result: r, seenAt } = await uploadShared(supabase, "aging", file, a.rows);
+    const { result: r, seenAt } = await uploadShared(supabase, "aging", file, a.rows, opt.reportDate ? { reportDate: opt.reportDate, ...(opt.month ? { collectionMonth: opt.month } : {}) } : {});
     return { seenAt, result: r, message: `Snapshot aging ${monthLabel(String(r.month))}: ${fmtN(Number(r.rows))} baris` +
       (r.current ? ` · Collection ${fmtN(Number(r.collectionRows))} invoice · Mitra10 ${fmtN(Number(r.m10Rows))} invoice (${r.m10NewInvoices} baru ke Kertas Kerja, ${r.m10Lunas} lunas)` : " · bukan bulan terbaru: disimpan sebagai snapshot sebelumnya") };
   }

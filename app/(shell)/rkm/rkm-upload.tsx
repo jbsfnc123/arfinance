@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { readAllSheets, readFirstSheetRows } from "@/lib/xlsx-client";
 import { parseRkmGr, parseRkmKw } from "@/lib/modules/rkm/parse";
+import { AgingPeriodFields } from "@/components/aging-period-fields";
+import { todayJakarta } from "@/lib/parsers/date";
 import { runUpload } from "@/lib/uploads/run";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, inputCls } from "@/components/ui";
@@ -14,6 +16,8 @@ type Kind = "aging" | "gr" | "kw";
 export function RkmUpload({ taxName: initialTax }: { taxName: string }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
+  const [agingMonth,setAgingMonth]=useState(todayJakarta().slice(0,7));
+  const [agingDate,setAgingDate]=useState("");
   const [busy, setBusy] = useState<Kind | null>(null);
   const [taxName, setTaxName] = useState(initialTax);
 
@@ -25,7 +29,7 @@ export function RkmUpload({ taxName: initialTax }: { taxName: string }) {
       let msg = "";
       if (kind === "aging") {
         // Laporan aging bersama: disimpan sekali, dipakai Collection, Mitra10, RKM, Presentasi.
-        const r = await runUpload(supabase, "aging", file, await readAllSheets(file));
+        const r = await runUpload(supabase, "aging", file, await readAllSheets(file), {month:agingMonth,reportDate:agingDate});
         msg = r.message;
       } else {
         const rows = await readFirstSheetRows(file);
@@ -66,6 +70,7 @@ export function RkmUpload({ taxName: initialTax }: { taxName: string }) {
           <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={inputCls} placeholder="Filter Tax Name" />
           <button type="button" className={btnGhost} onClick={saveTax}>Simpan</button>
         </div>
+        <AgingPeriodFields month={agingMonth} date={agingDate} onMonth={setAgingMonth} onDate={setAgingDate} disabled={busy!==null} />
         {fileInput("aging", ".xls,.xlsx,.xlsm,.xlsb")}
       </div>
 

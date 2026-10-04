@@ -1054,6 +1054,11 @@ export type Database = {
       m10_rows_delete: { Args: { p_table: string; p_ids: number[] }; Returns: number }
       mutasi_set_excluded: { Args: { p_ids: number[]; p_excluded: boolean; p_note: string }; Returns: number }
       name_login: { Args: { p_ip: string; p_name: string }; Returns: Json }
+      collection_closing_source: { Args: { p_month: string; p_revision: number }; Returns: Json }
+      collection_period_get: { Args: { p_month: string }; Returns: Json }
+      collection_closing_preview: { Args: { p_month: string; p_cutoff: string }; Returns: Json }
+      collection_close: { Args: { p_month: string; p_cutoff: string; p_token: string; p_revision: number; p_confirm_source: boolean }; Returns: number }
+      collection_reopen: { Args: { p_month: string; p_revision: number; p_reason: string }; Returns: undefined }
       upload_begin: { Args: { p_kind: string; p_file_name: string; p_sha256: string; p_meta: Json }; Returns: Json }
       upload_rows: { Args: { p_batch: string; p_offset: number; p_rows: Json }; Returns: number }
       aging_commit: { Args: { p_batch: string }; Returns: Json }
