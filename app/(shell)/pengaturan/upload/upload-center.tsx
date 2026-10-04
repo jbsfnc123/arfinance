@@ -26,6 +26,7 @@ export function UploadCenter() {
   const toast = useToast();
   const [items, setItems] = useState<Item[]>([]);
   const [month, setMonth] = useViewState("upload:month", todayJakarta().slice(0, 7));
+  const [reportDate, setReportDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState(0);
   const [over, setOver] = useState(false);
@@ -47,11 +48,14 @@ export function UploadCenter() {
   }
 
   async function process() {
+    if (hasAging && (!reportDate || reportDate.slice(0,7)!==month || reportDate>todayJakarta())) {
+      toast("Isi tanggal laporan Aging yang sesuai bulan Collection tujuan dan tidak melebihi hari ini.", "danger"); return;
+    }
     setBusy(true);
     for (const it of items.filter((x) => x.status === "baru" && x.kind && x.sheets)) {
       patch(it.file, { status: "memproses" });
       try {
-        const { message, seenAt } = await runUpload(supabase, it.kind!, it.file, it.sheets!, { month });
+        const { message, seenAt } = await runUpload(supabase, it.kind!, it.file, it.sheets!, { month, reportDate });
         patch(it.file, { status: "selesai", message: message + (seenAt ? ` · file identik pernah di-upload ${fmtTimestamp(seenAt)} (data tidak dobel)` : "") });
       } catch (e) {
         patch(it.file, { status: "gagal", error: (e as Error).message });
@@ -63,6 +67,7 @@ export function UploadCenter() {
   }
 
   const pending = items.filter((x) => x.status === "baru" && x.kind).length;
+  const hasAging = items.some((x) => x.kind === "aging" && x.status === "baru");
   const hasTarget = items.some((x) => x.kind === "target" && x.status === "baru");
 
   return (
@@ -112,13 +117,16 @@ export function UploadCenter() {
       )}
 
       <div className="flex flex-wrap items-end gap-3">
-        {hasTarget && (
+        {(hasTarget || hasAging) && (
           <label className="text-sm">
-            <span className="text-fg-2">Bulan untuk file Target</span>
-            <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} mt-1 !w-auto`} />
+            <span className="text-fg-2">Bulan Collection tujuan (Open)</span>
+            <input type="month" value={month} disabled={busy} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} mt-1 !w-auto`} />
           </label>
         )}
-        <button type="button" className={btnPrimary} disabled={!pending || busy} onClick={process}>
+        {hasAging && <label className="text-sm"><span className="text-fg-2">Tanggal posisi laporan Aging</span>
+          <input type="date" value={reportDate} max={todayJakarta()} disabled={busy} onChange={e=>setReportDate(e.target.value)} className={`${inputCls} mt-1 !w-auto`} />
+        </label>}
+        <button type="button" className={btnPrimary} disabled={!pending || busy || (hasAging && !reportDate)} onClick={process}>
           <Icon name="cloud_upload" size={20} />
           {busy ? "Memproses…" : `Proses ${pending} file${hasTarget ? ` (target ${monthLabel(month)})` : ""}`}
         </button>
