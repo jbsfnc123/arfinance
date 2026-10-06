@@ -5,6 +5,7 @@ import { currentHost } from "@/lib/workspace-server";
 import { WORKSPACES, workspaceUrl } from "@/lib/workspace";
 import { ToastProvider } from "@/components/toast";
 import { FinanceNav } from "./finance-nav";
+import { AlarmProvider, AlarmMenuButton } from "@/components/alarm/alarm-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppIcon, Icon } from "@/components/icons";
 import { workspaceIcon } from "@/lib/ui/app-icons";
@@ -17,7 +18,7 @@ export default async function FinanceLayout({ children }: LayoutProps<"/finance"
   const isSa = role.kind === "sa";
 
   return (
-    <ToastProvider>
+    <ToastProvider><AlarmProvider>
       <div className="flex min-h-screen flex-col">
         <header className="glass-soft sticky top-0 z-(--z-topbar) flex h-[var(--topbar-h)] shrink-0 items-center gap-2 border-x-0 border-t-0 px-3 text-[13px]">
           <AppIcon spec={{ ...workspaceIcon("finance"), glyph: WORKSPACES.finance.icon }} size={22} />
@@ -27,6 +28,7 @@ export default async function FinanceLayout({ children }: LayoutProps<"/finance"
               <div className="text-[13px]">{profile.display_name}</div>
               <div className="text-[11px] text-fg-2">{role.name}</div>
             </div>
+            <AlarmMenuButton className="flex items-center gap-1 rounded-lg px-2 py-1 hover:bg-fg/8" />
             <ThemeToggle />
             <form action="/auth/signout" method="post">
               <button type="submit" title="Keluar" aria-label="Keluar"
@@ -39,6 +41,6 @@ export default async function FinanceLayout({ children }: LayoutProps<"/finance"
         {isSa && <FinanceNav />}
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
-    </ToastProvider>
+    </AlarmProvider></ToastProvider>
   );
 }
