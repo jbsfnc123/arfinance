@@ -19,9 +19,13 @@ export function UploadJadwal() {
   async function pickMaster(f: File | null) {
     setMaster(null);
     if (!f) return;
-    const res = parseMasterCsv(await f.text());
-    if (!res.rows.length) return toast("Format tanggal dd/MM/yyyy tidak cocok pada kolom P, atau file kosong.", "danger");
-    setMaster({ file: f, rows: res.rows, skipped: res.skipped });
+    try {
+      const res = parseMasterCsv(await f.text());
+      if (!res.rows.length) return toast("Tidak ada invoice valid. Periksa kolom O (No Invoice) dan P (Date Invoice: dd/MM/yyyy atau dd-MM-yyyy).", "danger");
+      setMaster({ file: f, rows: res.rows, skipped: res.skipped });
+    } catch (e) {
+      toast(`Gagal membaca file master: ${(e as Error).message}`, "danger");
+    }
   }
 
   async function pickAging(f: File | null) {
@@ -59,7 +63,7 @@ export function UploadJadwal() {
       <label className="block text-sm">
         <span className="font-medium">1. Data Master Kirim (.csv)</span>
         <input type="file" accept=".csv" onChange={(e) => pickMaster(e.target.files?.[0] ?? null)} className={`${inputCls} mt-1`} />
-        <span className="mt-1 block text-xs text-fg-2">Data mulai baris 6. Kolom B = Send Date, H = Business Partner, O = No Invoice, P = Date Invoice (dd/MM/yyyy).</span>
+        <span className="mt-1 block text-xs text-fg-2">Data mulai baris 6. Kolom B = Send Date, H = Business Partner, O = No Invoice, P = Date Invoice (dd/MM/yyyy atau dd-MM-yyyy). Delimiter koma, titik koma, atau tab terdeteksi otomatis.</span>
       </label>
       <label className="block text-sm">
         <span className="font-medium">2. Data Aging (.xls / .xlsx / .csv) — opsional</span>
