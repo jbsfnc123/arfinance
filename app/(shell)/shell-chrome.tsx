@@ -8,6 +8,7 @@ import { reloadLoaded } from "@/lib/local/store";
 import { clearViewState, ensureViewOwner } from "@/lib/ui/view-state";
 import { ToastProvider, useToast } from "@/components/toast";
 import { deniedMessage } from "@/components/lock-dot";
+import { AlarmProvider } from "@/components/alarm/alarm-provider";
 import { TopBar } from "./shell/top-bar";
 import { Dock, MobileNav } from "./shell/dock";
 import { AppLauncher } from "./shell/app-launcher";
@@ -30,7 +31,7 @@ type ShellProps = {
 
 // ToastProvider membungkus seluruh shell agar Dock/Launcher/Spotlight bisa menampilkan pesan "tidak memiliki akses".
 export function ShellChrome(props: ShellProps) {
-  return <ToastProvider><ShellFrame {...props} /></ToastProvider>;
+  return <ToastProvider><AlarmProvider><ShellFrame {...props} /></AlarmProvider></ToastProvider>;
 }
 
 function ShellFrame({ title, icon, portalHref, menu, homeLocked, user, children }: ShellProps) {

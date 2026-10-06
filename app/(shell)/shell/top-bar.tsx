@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { findMenuByHref, type MenuGroup } from "@/lib/menu";
+import { AlarmMenuButton } from "@/components/alarm/alarm-provider";
 import { Popover } from "@/components/popover";
 import { toolbarBtn } from "@/components/ui";
 import { useTheme, type ThemeMode } from "@/lib/ui/prefs";
@@ -119,6 +120,7 @@ function ProfileMenu({ open, onClose, user, portalHref, signOut }: {
         </span>
       </div>
       <div className="mx-2 my-1 border-t border-hairline" />
+      <AlarmMenuButton className={item} onOpen={onClose} />
       {portalHref && <a href={portalHref} className={item}><Icon name="apps" size={17} />Ganti workspace</a>}
       <form action="/auth/signout" method="post" onSubmit={signOut}>
         <button type="submit" className={item}><Icon name="logout" size={17} />Keluar</button>
