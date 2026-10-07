@@ -11,6 +11,8 @@ import { dailyReport } from "@/lib/modules/tukar/daily-report";
 import { downloadXlsx } from "@/lib/xlsx-client";
 import { TableBox } from "@/components/table-box";
 
+const dateHeader = th.replace("text-left", "text-center");
+
 // Laporan Harian kolektor (pindahan Dashboard Tukar Faktur lama): tukar faktur Done per hari dari Aplikasi Kolektor —
 // Tanggal di kolom; invoice, BP unik, dan lokasi unik di baris. Total di kolom terakhir.
 export function LaporanHarian() {
@@ -55,9 +57,9 @@ export function LaporanHarian() {
             <caption className="sr-only">Laporan harian {monthLabel(month)} · {kurir || "Semua Kolektor"}</caption>
             <thead>
               <tr className="border-b border-line">
-                <th scope="col" className={`${th} sticky left-0 z-[2] min-w-44 bg-surface`}>Tanggal</th>
+                <th scope="col" className={`${dateHeader} sticky left-0 z-[2] min-w-44 bg-surface`}>Tanggal</th>
                 {report?.columns.map((c) => (
-                  <th key={c.day} scope="col" aria-label={`${c.day}${c.sunday ? " (Minggu)" : ""}`} className={`${th} min-w-14 text-center tabular-nums ${c.sunday ? "bg-danger/15 text-danger" : ""}`}>{c.day}</th>
+                  <th key={c.day} scope="col" aria-label={`${c.day}${c.sunday ? " (Minggu)" : ""}`} className={`${dateHeader} min-w-14 tabular-nums ${c.sunday ? "bg-danger/15 text-danger" : ""}`}>{c.day}</th>
                 ))}
                 <th scope="col" className={`${th} min-w-20 text-right`}>Total</th>
               </tr>
