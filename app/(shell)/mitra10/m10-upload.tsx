@@ -90,7 +90,7 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
     <div className="grid gap-4 md:grid-cols-2">
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">1. Update Master Aging</h2>
-        <p className="text-xs text-fg-2">File MASTER AGING / Blank_A4 — laporan yang sama dengan Update Tagihan, cukup di-upload sekali (di sini atau di Pusat Upload). Mitra10 membaca baris dengan Tax Name di bawah; No SJ baru otomatis masuk Kertas Kerja dan invoice yang hilang dari aging berstatus Lunas.</p>
+        <p className="text-xs text-fg-2">File MASTER AGING / Blank_A4 — laporan yang sama dengan Update Tagihan, cukup di-upload sekali (di sini atau di Pusat Upload). Mitra10 membaca baris dengan Tax Name di bawah; Aging terbaru menggantikan data aktif sebelumnya. Invoice yang tidak ada di Aging terbaru otomatis keluar dari dashboard dan Kertas Kerja; keterangan, tanggal tukar faktur, warna, dan data pendukung tetap tersimpan.</p>
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
           <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={inputCls} placeholder="Filter Tax Name" />
           <button type="button" className={btnGhost} onClick={saveTax}>Simpan</button>
