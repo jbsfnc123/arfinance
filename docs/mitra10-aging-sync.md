@@ -17,3 +17,13 @@ Before/after production checks: worksheet identity digest; row marks, remarks, G
 ## Recovery
 
 If necessary, restore the previous helper definition from migration 0017 to stop future updates. Keep the private audit. Do not blindly replay previous_values: subsequent uploads may already be valid. Restore a specific affected row only after checking its latest source and audit chain, in a transaction, preserving its ID and manual metadata. No data deletion or whole-table replacement is required.
+
+## Current Aging projection (follow-up)
+
+Mitra10's active worksheet and dashboard now exclude SJ absent from current Aging. Source fields are projected from the current snapshot in the shared derived-data path, so an older browser worksheet packet cannot override the latest invoice/date/balance/PO. Stable worksheet IDs and stored SJ spelling preserve annotations; receipts, schedules and shared remarks are never deleted. If an SJ reappears, its prior ID and linked metadata remain available.
+
+`pack_m10` sends only active worksheet anchors. Its cache depends on both `m10` and `aging`, including uploads that only remove invoices. Existing version-token caching remains in place; no polling or reload loop was introduced. Historical anchors remain solely for linkage, not active totals. No new table, duplicate snapshot or audit entry is needed for disappearance/reappearance.
+
+Mitra10 dashboard counts distinct invoice numbers (several SJ may share one invoice), including its daily/monthly rows; the paid-invoice summary and upload message are removed. RKM retains its existing shared dashboard behavior. The common Aging dataset already uses only one current snapshot; closed Collection snapshots and historical period references remain protected.
+
+Tests additionally cover stale browser source fields, null/zero replacements, removal-only uploads, reappearance with the same ID, retained TF dates/notes, invoice deduplication, SQL packet filtering and access checks. Apply `20261007145618_m10_current_aging_projection.sql` before or with the app release; it changes only the packet function and bumps the Mitra10 cache token once.
