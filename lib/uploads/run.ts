@@ -37,7 +37,7 @@ export async function runUpload(supabase: SupabaseClient<Database>, kind: FileKi
     const a = parseAging(sheets);
     const { result: r, seenAt } = await uploadShared(supabase, "aging", file, a.rows, opt.reportDate ? { reportDate: opt.reportDate, ...(opt.month ? { collectionMonth: opt.month } : {}) } : {});
     return { seenAt, result: r, message: `Snapshot aging ${monthLabel(String(r.month))}: ${fmtN(Number(r.rows))} baris` +
-      (r.current ? ` · Collection ${fmtN(Number(r.collectionRows))} invoice · Mitra10 ${fmtN(Number(r.m10Rows))} invoice (${r.m10NewInvoices} baru ke Kertas Kerja, ${r.m10Lunas} lunas)` : " · bukan bulan terbaru: disimpan sebagai snapshot sebelumnya") };
+      (r.current ? ` · Collection ${fmtN(Number(r.collectionRows))} invoice · Mitra10 ${fmtN(Number(r.m10Rows))} baris Aging aktif (${r.m10NewInvoices} baru ke Kertas Kerja)` : " · bukan bulan terbaru: disimpan sebagai snapshot sebelumnya") };
   }
   if (kind === "erp") {
     const e = parseErp(sheets);

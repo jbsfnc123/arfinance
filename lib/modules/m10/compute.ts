@@ -29,6 +29,26 @@ export function m10AgingLines(lines: AgingLine[], taxName: string) {
   return lines.filter((l) => (l.tax_name ?? "").trim().toLowerCase() === t);
 }
 
+// Current Aging owns every source field; worksheet rows only supply stable annotation IDs.
+// Preserve the stored SJ spelling so receiving and shared remark links remain stable.
+export function currentM10Worksheet(worksheet: Worksheet[], aging: AgingLine[]): Worksheet[] {
+  const bySj = new Map<string, AgingLine[]>();
+  for (const a of aging) {
+    const key = (a.no_sj ?? "").trim().toUpperCase();
+    if (!key || !a.invoice_no) continue;
+    (bySj.get(key) ?? bySj.set(key, []).get(key)!).push(a);
+  }
+  return worksheet.flatMap((w) => {
+    const candidates = bySj.get(w.no_sj.trim().toUpperCase()) ?? [];
+    const a = candidates.find((a) => a.invoice_no === w.invoice_no)
+      ?? (candidates.length === 1 ? candidates[0] : undefined);
+    if (!a) return [];
+    return [{ ...w, payment_group: a.payment_group, business_partner: a.business_partner,
+      invoice_no: a.invoice_no, invoice_date: a.invoice_date, due_date: a.due_date,
+      open_amt: num(a.open_amt), branch: a.branch, no_po: a.no_po }];
+  });
+}
+
 // remarks = Keterangan invoice bersama (Collection / Mitra10 / Hold Faktur Pajak).
 export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[]; aging: AgingLine[]; remarks?: Map<string, string> }) {
   const aging = input.aging; // sudah difilter Tax Name
@@ -83,7 +103,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
 
 // ── Dashboard (port m10_dashboard) ──────────────────────────────
 // Generik untuk semua modul tukar faktur (Mitra10, RKM): cukup baris Kertas Kerja dengan kolom di bawah.
-export type DashRow = Pick<WorksheetRow, "no_sj" | "invoice_date" | "open_amt" | "keterangan" | "gr" | "tukar_faktur" | "selisih" | "status" | "jadwal_bayar" | "lama_tf">;
+export type DashRow = Pick<WorksheetRow, "no_sj" | "invoice_date" | "open_amt" | "keterangan" | "gr" | "tukar_faktur" | "selisih" | "status" | "jadwal_bayar" | "lama_tf"> & { invoice_no?: string | null };
 export type DashInput = { worksheet: DashRow[]; gr: { check_status: string }[] };
 export type Stat = { invoice: number; done: number; avgLama: number | null };
 export type M10Dashboard = {
@@ -104,9 +124,11 @@ const addMonth = (ym: string, k: number) => {
 
 export function m10Dashboard(
   c: DashInput, aging: AgingLine[], schedule: Schedule[],
-  opt: { month: string | null; today: string; lastAging: string | null },
+  opt: { month: string | null; today: string; lastAging: string | null; activeInvoices?: boolean },
 ): M10Dashboard {
-  const w = c.worksheet;
+  const w = opt.activeInvoices ? c.worksheet.filter((r) => r.status === "Outstanding") : c.worksheet;
+  const count = (rows: DashRow[]) => opt.activeInvoices
+    ? new Set(rows.map((r) => r.invoice_no?.trim()).filter(Boolean)).size : rows.length;
   const months = [...new Set(w.map((r) => r.invoice_date?.slice(0, 7)).filter(Boolean) as string[])].sort();
   const month = opt.month && months.includes(opt.month) ? opt.month : months[months.length - 1] ?? opt.today.slice(0, 7);
   const cur = opt.today.slice(0, 7), prev = addMonth(cur, -1);
@@ -124,7 +146,7 @@ export function m10Dashboard(
     (byMonth.get(m) ?? byMonth.set(m, []).get(m)!).push(r);
   }
   const stat = (rs: DashRow[]): Stat => ({
-    invoice: rs.length, done: rs.filter((r) => r.tukar_faktur === "Done").length,
+    invoice: count(rs), done: count(rs.filter((r) => r.tukar_faktur === "Done")),
     avgLama: avg1(rs.map((r) => r.lama_tf).filter((x): x is number => x !== null)),
   });
 
@@ -142,23 +164,23 @@ export function m10Dashboard(
   return {
     month, months, prevMonth: prev, curMonth: cur,
     summary: {
-      total: w.length,
-      outstanding: out.length,
+      total: count(w),
+      outstanding: count(out),
       openOutstanding: out.reduce((s, r) => s + r.open_amt, 0),
-      lunas: w.length - out.length,
-      grPending: out.filter((r) => r.gr === "Pending").length,
-      siapTukar: out.filter((r) => r.gr === "Done" && r.tukar_faktur === "Pending").length,
-      tfDone: w.filter((r) => r.tukar_faktur === "Done").length,
-      selisihNonZero: w.filter((r) => r.tukar_faktur === "Done" && r.selisih !== 0).length,
-      ltkp: w.filter((r) => kt(r.keterangan) === "LTKP").length,
-      litigasi: w.filter((r) => kt(r.keterangan) === "LITIGASI").length,
-      pendingPrev: w.filter((r) => r.tukar_faktur === "Pending" && r.invoice_date?.slice(0, 7) === prev).length,
-      pendingCur: w.filter((r) => r.tukar_faktur === "Pending" && r.invoice_date?.slice(0, 7) === cur).length,
+      ...(opt.activeInvoices ? {} : { lunas: w.length - out.length }),
+      grPending: count(out.filter((r) => r.gr === "Pending")),
+      siapTukar: count(out.filter((r) => r.gr === "Done" && r.tukar_faktur === "Pending")),
+      tfDone: count(w.filter((r) => r.tukar_faktur === "Done")),
+      selisihNonZero: count(w.filter((r) => r.tukar_faktur === "Done" && r.selisih !== 0)),
+      ltkp: count(w.filter((r) => kt(r.keterangan) === "LTKP")),
+      litigasi: count(w.filter((r) => kt(r.keterangan) === "LITIGASI")),
+      pendingPrev: count(w.filter((r) => r.tukar_faktur === "Pending" && r.invoice_date?.slice(0, 7) === prev)),
+      pendingCur: count(w.filter((r) => r.tukar_faktur === "Pending" && r.invoice_date?.slice(0, 7) === cur)),
     },
     grCheck: c.gr.filter((g) => g.check_status === "Check").length,
     agingNotInWorksheet: aging.filter((a) => !wsSj.has(up(a.no_sj))).length,
     aging: {
-      count: aging.filter((a) => a.invoice_no).length,
+      count: opt.activeInvoices ? new Set(aging.map((a) => a.invoice_no?.trim()).filter(Boolean)).size : aging.filter((a) => a.invoice_no).length,
       totalOpen,
       buckets: [
         { label: "Current 0 - 30", value: sum((a) => a.cur_0_30) }, { label: "Current 31 - 60", value: sum((a) => a.cur_31_60) },

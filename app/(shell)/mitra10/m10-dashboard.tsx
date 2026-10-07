@@ -25,8 +25,8 @@ export function M10Dashboard({ m, showJadwal = true, stateKey }: { m: DashSource
   const [key, setKey] = useViewState(`${stateKey}:dash:filter`, "");
   const src = useMemo<Scoped | null>(() => (key && m.filter ? m.filter.scope(key) : m.computed ? { computed: m.computed, agingLines: m.agingLines, schedule: m.schedule } : null),
     [key, m.filter, m.computed, m.agingLines, m.schedule]);
-  const d = useMemo(() => (src ? m10Dashboard(src.computed, src.agingLines, src.schedule, { month, today: todayJakarta(), lastAging: m.lastAging }) : null),
-    [src, m.lastAging, month]);
+  const d = useMemo(() => (src ? m10Dashboard(src.computed, src.agingLines, src.schedule, { month, today: todayJakarta(), lastAging: m.lastAging, activeInvoices: stateKey === "mitra10" }) : null),
+    [src, m.lastAging, month, stateKey]);
 
   if (!d) return <div className="h-40 animate-pulse rounded-xl bg-surface-2" />;
   const s = d.summary;
@@ -62,7 +62,7 @@ export function M10Dashboard({ m, showJadwal = true, stateKey }: { m: DashSource
             ["Total invoice di Kertas Kerja", s.total],
             ["Invoice outstanding", s.outstanding],
             ["Open Amt outstanding", rupiah(s.openOutstanding)],
-            ["Invoice lunas", s.lunas],
+            ...(stateKey === "mitra10" ? [] : [["Invoice lunas", s.lunas] as [string, number]]),
             ["GR pending (outstanding)", s.grPending],
             ["Siap tukar faktur (GR Done, TF Pending)", s.siapTukar],
             ["Tukar faktur Done", `${s.tfDone} (${pct(s.tfDone, s.outstanding)})`],

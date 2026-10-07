@@ -85,7 +85,7 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string
   aging: { rpc: "pack_aging", deps: ["aging"], decode: (r) => ({ month: (r.month as string) ?? null, uploadedAt: (r.uploadedAt as string) ?? null, lines: unpack<AgingLine>(r.lines as Packed) }) },
   activity: { rpc: "pack_activity", deps: ["activity"], decode: (r) => tables(r, ["notes", "promises", "exchanges"]) as Datasets["activity"] },
   targets: { rpc: "pack_targets", deps: ["targets"], decode: (r) => tables(r, ["targets"]) as Datasets["targets"] },
-  m10: { rpc: "pack_m10", deps: ["m10"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi", "schedule"]) as Datasets["m10"] },
+  m10: { rpc: "pack_m10", deps: ["m10", "aging"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi", "schedule"]) as Datasets["m10"] },
   rkm: { rpc: "pack_rkm", deps: ["rkm"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi"]) as Datasets["rkm"] },
   mutasi: { rpc: "pack_mutasi", deps: ["mutasi"], decode: (r) => tables(r, ["accounts", "mutations"]) as Datasets["mutasi"] },
   erp: { rpc: "pack_erp", deps: ["erp"], decode: decodeErp },
