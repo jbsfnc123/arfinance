@@ -67,3 +67,16 @@ The embed is independent and can run with the existing chatbot. Supabase retriev
 - **Penerapan GAS**: kode sudah `clasp push` (HEAD). Deployment publik (V2.1, @12) harus diperbarui pemilik script:
   Apps Script editor → Deploy → Manage deployments → ✏️ deployment V2.1 → Version: New version → Deploy (URL tetap).
   Saat pertama dijalankan Google dapat meminta otorisasi ulang (membuat folder/dokumen di Drive).
+
+## Fase 53 — perapian chat (2026-10-08)
+
+- Tidak ada lagi info teknis/kuning di chat: error AI (kuota, agent mati, model) selalu tampil
+  "Saya sedang sibuk saat ini, silakan kembali lagi nanti 🙏"; detail dicatat di log Apps Script dan Script Property
+  `QNA_LAST_ERROR` (terlihat di Pengaturan AI → Status memori). Prompt melarang bot membicarakan model/AI/kuota.
+- Tanpa chip saran awal, banner, atau tombol 📎. Bot hanya menerima **nama halaman** aktif (`{menu, path}`) setiap
+  mengirim pesan; tidak ada data layar yang dikirim (`useChatContext` dihapus).
+- Persona jenaka & humoris sesuai mood (dokumen `QnA - 01 Persona` v2, `QnA - 04 Konteks Halaman`).
+- Memori Drive: kode lama hanya membaca Drive sehingga izin yang diberikan kemungkinan read-only; penulisan gagal tanpa
+  jejak. Kini `appsscript.json` mendeklarasikan scope drive/documents, error dicatat, memori disimpan meski AI sibuk.
+  Pemilik script WAJIB menjalankan `qnaDiagnose` sekali dari editor (memberi izin & membuat folder memori + 4 dokumen),
+  lalu Deploy → Manage deployments → New version.

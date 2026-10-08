@@ -5,15 +5,14 @@ import { usePathname } from "next/navigation";
 import { useDialog } from "@/components/use-dialog";
 
 import { CONSULTANT_URL } from "@/lib/consultant-config";
-import { chatContextSnapshot, isChatOrigin, isWithin } from "@/lib/chat-context";
-import { todayJakarta } from "@/lib/parsers/date";
+import { isChatOrigin, isWithin, menuLabel } from "@/lib/chat-context";
 
 export const CHAT_NAME = "QnA AR Workspace";
 export { CONSULTANT_URL } from "@/lib/consultant-config";
 
 // Load the remote bot only after the first click. Keep its conversation when minimized.
-// Display name and account ID scope greeting/memory. Page summary (what is already on screen) is sent ONLY when the
-// chat frame asks (user pressed 📎 or asked to analyse this page), and only to the Apps Script frame inside this panel.
+// Display name and account ID scope greeting/memory. When the chat frame asks, it receives only the NAME of the page
+// the user has open ({menu, path}) — never page data — and only the Apps Script frame inside this panel is answered.
 export function ConsultantChat({ accountName = "", accountId = "" }: { accountName?: string; accountId?: string }) {
   const [open, setOpen] = useState(false);
   const [started, setStarted] = useState(false);
@@ -33,7 +32,7 @@ export function ConsultantChat({ accountName = "", accountId = "" }: { accountNa
       const d = event.data as { type?: unknown; id?: unknown } | null;
       if (!d || d.type !== "qna:context:request" || typeof d.id !== "string" || d.id.length > 40) return;
       if (!isChatOrigin(event.origin) || !isWithin(iframe.current?.contentWindow, event.source)) return;
-      (event.source as Window).postMessage({ type: "qna:context", id: d.id, context: chatContextSnapshot(path, todayJakarta()) }, event.origin);
+      (event.source as Window).postMessage({ type: "qna:context", id: d.id, context: { menu: menuLabel(path), path } }, event.origin);
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);

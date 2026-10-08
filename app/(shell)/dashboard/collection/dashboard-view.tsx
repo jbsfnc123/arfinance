@@ -1,6 +1,5 @@
 "use client";
 
-import { useChatContext } from "@/lib/chat-context";
 import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { useCollectionPeriod } from "./use-period";
@@ -35,16 +34,6 @@ export function DashboardView() {
   const loading = period.loading;
   const reload = () => { void period.reload(); };
   const noData = !data && !loading;
-  useChatContext("dashboard:collection", () => data ? {
-    title: `Dashboard Collection — Target ${monthLabel(month)}`,
-    filters: { bulan: month, status: period.data?.status ?? "-" },
-    summary: { Target: data.target, Sisa: data.sisa, Terkumpul: data.terkumpul, "Pencapaian %": data.pencapaian,
-      "Invoice total": data.invTotal, "Invoice lunas": data.invLunas, "Invoice belum": data.invBelum,
-      "Forecast janji bayar": data.forecast, "Alokasi target": alloc?.totalAllocT ?? null, "Selisih rekonsiliasi": recon?.selisih ?? null },
-    columns: ["Collection", "Target", "Sisa", "Terkumpul", "Pencapaian %", "Invoice belum"],
-    rows: data.byColl.map((g) => [g.nama, g.target, g.sisa, g.terkumpul, g.pencapaian, g.invBelum]),
-    total: data.byColl.length,
-  } : null, [data, alloc, recon, month, period.data?.status]);
 
   return (
     <div className="mx-auto max-w-[1920px]">

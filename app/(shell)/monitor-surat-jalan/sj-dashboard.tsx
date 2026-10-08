@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { useChatContext } from "@/lib/chat-context";
 import type { EChartsOption } from "echarts";
 import { Chart } from "@/components/chart";
 import { TableBox } from "@/components/table-box";
@@ -20,15 +19,6 @@ const pct1 = (v: number | null) => (v === null ? "—" : `${v.toLocaleString("id
 export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Quick; focus?: string }) => void }) {
   const sum = useMemo(() => summarize(s.filtered), [s.filtered]);
   const trend = useMemo(() => trendSeries(sum.trend), [sum.trend]);
-  useChatContext("dashboard:sj", () => ({
-    title: "Dashboard Monitor Surat Jalan",
-    filters: { periode: periodText(s) },
-    summary: { "SJ di Aging": sum.total, "Sudah diterima": sum.done, "Belum diterima": sum.open, "Rata-rata hari terima": sum.avg,
-      "Masalah tanggal": sum.quality.dateIssues },
-    columns: ["Marketing", "SJ", "Sudah", "Belum", "% Sudah", "Rata-rata hari"],
-    rows: sum.byMarketing.map((m) => [m.marketing, m.total, m.done, m.open, Math.round(m.pct * 10) / 10, m.avg]),
-    total: sum.byMarketing.length,
-  }), [sum]);
   const theme = useResolvedTheme();
   const sc = seriesColors(theme), ct = chartTheme();
 
