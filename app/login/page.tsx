@@ -24,7 +24,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   // Hanya nama & tanda "tanpa PIN" yang dikirim ke browser (mode manual: tidak ada daftar sama sekali).
   const { data } = manual ? { data: [] } : await createAdminClient()
-    .from("profiles").select("display_name, active, pin_optional, role:roles(kind)").eq("active", true);
+    .from("profiles").select("display_name, active, pin_optional, role:roles(kind)").eq("active", true).eq("system_account", false);
   const accounts: LoginAccount[] = (data ?? []).map((p) => ({
     display_name: p.display_name, active: p.active, pin_optional: p.pin_optional,
     kind: (p.role as { kind: string } | null)?.kind ?? null,

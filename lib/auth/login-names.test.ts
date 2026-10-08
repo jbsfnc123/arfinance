@@ -9,6 +9,7 @@ const accounts = [
   { display_name: "Lama", active: false, kind: "coll" },
   { display_name: "Kurir Lama", active: false, kind: "kurir" },
   { display_name: "Ani", active: true, kind: "coll", pin_optional: true },
+  { display_name: "Bot ERP", active: true, kind: "coll", pin_optional: false, system_account: true },
 ];
 
 describe("daftar nama login per halaman", () => {
