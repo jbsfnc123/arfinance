@@ -19,6 +19,8 @@ it('starts collapsed with no external iframe request, opens and keeps the same f
   const frame=host.querySelector('iframe')!;
   expect(frame.getAttribute('src')).toBe(CONSULTANT_URL);
   expect(frame.getAttribute('referrerpolicy')).toBe('no-referrer');
+  expect(host.querySelector('a[target="_blank"]')).toBeNull();
+  expect(host.firstElementChild?.getAttribute('style')).not.toContain('--dock-reserve');
   await click('Tutup chat');expect(host.querySelector('section')?.hidden).toBe(true);
   await click('Buka konsultan chat');expect(host.querySelector('iframe')).toBe(frame);
   expect(host.querySelector('section')?.hidden).toBe(false);
