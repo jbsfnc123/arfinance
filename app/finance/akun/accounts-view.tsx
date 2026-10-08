@@ -16,6 +16,7 @@ type Account = {
   division: string;
   has_pin: boolean;
   pin_optional: boolean;
+  chatbot_enabled: boolean;
 };
 
 function Feedback({ state }: { state: ActionResult }) {
@@ -71,6 +72,15 @@ function RoleSelect({ roles, defaultValue, onChange }: { roles: Role[]; defaultV
   );
 }
 
+function ChatbotCheck({ defaultChecked = false, superAdmin = false }: { defaultChecked?: boolean; superAdmin?: boolean }) {
+  return <label className="flex items-start gap-2 text-sm sm:col-span-6">
+    <input key={superAdmin ? "sa" : "account"} type="checkbox" name="chatbot_enabled" defaultChecked={superAdmin || defaultChecked} disabled={superAdmin} className="mt-1" />
+    <span>Akses chatbot Bang Mando
+      <span className="block text-xs text-fg-2">Bantuan penggunaan aplikasi. Super Admin otomatis memiliki akses; akun lain harus diizinkan.</span>
+    </span>
+  </label>;
+}
+
 // Divisi = workspace yang boleh dibuka (AR → ar.tangki.space, AP → ap.tangki.space, AR + AP → pilih di tangki.space).
 function DivisionSelect({ defaultValue }: { defaultValue?: string }) {
   return (
@@ -101,6 +111,7 @@ function CreateForm({ roles }: { roles: Role[] }) {
         {pending ? "Menyimpan…" : "Tambah"}
       </button>
       <NoPinCheck onChange={setNoPin} />
+      <ChatbotCheck />
       <div className="sm:col-span-6">
         <Feedback state={state} />
       </div>
@@ -145,6 +156,7 @@ function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: 
         {account.pin_optional && (
           <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning" title="Login cukup nama">Tanpa PIN</span>
         )}
+        {(isSa || account.chatbot_enabled) && <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">Chatbot</span>}
         <span
           className={`rounded-full px-2 py-0.5 text-xs ${
             account.active ? "bg-success/15 text-success" : "bg-danger/15 text-danger"
@@ -184,6 +196,7 @@ function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: 
             Simpan
           </button>
           {role?.kind !== "sa" && <NoPinCheck defaultChecked={account.pin_optional} />}
+          <ChatbotCheck defaultChecked={account.chatbot_enabled} superAdmin={picked?.kind === "sa"} />
           {pickedRole !== account.role_id && picked?.kind !== "sa" && (
             <label className="flex items-start gap-2 text-sm sm:col-span-6">
               <input type="checkbox" name="reset_menus" defaultChecked className="mt-1" />

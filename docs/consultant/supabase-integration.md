@@ -1,5 +1,11 @@
 # Asst. Bang Mando — integration checkpoint
 
+## Help desk and account permission update
+
+Bang Mando focuses on application usage and troubleshooting, with polite casual Jakarta Indonesian. Tutorial knowledge is maintained in Drive document `19ld-QJ6ZJPPyz6bF8YfUjpVQteioTD8gn2ga7k1925A`, in the user-specified knowledge folder. The supplied manual-paste GAS package loads that document first; applying this repository change does not deploy GAS source.
+
+`profiles.chatbot_enabled` defaults to false. Super Admin manages it in Finance > Akun & PIN (create/edit account); existing Super Admin roles retain automatic access. AR/AP layouts derive chat visibility from the authenticated server profile in the existing session query, with no additional polling. Existing profile RLS allows Super Admin updates only. Users refresh/re-enter the app after a permission change. This governs the embedded app launcher; it does not change the external GAS deployment's public accessibility or grant data retrieval.
+
 ## Implemented
 
 Authenticated AR shell embeds the user-provided Apps Script deployment in a collapsible, lazy-loaded frame. User changes remount the frame. Remote frame receives no app session, access token, database key or financial data. External resource loads only on opening. A separate-tab link is available for browser iframe/login restrictions. Existing overlay stack manages Escape priority.
