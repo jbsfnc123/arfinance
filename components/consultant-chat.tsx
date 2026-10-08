@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useDialog } from "@/components/use-dialog";
 
-export const CONSULTANT_URL = "https://script.google.com/macros/s/AKfycbyBUUcfrXV0Bw_R6thB8UCRxWj1vw-9KOvvOW9JCjWZoddcJUtas5eQX-7mzZWctw3wbA/exec";
+import { CONSULTANT_URL } from "@/lib/consultant-config";
+export { CONSULTANT_URL } from "@/lib/consultant-config";
 
 // Load the remote bot only after the first click. Keep its conversation when minimized.
 // Display name and account ID scope greeting/browser memory; no credentials or financial data.

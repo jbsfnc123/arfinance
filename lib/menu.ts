@@ -115,6 +115,7 @@ export const FINANCE_NAV = [
   { href: "/akun", label: "Akun & PIN", icon: "badge" },
   { href: "/acl", label: "Role & Akses", icon: "admin_panel_settings" },
   { href: "/database", label: "Database", icon: "database" },
+  { href: "/ai-settings", label: "Pengaturan AI", icon: "settings" },
 ] as const;
 
 export function findMenuById(id: string) {
