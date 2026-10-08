@@ -8,9 +8,15 @@ Bang Mando focuses on application usage and troubleshooting, with polite casual 
 
 ## Implemented
 
-Authenticated AR shell embeds the user-provided Apps Script deployment in a collapsible, lazy-loaded frame. User changes remount the frame. Remote frame receives no app session, access token, database key or financial data. External resource loads only on opening. The account display name is passed in the `account` query parameter for greeting lookup only; it grants no authentication or authorization. There is no separate-tab link. Existing overlay stack manages Escape priority.
+Authenticated AR shell embeds the user-provided Apps Script deployment in a collapsible, lazy-loaded frame. User changes remount the frame. Remote frame receives no app session, access token, database key or financial data. External resource loads only on opening. The account display name is passed in `account` for greeting lookup and the profile ID in `accountId` for a hashed browser-memory namespace; neither grants authentication or authorization. There is no separate-tab link. Existing overlay stack manages Escape priority.
 
 The manual-paste GAS package reads only the name/salutation columns of the user-specified Karyawan sheet (gid 0) for an exact normalized unique match, with a five-minute greeting cache. Missing/ambiguous matches use a generic greeting. Reply source lists are hidden; the prompt allows occasional contextual humor after help. GAS must be updated separately for these behaviors to take effect.
+
+## Browser memory and support tone
+
+The separately deployed GAS package supports session conversation context and optional browser persistence: up to twelve messages, 500 characters each, and an explicit short/detail/steps style preference. Persistence defaults off and expires after thirty days since last save. Clear removes saved context/preferences; malformed/expired storage is dropped; blocked iframe storage falls back to session context. Same display names are separated by profile UUID namespace. This is local storage separation, not authenticated cross-device history or model training. No new database table/query or financial retrieval is added.
+
+Memory is bounded and treated as untrusted context by GAS. The help desk prompt responds empathetically to signs of frustration without diagnosis/profiling, redirects unclear/off-topic questions, and permits occasional respectful Bible paraphrases or light humor when appropriate. These behaviors require updating the manual-paste GAS files and the existing deployment.
 
 ## External source access needed
 

@@ -52,3 +52,16 @@ it('does not close chat when Escape belongs to a newer modal',async()=>{
     expect(host.querySelector('section')?.hidden).toBe(false);
   } finally {layerStack.remove(modal);}
 });
+
+it('scopes browser memory by account ID even when display names match', async()=>{
+  await act(async()=>root.render(<ConsultantChat key="a" accountName="Mando" accountId="11111111-1111-4111-8111-111111111111" />));
+  await click('Buka konsultan chat');
+  const first=new URL(host.querySelector('iframe')!.getAttribute('src')!);
+  expect(first.searchParams.get('accountId')).toBe('11111111-1111-4111-8111-111111111111');
+  await act(async()=>root.render(<ConsultantChat key="b" accountName="Mando" accountId="22222222-2222-4222-8222-222222222222" />));
+  expect(host.querySelector('iframe')).toBeNull();
+  await click('Buka konsultan chat');
+  const second=new URL(host.querySelector('iframe')!.getAttribute('src')!);
+  expect(second.searchParams.get('accountId')).not.toBe(first.searchParams.get('accountId'));
+  expect([...second.searchParams.keys()].sort()).toEqual(['account','accountId']);
+});
