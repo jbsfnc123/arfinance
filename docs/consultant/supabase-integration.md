@@ -8,7 +8,9 @@ Bang Mando focuses on application usage and troubleshooting, with polite casual 
 
 ## Implemented
 
-Authenticated AR shell embeds the user-provided Apps Script deployment in a collapsible, lazy-loaded frame. User changes remount the frame. Remote frame receives no app session, access token, database key or financial data. External resource loads only on opening. A separate-tab link is available for browser iframe/login restrictions. Existing overlay stack manages Escape priority.
+Authenticated AR shell embeds the user-provided Apps Script deployment in a collapsible, lazy-loaded frame. User changes remount the frame. Remote frame receives no app session, access token, database key or financial data. External resource loads only on opening. The account display name is passed in the `account` query parameter for greeting lookup only; it grants no authentication or authorization. There is no separate-tab link. Existing overlay stack manages Escape priority.
+
+The manual-paste GAS package reads only the name/salutation columns of the user-specified Karyawan sheet (gid 0) for an exact normalized unique match, with a five-minute greeting cache. Missing/ambiguous matches use a generic greeting. Reply source lists are hidden; the prompt allows occasional contextual humor after help. GAS must be updated separately for these behaviors to take effect.
 
 ## External source access needed
 

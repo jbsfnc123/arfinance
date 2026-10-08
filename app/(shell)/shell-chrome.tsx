@@ -91,7 +91,7 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabl
       <main className="min-w-0 flex-1 overflow-auto px-4 pt-4 md:px-6 md:pt-5" style={{ paddingBottom: "var(--dock-reserve)" }}>
         <div key={pathname} className="page-in">{children}</div>
       </main>
-      {consultantEnabled ? <ConsultantChat key={user.id} /> : null}
+      {consultantEnabled ? <ConsultantChat key={user.id} accountName={user.name} /> : null}
       <Dock menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
       <MobileNav menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
       <AppLauncher open={overlay === "launcher"} onClose={closeOverlay} menu={menu} homeLocked={homeLocked} onDenied={denyAccess} />

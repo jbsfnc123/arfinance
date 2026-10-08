@@ -31,6 +31,13 @@ it('returns focus when closed by Escape',async()=>{
   expect(host.querySelector('section')?.hidden).toBe(true);
   expect(document.activeElement?.getAttribute('aria-label')).toBe('Buka konsultan chat');
 });
+it('passes only the account display name for greeting lookup, safely encoded', async()=>{
+  await act(async()=>root.render(<ConsultantChat key="account-a" accountName="Mando & Tim" />));
+  await click('Buka konsultan chat');
+  const url=new URL(host.querySelector('iframe')!.getAttribute('src')!);
+  expect(url.searchParams.get('account')).toBe('Mando & Tim');
+  expect([...url.searchParams.keys()]).toEqual(['account']);
+});
 it('clears the embedded conversation when the account changes',async()=>{
   await click('Buka konsultan chat');
   await act(async()=>root.render(<ConsultantChat key="account-b" />));
