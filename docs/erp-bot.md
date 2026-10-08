@@ -36,3 +36,15 @@ Kode: `automation/erp-bot/` (paket npm terpisah, tidak ikut build Vercel). Log: 
 - PC harus menyala & user login; bila terlewat (PC mati), Task Scheduler menjalankan segera setelah PC aktif.
 - Opsi: `--dry-run`, `--file <path>` (pakai file yang ada), `--no-drive`, `--force`. `BOT_HEADLESS=false` untuk melihat
   browser saat memeriksa masalah.
+
+## Catatan teknis (pelajaran uji nyata 2026-10-09)
+
+- Jaspersoft memakai Content-Security-Policy ketat → `page.setBypassCSP(true)` wajib, kalau tidak semua
+  `waitForFunction` gagal diam-diam.
+- Kode yang dijalankan di browser (`evaluate`/`waitForFunction`/`$eval`) tidak boleh berisi fungsi bernama: tsx (esbuild)
+  menambahkan `__name()` yang tidak ada di halaman → ReferenceError.
+- Organization dipilih dengan mengetik lalu mengklik item "PT. Penguin Trading" (daftar diawali "---" dan "*").
+- Export: arahkan kursor & klik Export, lalu klik blok `p.wrap.button` "Excel" sekali; dialog Input Controls boleh tetap
+  terbuka. Laporan ±3 menit, file ±12 MB, ±22 ribu baris.
+- Hanya satu proses bot boleh berjalan (`logs/bot.lock`). Saat gagal: `logs/error-*.png` + `.html` untuk diagnosis.
+

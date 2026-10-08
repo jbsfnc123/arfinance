@@ -13,16 +13,18 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const isExcel = (f: string) => /\.(xlsx?|XLSX?)$/.test(f);
 
+// PENTING: kode yang dijalankan di browser (evaluate/waitForFunction/$eval) TIDAK boleh berisi fungsi bernama
+// (`const f = () => …` / `function f`): tsx (esbuild keepNames) membungkusnya dengan __name() yang tidak ada di halaman
+// → ReferenceError dan penantian selalu gagal. Pakai callback anonim saja.
+const LOADERS = ["#loading", ".dimmer", "#exportLoadingIndicator"];
+
 // Tunggu indikator loading / dimmer Jaspersoft hilang.
 async function waitForLoading(page: Page, timeoutMs = 60_000) {
   await delay(500);
-  await page.waitForFunction(() => {
-    const hidden = (sel: string) => {
-      const el = document.querySelector<HTMLElement>(sel);
-      return !el || el.classList.contains("hidden") || el.style.display === "none";
-    };
-    return hidden("#loading") && hidden(".dimmer") && hidden("#exportLoadingIndicator");
-  }, { timeout: timeoutMs }).catch(() => log("  (indikator loading timeout, lanjut)"));
+  await page.waitForFunction((sels: string[]) => sels.every((s) => {
+    const el = document.querySelector<HTMLElement>(s);
+    return !el || el.classList.contains("hidden") || el.style.display === "none";
+  }), { timeout: timeoutMs }, LOADERS).catch((e: Error) => log(`  (indikator loading: ${e.message.split("\n")[0]}, lanjut)`));
   await delay(800);
 }
 
@@ -36,6 +38,9 @@ export async function downloadAgingDetail(opt: { downloadDir: string; logDir: st
   fs.mkdirSync(opt.downloadDir, { recursive: true });
   const browser = await puppeteer.launch({ headless: opt.headless, defaultViewport: { width: 1440, height: 900 }, args: ["--window-size=1440,900"] });
   const page = await browser.newPage();
+  let stage = "Login";
+  // CSP Jaspersoft memblokir `new Function` yang dipakai waitForFunction → tanpa ini semua penantian timeout.
+  await page.setBypassCSP(true);
   try {
     const cdp = await page.createCDPSession();
     await cdp.send("Page.setDownloadBehavior", { behavior: "allow", downloadPath: opt.downloadDir });
@@ -48,6 +53,7 @@ export async function downloadAgingDetail(opt: { downloadDir: string; logDir: st
     await Promise.all([page.waitForNavigation({ waitUntil: "networkidle2", timeout: 60_000 }), page.click("#submitButton")]);
     if (await page.$("#j_username")) throw new Error("Login Jaspersoft gagal (periksa JASPER_USERNAME/JASPER_PASSWORD).");
 
+    stage = "Buka laporan";
     log("2. Library › Aging Detail…");
     await page.waitForSelector("#main_library", { visible: true, timeout: 20_000 });
     await page.click("#main_library");
@@ -55,29 +61,30 @@ export async function downloadAgingDetail(opt: { downloadDir: string; logDir: st
     await page.waitForSelector(link, { visible: true, timeout: 20_000 });
     await Promise.all([page.waitForNavigation({ waitUntil: "networkidle2", timeout: 60_000 }), page.click(link)]);
 
+    stage = "Input Controls";
     log("3. Input Controls…");
     await page.waitForSelector("#inputControls", { visible: true, timeout: 30_000 });
     await waitForLoading(page);
 
-    // Organization: klik dropdown → ketik → ArrowDown → Enter (cara yang terbukti di bot lama).
+    // Organization: buka dropdown → ketik untuk menyaring → klik item yang cocok ("PT. Penguin Trading").
+    // (ArrowDown+Enter memilih "*" karena daftar diawali "---" dan "*".)
     await scrollTo(page, "#AD_Org_ID");
     await page.waitForSelector("#AD_Org_ID a.jr-mSingleselect-input", { visible: true, timeout: 10_000 });
     await page.click("#AD_Org_ID a.jr-mSingleselect-input");
     await delay(800);
     await (await page.$("#AD_Org_ID input.jr-mInput-search"))?.focus();
-    await page.keyboard.type(ORGANIZATION, { delay: 100 });
-    await delay(1000);
-    await page.keyboard.press("ArrowDown");
-    await delay(500);
-    await page.keyboard.press("Enter");
-    await delay(1000);
-    await page.evaluate((org) => {
-      const item = [...document.querySelectorAll<HTMLElement>("li.jr-mSelectlist-item")]
-        .find((el) => (el.getAttribute("title") ?? el.textContent ?? "").includes(org));
-      if (item && item.offsetParent !== null) (item.querySelector("a") ?? item).click();
-    }, ORGANIZATION);
+    await page.keyboard.type(ORGANIZATION, { delay: 60 });
+    let picked = false;
+    for (let i = 0; i < 15 && !picked; i++) {
+      await delay(1000);
+      for (const li of await page.$$("li.jr-mSelectlist-item")) {
+        const txt = await li.evaluate((e) => (e.checkVisibility() ? e.textContent?.trim() ?? "" : ""));
+        if (txt.toLowerCase().includes(ORGANIZATION.toLowerCase())) { await li.click(); picked = true; break; }
+      }
+    }
+    if (!picked) throw new Error(`Organization "${ORGANIZATION}" tidak ada di daftar.`);
     await waitForLoading(page);
-    const org = await page.$eval("#AD_Org_ID a.jr-mSingleselect-input", (el) => (el as HTMLElement).title || el.textContent || "").catch(() => "");
+    const org = await page.$eval("#AD_Org_ID .jr-mSingleselect-input-selection", (el) => el.textContent ?? "").catch(() => "");
     if (!org.includes(ORGANIZATION)) throw new Error(`Organization tidak terpilih (terbaca: "${org.trim()}").`);
 
     // Statement Date = hari ini (WIB).
@@ -90,17 +97,18 @@ export async function downloadAgingDetail(opt: { downloadDir: string; logDir: st
         await dateInput.click({ clickCount: 3 });
         await page.keyboard.press("Backspace");
         await dateInput.type(today);
+        await page.keyboard.press("Tab");
         await delay(500);
       }
+      const set = await dateInput.evaluate((el) => (el as HTMLInputElement).value);
+      if (!set.includes(today)) throw new Error(`Statement Date tidak terisi (terbaca: "${set}").`);
     }
     await waitForLoading(page);
 
     // Tipe Transaksi = Piutang.
     await scrollTo(page, "#isSOtrx");
-    const piutang = await page.evaluate(() => {
-      const t = document.querySelector<HTMLElement>("#isSOtrx a.jr-mSingleselect-input");
-      return !!t && (t.title || t.textContent || "").includes("Piutang");
-    });
+    const tipe = () => page.$eval("#isSOtrx .jr-mSingleselect-input-selection", (el) => el.textContent ?? "").catch(() => "");
+    const piutang = (await tipe()).includes("Piutang");
     if (!piutang) {
       await page.click("#isSOtrx a.jr-mSingleselect-input");
       await delay(800);
@@ -111,9 +119,11 @@ export async function downloadAgingDetail(opt: { downloadDir: string; logDir: st
         for (const t of ["mousedown", "mouseup", "click"]) item.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }));
       });
       await waitForLoading(page);
+      if (!(await tipe()).includes("Piutang")) throw new Error("Tipe Transaksi Piutang tidak terpilih.");
     }
     log(`   Organization ${ORGANIZATION} · Statement Date ${today} · Piutang`);
 
+    stage = "Generate laporan";
     log("4. Apply & tunggu laporan…");
     await scrollTo(page, "#apply");
     await page.waitForSelector("#apply", { visible: true, timeout: 10_000 });
@@ -128,38 +138,34 @@ export async function downloadAgingDetail(opt: { downloadDir: string; logDir: st
     });
     await delay(2000);
     await page.waitForFunction(() => {
-      const hidden = (sel: string) => {
-        const el = document.querySelector<HTMLElement>(sel);
+      const idle = ["#loading", "#exportLoadingIndicator"].every((s) => {
+        const el = document.querySelector<HTMLElement>(s);
         return !el || el.classList.contains("hidden") || el.style.display === "none";
-      };
+      });
       const exp = document.querySelector<HTMLButtonElement>("#export");
       const ready = !!exp && !exp.disabled && !exp.hasAttribute("disabled");
-      return hidden("#loading") && hidden("#exportLoadingIndicator") && (document.querySelector("table.jrPage") !== null || ready);
-    }, { timeout: 300_000 });
+      return idle && (document.querySelector("table.jrPage") !== null || ready);
+    }, { timeout: 600_000 });
+    log("   Laporan selesai digenerate.");
 
+    stage = "Export › Excel";
     log("5. Export › Excel…");
     await page.waitForFunction(() => {
       const b = document.querySelector<HTMLButtonElement>("#export");
       return !!b && !b.disabled && !b.hasAttribute("disabled");
     }, { timeout: 30_000 });
-    await scrollTo(page, "#export");
     const before = new Set(fs.readdirSync(opt.downloadDir));
-    const menuOpen = await page.evaluate(() => {
-      const m = document.querySelector<HTMLElement>("#menu");
-      return !!m && !m.classList.contains("hidden") && m.style.display !== "none";
-    });
-    if (!menuOpen) { await page.click("#export"); await delay(800); }
-    await page.waitForFunction(() =>
-      !!(document.querySelector("#menuList_simpleAction_41 p.wrap.button") ||
-        [...document.querySelectorAll("#menuList p.wrap.button, #menu p.wrap.button")].find((p) => p.textContent?.replace(/\s+/g, " ").trim() === "Excel")),
-    { timeout: 15_000 });
-    const clicked = await page.evaluate(() => {
-      const target = document.querySelector<HTMLElement>("#menuList_simpleAction_41 p.wrap.button") ??
-        [...document.querySelectorAll<HTMLElement>("#menuList p.wrap.button, #menu p.wrap.button")].find((p) => p.textContent?.replace(/\s+/g, " ").trim() === "Excel");
-      target?.click(); // TEPAT satu klik (klik ganda = dua file)
-      return !!target;
-    });
-    if (!clicked) throw new Error("Tombol Export › Excel tidak ditemukan.");
+    // Seperti manual: arahkan kursor ke Export lalu klik; dialog Input Controls boleh tetap terbuka.
+    const EXCEL = "::-p-xpath(//p[contains(@class,'wrap') and contains(@class,'button')][normalize-space()='Excel'])";
+    let excel = null;
+    for (let i = 0; i < 3 && !excel; i++) {
+      await page.hover("#export");
+      await page.click("#export");
+      excel = await page.waitForSelector(EXCEL, { visible: true, timeout: 10_000 }).catch(() => null);
+    }
+    if (!excel) throw new Error("menu Export tidak menampilkan pilihan Excel");
+    await excel.click(); // TEPAT satu klik (klik ganda = dua file)
+    stage = "Unduh file";
 
     // Tunggu file Excel baru selesai diunduh (tanpa .crdownload).
     let file: string | null = null;
@@ -177,10 +183,12 @@ export async function downloadAgingDetail(opt: { downloadDir: string; logDir: st
     return finalPath;
   } catch (e) {
     fs.mkdirSync(opt.logDir, { recursive: true });
-    const shot = path.join(opt.logDir, `error-${Date.now()}.png`);
-    await page.screenshot({ path: shot as `${string}.png`, fullPage: true }).catch(() => {});
-    log(`   Screenshot galat: ${shot}`);
-    throw e;
+    const base = path.join(opt.logDir, `error-${Date.now()}`);
+    await page.screenshot({ path: `${base}.png`, fullPage: true }).catch(() => {});
+    const html = await page.content().catch(() => "");
+    if (html) fs.writeFileSync(`${base}.html`, html);
+    log(`   Bahan diagnosis: ${base}.png / .html`);
+    throw new Error(`${stage}: ${(e as Error).message}`);
   } finally {
     await browser.close();
   }
