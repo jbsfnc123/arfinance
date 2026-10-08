@@ -13,6 +13,7 @@ import { btnGhost, card, inputCls, th } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { Icon } from "@/components/icons";
 import type { RowMarkColor } from "@/lib/modules/row-marks";
+import { useChatContext } from "@/lib/chat-context";
 
 // Tabel data standar: semua baris sudah ada di browser, jadi filter/cari/sort/export instan.
 // Tinggi mengikuti sisa layar (satu scrollbar per halaman), virtual scroll dengan tinggi baris terukur,
@@ -241,6 +242,15 @@ export function LocalTable<T>(props: {
     onRowsChange.current?.(allRows);
   }, [allRows]);
   const rows = useMemo(() => (limited ? topRows(allRows, defaultLimit!, limitWhere) : allRows), [limited, allRows, defaultLimit, limitWhere]);
+  // Ringkasan untuk chat QnA (dibangun hanya saat chat meminta): baris yang tampil sesuai cari/filter/urutan.
+  useChatContext(`table:${vk}`, () => ({
+    title: props.title,
+    filters: { ...(q.trim() ? { cari: q.trim() } : {}), ...activeF },
+    columns: cols.map((c) => c.l),
+    rows: rows.slice(0, 50).map((r) => cols.map((c) => cellText(r, c))),
+    total: allRows.length,
+    summary: Object.fromEntries(cols.filter((c) => c.sum).map((c) => [`Total ${c.l}`, allRows.reduce((a, r) => a + (Number(r[c.k]) || 0), 0)])),
+  }), [rows, cols, q, activeF]);
 
   // Cek rowKey ganda (dev) sekali per data, bukan di setiap render/ketukan.
   // (rowKey sering fungsi inline → dibaca lewat ref agar tidak memicu ulang.)

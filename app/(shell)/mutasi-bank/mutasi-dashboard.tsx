@@ -1,5 +1,6 @@
 "use client";
 
+import { useChatContext } from "@/lib/chat-context";
 import { useMemo } from "react";
 import type { EChartsOption } from "echarts";
 import { useDataset } from "@/lib/local/store";
@@ -34,6 +35,13 @@ export function MutasiDashboard() {
   const alloc = useMemo(() => (mutasi.data && erp.data && targets.data
     ? allocationOf({ month, mutasi: mutasi.data, erp: erp.data, targets: targets.data.targets }) : null),
   [month, mutasi.data, erp.data, targets.data]);
+  useChatContext("dashboard:mutasi", () => alloc ? {
+    title: `Mutasi Bank vs Realisasi — ${monthLabel(month)}`,
+    filters: { bulan: month },
+    summary: { "Penjualan": alloc.sales, "Uang masuk": alloc.inflow, "Target tagihan": alloc.target, "Alokasi penjualan": alloc.allocSales,
+      "Alokasi target": alloc.allocTarget, "Di luar penjualan & target": alloc.allocOther, "Belum dialokasikan": alloc.unallocated,
+      "Outstanding bulan berikut": alloc.outstanding, "Sisa target": alloc.targetLeft },
+  } : null, [alloc, month]);
   const theme = useResolvedTheme();
   const sc = seriesColors(theme), ct = chartTheme();
   const days = v?.daily.map((d) => String(Number(d.date.slice(8)))) ?? [];

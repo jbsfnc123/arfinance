@@ -65,3 +65,20 @@ it('scopes browser memory by account ID even when display names match', async()=
   expect(second.searchParams.get('accountId')).not.toBe(first.searchParams.get('accountId'));
   expect([...second.searchParams.keys()].sort()).toEqual(['account','accountId']);
 });
+it('uses the new name QnA AR Workspace', async()=>{
+  await click('Buka konsultan chat');
+  expect(host.querySelector('section')?.getAttribute('aria-label')).toBe('QnA AR Workspace');
+  expect(host.textContent).toContain('QnA AR Workspace');
+  expect(host.querySelector('iframe')?.getAttribute('title')).toBe('Percakapan dengan QnA AR Workspace');
+});
+it('answers page-context requests only from the Apps Script origin inside its own frame', async()=>{
+  await click('Buka konsultan chat');
+  const frameWin = host.querySelector('iframe')!.contentWindow!;
+  const sent: unknown[] = [];
+  const source = { postMessage: (m: unknown) => sent.push(m) } as unknown as Window;
+  // Bukan origin Google → diabaikan
+  window.dispatchEvent(new MessageEvent('message', { data: { type: 'qna:context:request', id: 'x1' }, origin: 'https://evil.example.com', source: frameWin }));
+  // Origin Google tetapi bukan frame chat → diabaikan
+  window.dispatchEvent(new MessageEvent('message', { data: { type: 'qna:context:request', id: 'x2' }, origin: 'https://n-x-script.googleusercontent.com', source }));
+  expect(sent).toEqual([]);
+});

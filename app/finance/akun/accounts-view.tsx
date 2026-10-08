@@ -75,7 +75,7 @@ function RoleSelect({ roles, defaultValue, onChange }: { roles: Role[]; defaultV
 function ChatbotCheck({ defaultChecked = false, superAdmin = false }: { defaultChecked?: boolean; superAdmin?: boolean }) {
   return <label className="flex items-start gap-2 text-sm sm:col-span-6">
     <input key={superAdmin ? "sa" : "account"} type="checkbox" name="chatbot_enabled" defaultChecked={superAdmin || defaultChecked} disabled={superAdmin} className="mt-1" />
-    <span>Akses chatbot Bang Mando
+    <span>Akses chatbot QnA AR Workspace
       <span className="block text-xs text-fg-2">Bantuan penggunaan aplikasi. Super Admin otomatis memiliki akses; akun lain harus diizinkan.</span>
     </span>
   </label>;

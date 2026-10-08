@@ -1,4 +1,4 @@
-# Asst. Bang Mando — integration checkpoint
+# QnA AR Workspace (dulu: Asst. Bang Mando) — integration checkpoint
 
 ## Help desk and account permission update
 
@@ -46,3 +46,24 @@ Folder inventory currently contains a staff spreadsheet and a product knowledge 
 ## Completion state
 
 The embed is independent and can run with the existing chatbot. Supabase retrieval and knowledge ingestion are NOT connected by this checkpoint. Updating and redeploying the existing Apps Script requires editor access through Apps Script API or the approved browser workflow, plus inspecting the original source before modification.
+
+## Fase 52 — QnA AR Workspace (2026-10-08)
+
+- **Nama** "Asst. Bang Mando" → **QnA AR Workspace** (launcher, panel, Pengaturan AI, Akun & PIN, GAS).
+- **UI GAS** meniru WhatsApp iOS: header kaca + status online/mengetik…, wallpaper doodle, gelembung berekor dengan jam &
+  centang biru, chip balasan cepat, bilah input bulat, panel **emoji** (4 kategori), menu ⋯ (Bersihkan chat, Lupakan saya).
+  Pesan dirender lewat DOM (`textContent`), hanya `**tebal**`/`_miring_` yang dibuat sebagai elemen aman.
+- **Lampiran halaman (📎)**: aplikasi mendaftarkan ringkasan yang SUDAH tampil di layar lewat `useChatContext`
+  (`lib/chat-context.ts`): semua `LocalTable` (judul, filter, kolom, ≤50 baris tampil, total), Daftar Tagihan, Dashboard
+  Collection, Mutasi Bank (alokasi), Dashboard Monitor SJ. Frame GAS meminta `qna:context:request` ke `window.top`
+  hanya saat user menekan 📎 atau bertanya "analisis/data ini…"; `ConsultantChat` membalas hanya bila origin
+  `*-script.googleusercontent.com`/`script.google.com` DAN `event.source` berada di dalam iframe chat. Maks 3 sumber,
+  50 baris, 11.000 karakter. GAS menerima balasan hanya dari origin AR Workspace (tangki.space, preview vercel, localhost).
+- **Memori akun (Drive)**: subfolder `QnA - Memori Akun` di folder knowledge, satu JSON per akun (nama = hash accountId):
+  20 tanya-jawab terakhir + profil gaya bicara (sapaan, bahasa, panjang, humor, emoji, topik, catatan) yang diringkas model
+  tiap 6 pesan; tanpa profil sensitif. "Lupakan saya" (menu ⋯ atau ketik) membuang file.
+- **File keahlian Drive** (dibuat otomatis sekali, dapat diedit): `QnA - 01 Persona`, `QnA - 02 Pantun`,
+  `QnA - 03 Panduan Menu`, `QnA - 04 Analisis Halaman`; ID tersimpan di Script Property `QNA_SKILL_IDS`.
+- **Penerapan GAS**: kode sudah `clasp push` (HEAD). Deployment publik (V2.1, @12) harus diperbarui pemilik script:
+  Apps Script editor → Deploy → Manage deployments → ✏️ deployment V2.1 → Version: New version → Deploy (URL tetap).
+  Saat pertama dijalankan Google dapat meminta otorisasi ulang (membuat folder/dokumen di Drive).
