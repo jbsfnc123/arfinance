@@ -4,12 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useDataset } from "@/lib/local/store";
+import { useChatContext } from "@/lib/chat-context";
 import { collectionSummary } from "@/lib/modules/collection/rows";
 import { arOf, collectionRowsOf } from "@/lib/local/derived";
 import { setRemarks, useRemarks } from "@/lib/modules/remarks";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, rupiah } from "@/lib/format";
-import { withReceive,
+import { COLUMN_DEFS, cellText, withReceive,
   applyExchange, DEFAULT_COLUMNS, EMPTY_FILTERS, filterRows, sortRows, withSearch,
   type CollectionRow, type CollectionSort, type ColumnKey, type Filters,
 } from "@/lib/modules/collection/view-model";
@@ -116,6 +117,20 @@ export function CollectionView(props: {
   // Kolom yang dipakai untuk urut disembunyikan → kembali ke urutan asli.
   const activeSort = sort && columns.includes(sort.k) ? sort : null;
   const sorted = useMemo(() => sortRows(filtered, activeSort), [filtered, activeSort]);
+  // Ringkasan untuk chat QnA: collection, filter, total & baris yang tampil (kolom aktif).
+  useChatContext("collection:tagihan", () => {
+    const defs = COLUMN_DEFS.filter((c) => columns.includes(c.key));
+    const total = filtered.reduce((t, r) => t + r.open_amt, 0);
+    const active = Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) as Record<string, string>;
+    return {
+      title: `Daftar Tagihan ${coll}`,
+      filters: { collection: coll, ...active },
+      summary: { "Jumlah invoice": filtered.length, "Total nominal": total, "Jumlah invoice (semua, collection ini)": rows.length },
+      columns: defs.map((c) => c.label),
+      rows: sorted.slice(0, 50).map((r) => defs.map((c) => cellText(r, c.key))),
+      total: sorted.length,
+    };
+  }, [sorted, columns, coll, filters]);
   const byInvoice = useMemo(() => new Map(rows.map((r) => [r.invoice_no, r])), [rows]);
   const selectedRows = useMemo(
     () => selection.map((inv) => byInvoice.get(inv)).filter((r): r is CollectionRow => !!r),
