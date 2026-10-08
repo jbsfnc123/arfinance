@@ -185,6 +185,41 @@ async function exportAs(page: Page, stage: Stage, dir: string, label: "Excel" | 
   return path.join(dir, file);
 }
 
+/**
+ * Organization = PT. Penguin Trading pada kontrol pertama yang ada di `controlIds`: buka dropdown → ketik untuk
+ * menyaring → klik item yang cocok. (ArrowDown+Enter memilih "*" karena daftar diawali "---" dan "*".)
+ */
+async function pickOrganization(page: Page, controlIds: string[]) {
+  let id: string | null = null;
+  for (const c of controlIds) if (await page.$(`#${c} a.jr-mSingleselect-input`)) { id = c; break; }
+  if (!id) throw new Error(`kontrol Organization tidak ditemukan (${controlIds.map((c) => "#" + c).join(", ")})`);
+  await scrollTo(page, `#${id}`);
+  await page.waitForSelector(`#${id} a.jr-mSingleselect-input`, { visible: true, timeout: 10_000 });
+  await page.click(`#${id} a.jr-mSingleselect-input`);
+  await delay(800);
+  await (await page.$(`#${id} input.jr-mInput-search`))?.focus();
+  await page.keyboard.type(ORGANIZATION, { delay: 60 });
+  let picked = false;
+  for (let i = 0; i < 15 && !picked; i++) {
+    await delay(1000);
+    for (const li of await page.$$("li.jr-mSelectlist-item")) {
+      const txt = await li.evaluate((e) => (e.checkVisibility() ? e.textContent?.trim() ?? "" : ""));
+      if (txt.toLowerCase().includes(ORGANIZATION.toLowerCase())) { await li.click(); picked = true; break; }
+    }
+  }
+  if (!picked) throw new Error(`Organization "${ORGANIZATION}" tidak ada di daftar.`);
+  await waitForLoading(page);
+  const org = await page.$eval(`#${id} .jr-mSingleselect-input-selection`, (el) => el.textContent ?? "").catch(() => "");
+  if (!org.includes(ORGANIZATION)) throw new Error(`Organization tidak terpilih (terbaca: "${org.trim()}").`);
+}
+
+/** Tanggal ISO `iso` digeser `days` hari (kalender, tanpa zona waktu). */
+export function shiftDate(iso: string, days: number) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 function finalize(file: string, prefix: string) {
   const finalPath = path.join(path.dirname(file), `${prefix} ${stamp()}${path.extname(file)}`);
   fs.renameSync(file, finalPath);
@@ -197,26 +232,7 @@ export async function downloadAgingDetail(opt: JasperOptions) {
   return withSession(opt, async (page, stage) => {
     await openReport(page, stage, "Aging Detail");
 
-    // Organization: buka dropdown → ketik untuk menyaring → klik item yang cocok ("PT. Penguin Trading").
-    // (ArrowDown+Enter memilih "*" karena daftar diawali "---" dan "*".)
-    await scrollTo(page, "#AD_Org_ID");
-    await page.waitForSelector("#AD_Org_ID a.jr-mSingleselect-input", { visible: true, timeout: 10_000 });
-    await page.click("#AD_Org_ID a.jr-mSingleselect-input");
-    await delay(800);
-    await (await page.$("#AD_Org_ID input.jr-mInput-search"))?.focus();
-    await page.keyboard.type(ORGANIZATION, { delay: 60 });
-    let picked = false;
-    for (let i = 0; i < 15 && !picked; i++) {
-      await delay(1000);
-      for (const li of await page.$$("li.jr-mSelectlist-item")) {
-        const txt = await li.evaluate((e) => (e.checkVisibility() ? e.textContent?.trim() ?? "" : ""));
-        if (txt.toLowerCase().includes(ORGANIZATION.toLowerCase())) { await li.click(); picked = true; break; }
-      }
-    }
-    if (!picked) throw new Error(`Organization "${ORGANIZATION}" tidak ada di daftar.`);
-    await waitForLoading(page);
-    const org = await page.$eval("#AD_Org_ID .jr-mSingleselect-input-selection", (el) => el.textContent ?? "").catch(() => "");
-    if (!org.includes(ORGANIZATION)) throw new Error(`Organization tidak terpilih (terbaca: "${org.trim()}").`);
+    await pickOrganization(page, ["AD_Org_ID"]);
 
     const today = todayJakarta();
     await setDate(page, "statementdate", today, "Statement Date");
@@ -255,5 +271,24 @@ export async function downloadSendInvoice(opt: JasperOptions) {
     log(`   Tanggal Awal ${today} · Tanggal Akhir ${today}`);
     if (!(await applyAndWait(page, stage))) return null;
     return finalize(await exportAs(page, stage, opt.downloadDir, "CSV", /\.csv$/i), "Send Invoice");
+  });
+}
+
+/**
+ * Laporan Serah Terima Surat Jalan By Send Date (Start Date = hari ini − 6, End Date = hari ini, Organization Penguin
+ * Trading) → CSV. `null` bila laporan kosong. Rentang 7 hari menangkap penerimaan yang tercatat terlambat.
+ */
+export async function downloadSerahTerimaSj(opt: JasperOptions) {
+  return withSession(opt, async (page, stage) => {
+    await openReport(page, stage, "Laporan Serah Terima Surat Jalan By Send Date");
+    const today = todayJakarta();
+    const from = shiftDate(today, -6);
+    await setDate(page, "StartDate", from, "Start Date");
+    await setDate(page, "EndDate", today, "End Date");
+    await waitForLoading(page);
+    await pickOrganization(page, ["Organization", "AD_Org_ID"]);
+    log(`   Start Date ${from} · End Date ${today} · Organization ${ORGANIZATION}`);
+    if (!(await applyAndWait(page, stage))) return null;
+    return finalize(await exportAs(page, stage, opt.downloadDir, "CSV", /\.csv$/i), "Serah Terima SJ");
   });
 }

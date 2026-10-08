@@ -1,12 +1,15 @@
-// Bot ERP (Fase 55–56): Jaspersoft → arsip Google Drive → database AR Workspace. Dua tugas, berurutan:
+// Bot ERP (Fase 55–57): Jaspersoft → arsip Google Drive → database AR Workspace. Tiga tugas, berurutan:
 //   1. Aging Detail (Excel)              → Snapshot Aging / Daftar Tagihan (aging_commit)
 //   2. Send Invoice To Customer (CSV)    → Jadwal Tukar Faktur (schedule_replace; memakai Aging hasil tugas 1)
+//   3. Serah Terima Surat Jalan (CSV, 7 hari terakhir) → Monitor Surat Jalan (sj_receipts_apply; insert-only,
+//      data lama tidak dihapus/ditimpa; dicocokkan dengan Aging hasil tugas 1)
 // Opsi:
 //   npm start                            jalankan penuh (dipakai Task Scheduler)
 //   npm start -- --dry-run               hanya unduh & baca (tanpa Drive/database)
-//   npm start -- --only aging|jadwal     satu tugas saja
+//   npm start -- --only aging|jadwal|sj  satu tugas saja
 //   npm start -- --file <xls>            Aging dari file yang sudah ada (lewati unduh)
 //   npm start -- --jadwal-file <csv>     Jadwal dari file yang sudah ada (lewati unduh)
+//   npm start -- --sj-file <csv>         Surat Jalan dari file yang sudah ada (lewati unduh)
 //   npm start -- --no-drive              lewati arsip Drive
 //   npm start -- --force                 kirim walau file identik dengan upload sukses terakhir
 import fs from "node:fs";
@@ -15,17 +18,22 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import dotenv from "dotenv";
 import { todayJakarta } from "@/lib/parsers/date";
-import { downloadAgingDetail, downloadSendInvoice, type JasperOptions } from "./jasper";
+import { downloadAgingDetail, downloadSendInvoice, downloadSerahTerimaSj, type JasperOptions } from "./jasper";
 import { archiveToDrive } from "./drive";
 import { commitAging, inspectAging, lastSuccess, readSheets, saveSuccess, sha256, type BotEnv } from "./ingest";
 import { commitSchedule, inspectSchedule } from "./schedule";
+import { commitSj, inspectSj } from "./sj";
 import { initLog, log } from "./log";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(ROOT, ".env"), quiet: true });
 const DIRS = { downloads: path.join(ROOT, "downloads"), logs: path.join(ROOT, "logs") };
 // Status sukses terakhir per tugas (aging memakai nama lama last-success.json agar tidak mengirim ulang).
-const STATE = { aging: path.join(DIRS.logs, "last-success.json"), jadwal: path.join(DIRS.logs, "last-success-jadwal.json") };
+const STATE = {
+  aging: path.join(DIRS.logs, "last-success.json"),
+  jadwal: path.join(DIRS.logs, "last-success-jadwal.json"),
+  sj: path.join(DIRS.logs, "last-success-sj.json"),
+};
 const LOCK = path.join(DIRS.logs, "bot.lock");
 
 // Satu proses saja (Task Scheduler + run manual tidak boleh login Jaspersoft bersamaan). Lock basi (PID mati atau
@@ -52,7 +60,7 @@ function releaseLock() {
 
 const { values: args } = parseArgs({
   options: {
-    "dry-run": { type: "boolean" }, only: { type: "string" }, file: { type: "string" }, "jadwal-file": { type: "string" },
+    "dry-run": { type: "boolean" }, only: { type: "string" }, file: { type: "string" }, "jadwal-file": { type: "string" }, "sj-file": { type: "string" },
     "no-drive": { type: "boolean" }, force: { type: "boolean" },
   },
 });
@@ -136,16 +144,37 @@ async function runJadwal(today: string) {
   log(`Database: jadwal kurir diganti — ${num(n)} invoice tersimpan.`);
 }
 
+async function runSj(today: string) {
+  log(`── Serah Terima Surat Jalan (7 hari terakhir) ──`);
+  const filePath = args["sj-file"] ? path.resolve(args["sj-file"]) : await withRetry("Unduh Serah Terima SJ", () => downloadSerahTerimaSj(jasper()));
+  if (!filePath) { log("Laporan kosong — tidak ada data serah terima; data lama tetap."); return; }
+  if (!fs.existsSync(filePath)) throw new Error(`File tidak ditemukan: ${filePath}`);
+  const buf = fs.readFileSync(filePath);
+  const parsed = inspectSj(buf.toString("utf8"));
+  log(`Baca: ${num(parsed.stats.records)} baris · ${num(parsed.stats.uniqueSj)} SJ unik · ${num(parsed.stats.withReceiver)} baris ber-Receiver · ` +
+    `${parsed.bad.length} baris bermasalah · ${parsed.stats.dateIssues} masalah tanggal`);
+  if (!parsed.rows.length) { log("Tidak ada baris data — data lama tetap."); return; }
+  if (args["dry-run"]) return;
+  await archive(filePath, today.slice(0, 7));
+  const sha = sha256(buf);
+  if (unchanged(STATE.sj, sha)) return;
+  const { candidates, result: r } = await commitSj(filePath, parsed, botEnv());
+  saveSuccess(STATE.sj, sha);
+  if (!r) { log("Database: tidak ada SJ dengan Receiver diakui & Receive Date valid — tidak ada yang dikirim."); return; }
+  log(`Database: ${num(candidates)} SJ dikirim → ${num(r.saved)} Receive Date baru disimpan · ${num(r.existing)} sudah ada (tidak ditimpa) · ` +
+    `${num(r.notInAging)} tidak ada di Aging · ${num(r.notRecognized)} Receiver tidak diakui · ${num(r.badDate)} tanggal tidak valid`);
+}
+
 async function main() {
   initLog(DIRS.logs);
   acquireLock();
   const today = todayJakarta();
   const only = args.only;
-  if (only && only !== "aging" && only !== "jadwal") throw new Error(`--only harus "aging" atau "jadwal" (bukan "${only}")`);
+  if (only && !["aging", "jadwal", "sj"].includes(only)) throw new Error(`--only harus "aging", "jadwal", atau "sj" (bukan "${only}")`);
   log(`=== Bot ERP · ${today}${only ? ` · hanya ${only}` : ""}${args["dry-run"] ? " · DRY RUN" : ""} ===`);
 
-  // Tugas berurutan: Aging dulu (Jadwal memakai data tagihan terbaru). Gagal satu tugas tidak menghentikan yang lain.
-  const tasks = [["Aging", runAging], ["Jadwal", runJadwal]] as const;
+  // Tugas berurutan: Aging dulu (Jadwal & Surat Jalan memakai Aging terbaru). Gagal satu tugas tidak menghentikan yang lain.
+  const tasks = [["Aging", runAging], ["Jadwal", runJadwal], ["SJ", runSj]] as const;
   const failed: string[] = [];
   for (const [name, run] of tasks) {
     if (only && name.toLowerCase() !== only) continue;
