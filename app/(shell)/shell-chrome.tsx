@@ -19,13 +19,14 @@ import { useCommandK } from "./shell/use-command-k";
 // Kerangka halaman AR Workspace (Fase 39, macOS-inspired): Top bar kaca + Dock mengambang (desktop) / bottom nav
 // (HP) + App Launcher + Spotlight (Ctrl/Cmd+K). Konten memakai hampir seluruh lebar; ruang bawah dicadangkan
 // (--dock-reserve) agar tabel yang tingginya mengikuti layar tidak tertutup Dock. Client component karena menyimpan
-// status overlay dan membersihkan cache browser saat logout. Props & pemanggil (layout.tsx) tidak berubah.
+// status overlay dan membersihkan cache browser saat logout.
 type ShellProps = {
   title: string;
   portalHref?: string | null; // akun SA / divisi AR + AP: kembali ke pemilih workspace (tangki.space)
   icon: string;
   menu: NavGroup[];           // SEMUA menu; `locked` = tanpa akses (titik merah, klik → pesan)
   homeLocked: boolean;
+  consultantEnabled: boolean; // ditentukan server dari role.kind, bukan label role
   user: { id: string; name: string; role: string; collection: string | null };
   children: React.ReactNode;
 };
@@ -35,7 +36,7 @@ export function ShellChrome(props: ShellProps) {
   return <ToastProvider><AlarmProvider><ShellFrame {...props} /></AlarmProvider></ToastProvider>;
 }
 
-function ShellFrame({ title, icon, portalHref, menu, homeLocked, user, children }: ShellProps) {
+function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabled, user, children }: ShellProps) {
   // Overlay diikat ke path saat dibuka → pindah halaman otomatis menutupnya tanpa setState di effect.
   const [ov, setOv] = useState<{ path: string; v: "launcher" | "spotlight" | null }>({ path: "", v: null });
   const [refreshing, setRefreshing] = useState(false);
@@ -90,7 +91,7 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, user, children 
       <main className="min-w-0 flex-1 overflow-auto px-4 pt-4 md:px-6 md:pt-5" style={{ paddingBottom: "var(--dock-reserve)" }}>
         <div key={pathname} className="page-in">{children}</div>
       </main>
-      <ConsultantChat key={user.id} />
+      {consultantEnabled ? <ConsultantChat key={user.id} /> : null}
       <Dock menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
       <MobileNav menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
       <AppLauncher open={overlay === "launcher"} onClose={closeOverlay} menu={menu} homeLocked={homeLocked} onDenied={denyAccess} />

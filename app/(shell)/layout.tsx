@@ -12,7 +12,7 @@ export default async function ShellLayout({ children }: LayoutProps<"/">) {
   const menu = navMenu(access);
 
   return (
-    <ShellChrome title={WORKSPACES.ar.label} icon={WORKSPACES.ar.icon} menu={menu}
+    <ShellChrome title={WORKSPACES.ar.label} icon={WORKSPACES.ar.icon} menu={menu} consultantEnabled={role.kind === "sa"}
       portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null} homeLocked={!canAccess(HOME_ITEM, access)}
       user={{ id: profile.id, name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}
