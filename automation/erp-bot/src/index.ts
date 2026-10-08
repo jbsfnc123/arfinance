@@ -19,6 +19,29 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(ROOT, ".env"), quiet: true });
 const DIRS = { downloads: path.join(ROOT, "downloads"), logs: path.join(ROOT, "logs") };
 const STATE = path.join(ROOT, "logs", "last-success.json");
+const LOCK = path.join(ROOT, "logs", "bot.lock");
+
+// Satu proses saja (Task Scheduler + run manual tidak boleh login Jaspersoft bersamaan). Lock basi (PID mati atau
+// > 60 menit) diabaikan.
+function acquireLock() {
+  fs.mkdirSync(path.dirname(LOCK), { recursive: true });
+  try {
+    const held = JSON.parse(fs.readFileSync(LOCK, "utf8")) as { pid: number; at: number };
+    let alive = true;
+    try { process.kill(held.pid, 0); } catch { alive = false; }
+    if (alive && held.pid !== process.pid && Date.now() - held.at < 60 * 60_000) {
+      throw new Error(`Bot lain masih berjalan (PID ${held.pid}, mulai ${new Date(held.at).toLocaleTimeString("id-ID")}).`);
+    }
+  } catch (e) {
+    if ((e as Error).message.startsWith("Bot lain")) throw e;
+  }
+  fs.writeFileSync(LOCK, JSON.stringify({ pid: process.pid, at: Date.now() }));
+}
+function releaseLock() {
+  try {
+    if ((JSON.parse(fs.readFileSync(LOCK, "utf8")) as { pid: number }).pid === process.pid) fs.rmSync(LOCK);
+  } catch { /* tidak ada lock */ }
+}
 
 const { values: args } = parseArgs({
   options: { "dry-run": { type: "boolean" }, file: { type: "string" }, "no-drive": { type: "boolean" }, force: { type: "boolean" } },
@@ -43,6 +66,7 @@ async function withRetry<T>(label: string, fn: () => Promise<T>, tries = 3): Pro
 
 async function main() {
   initLog(DIRS.logs);
+  acquireLock();
   const reportDate = todayJakarta();
   log(`=== Bot ERP · Aging Detail · ${reportDate}${args["dry-run"] ? " · DRY RUN" : ""} ===`);
 
@@ -84,7 +108,8 @@ async function main() {
   log(`Database: ${r.message}`);
 }
 
-main().then(() => { log("Selesai."); process.exit(0); }).catch((e) => {
+main().then(() => { log("Selesai."); releaseLock(); process.exit(0); }).catch((e) => {
   try { log(`GAGAL: ${(e as Error).message ?? e}`); } catch { console.error(e); }
+  releaseLock();
   process.exit(1);
 });
