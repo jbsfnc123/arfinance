@@ -34,10 +34,18 @@ export function saveSuccess(stateFile: string, sha: string) {
   fs.writeFileSync(stateFile, JSON.stringify({ sha, at: new Date().toISOString() }));
 }
 
-export async function commitAging(filePath: string, sheets: Sheet[], reportDate: string, env: { url: string; anon: string; email: string; password: string }) {
+export type BotEnv = { url: string; anon: string; email: string; password: string };
+
+/** Klien Supabase yang sudah login sebagai akun sistem "Bot ERP". Panggil `done()` setelah selesai. */
+export async function botClient(env: BotEnv) {
   const supabase = createClient<Database>(env.url, env.anon, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { error: authError } = await supabase.auth.signInWithPassword({ email: env.email, password: env.password });
-  if (authError) throw new Error(`Login Bot ERP gagal: ${authError.message}`);
+  const { error } = await supabase.auth.signInWithPassword({ email: env.email, password: env.password });
+  if (error) throw new Error(`Login Bot ERP gagal: ${error.message}`);
+  return { supabase, done: async () => { await supabase.auth.signOut(); } };
+}
+
+export async function commitAging(filePath: string, sheets: Sheet[], reportDate: string, env: BotEnv) {
+  const { supabase, done } = await botClient(env);
   try {
     const buf = fs.readFileSync(filePath);
     const file = new File([buf], path.basename(filePath));
@@ -45,6 +53,6 @@ export async function commitAging(filePath: string, sheets: Sheet[], reportDate:
     const client = supabase as unknown as Parameters<typeof runUpload>[0];
     return await runUpload(client, "aging", file, sheets, { month: reportDate.slice(0, 7), reportDate });
   } finally {
-    await supabase.auth.signOut();
+    await done();
   }
 }

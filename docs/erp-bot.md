@@ -1,13 +1,19 @@
-# Bot ERP — Aging Detail otomatis (Fase 55)
+# Bot ERP — Aging & Jadwal Tukar Faktur otomatis (Fase 55–56)
 
-Setiap pagi, PC lokal menjalankan bot yang:
+Setiap hari kerja (Task Scheduler, default Senin–Jumat), PC lokal menjalankan bot dengan dua tugas berurutan:
 
-1. login ke Jaspersoft (report.tangki.id) → Library › **Aging Detail** → Organization *Penguin Trading*,
-   Statement Date = hari ini (WIB), Tipe Transaksi *Piutang* → Apply → Export **Excel**;
-2. mengarsipkan file ke Google Drive (folder arsip / `YYYY-MM`) lewat Web App Apps Script **ERP Drive Inbox**;
-3. membaca file dengan parser yang sama dengan Pusat Upload (`lib/uploads/parse.ts`) dan mengirimnya lewat jalur yang
-   sama (`lib/uploads/run.ts` → `upload_begin` / `upload_rows` / `aging_commit`) sebagai akun sistem **Bot ERP**.
+1. **Aging Detail** — login Jaspersoft (report.tangki.id) → Library › *Aging Detail* → Organization *Penguin Trading*,
+   Statement Date = hari ini (WIB), Tipe Transaksi *Piutang* → Apply → Export **Excel** → arsip Google Drive → kirim
+   lewat jalur Pusat Upload (`lib/uploads/run.ts` → `upload_begin` / `upload_rows` / `aging_commit`).
    Tanggal laporan = hari ini, bulan Collection = bulan berjalan (sama seperti upload manual).
+2. **Jadwal Tukar Faktur** — laporan *Report Send Invoice To Customer* (dicari lewat kotak pencarian Library),
+   Tanggal Awal = Tanggal Akhir = hari ini → Export **CSV** → arsip Drive → parser halaman Upload Jadwal
+   (`lib/modules/tukar/schedule.ts` `parseMasterCsv`) → `schedule_replace` (jadwal kurir **diganti seluruhnya**; hasil
+   kunjungan kurir tidak terhapus). Tanpa file Aging kedua: Payment Group / Marketing / Open Amt diambil dari data
+   tagihan (`ar_invoices` = Aging terkini, yang baru diperbarui tugas 1). Laporan kosong → jadwal lama dibiarkan.
+
+Kedua tugas berjalan sebagai akun sistem **Bot ERP** (menu `set.update` + `tukar.upload`). Gagal satu tugas tidak
+menghentikan tugas lain.
 
 Kode: `automation/erp-bot/` (paket npm terpisah, tidak ikut build Vercel). Log: `automation/erp-bot/logs/<tanggal>.log`
 (+ screenshot `error-*.png` bila Jaspersoft gagal). Riwayat upload di aplikasi menampilkan upload bot seperti biasa.
@@ -26,7 +32,8 @@ Kode: `automation/erp-bot/` (paket npm terpisah, tidak ikut build Vercel). Log: 
    - Deploy → New deployment → Web app · Execute as **Me** · Who has access **Anyone** → salin URL `/exec`.
 3. **Bot**: `cd automation/erp-bot && npm install`, salin `.env.example` → `.env`, isi semua nilai.
 4. **Uji**: `npm run dry-run` (unduh + baca saja) → `npm start -- --no-drive` atau `npm start` (penuh).
-5. **Jadwal**: `powershell -ExecutionPolicy Bypass -File install-task.ps1 -At 07:00`.
+5. **Jadwal**: `powershell -ExecutionPolicy Bypass -File install-task.ps1 -At 10:00` (default Senin–Jumat;
+   `-Days Monday,Friday` untuk hari tertentu, `-Daily` untuk setiap hari).
 
 ## Perilaku & batasan
 
@@ -34,7 +41,8 @@ Kode: `automation/erp-bot/` (paket npm terpisah, tidak ikut build Vercel). Log: 
 - Arsip Drive gagal → hanya peringatan; update database tetap jalan. Unduhan Jaspersoft dicoba 3x (jeda 30 dtk).
 - Periode Collection sudah *closed*, file bukan Aging, atau 0 baris → gagal tanpa mengubah database (aging_commit atomik).
 - PC harus menyala & user login; bila terlewat (PC mati), Task Scheduler menjalankan segera setelah PC aktif.
-- Opsi: `--dry-run`, `--file <path>` (pakai file yang ada), `--no-drive`, `--force`. `BOT_HEADLESS=false` untuk melihat
+- Opsi: `--dry-run`, `--only aging|jadwal`, `--file <xls>` (Aging dari file yang ada), `--jadwal-file <csv>`,
+  `--no-drive`, `--force`. `BOT_HEADLESS=false` untuk melihat
   browser saat memeriksa masalah.
 
 ## Catatan teknis (pelajaran uji nyata 2026-10-09)

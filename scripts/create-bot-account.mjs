@@ -3,7 +3,7 @@
 //   node --env-file=.env.local scripts/create-bot-account.mjs [--name "Bot ERP"]
 //
 // Akun sistem: tidak tampil di daftar login & tidak bisa masuk lewat halaman login (system_account), PIN acak,
-// akses menu HANYA set.update (Pusat Upload) → cukup untuk upload_begin / upload_rows / aging_commit.
+// akses menu HANYA set.update (Pusat Upload: Aging) + tukar.upload (Upload Jadwal Tukar Faktur, Fase 56).
 // Mencetak BOT_EMAIL & BOT_PASSWORD untuk automation/erp-bot/.env. Kunci service role tidak perlu ada di PC bot.
 // Bila akun sudah ada: hanya mencetak ulang kredensialnya (dan merapikan akses menu).
 import { createHmac, randomInt, randomUUID } from "node:crypto";
@@ -42,9 +42,10 @@ if (!bot) {
   console.log(`Akun sistem "${args.name}" dibuat (${id}).`);
 }
 
-// Akses menu: hanya Pusat Upload (trigger default role menambahkan menu Collection saat akun dibuat).
-await admin.from("profile_menus").delete().eq("user_id", bot.id).neq("submenu_id", "set.update");
-await admin.from("profile_menus").upsert({ user_id: bot.id, submenu_id: "set.update" }, { onConflict: "user_id,submenu_id" });
+// Akses menu: hanya yang dipakai bot (trigger default role menambahkan menu Collection saat akun dibuat).
+const BOT_MENUS = ["set.update", "tukar.upload"];
+await admin.from("profile_menus").delete().eq("user_id", bot.id).not("submenu_id", "in", `(${BOT_MENUS.join(",")})`);
+await admin.from("profile_menus").upsert(BOT_MENUS.map((submenu_id) => ({ user_id: bot.id, submenu_id })), { onConflict: "user_id,submenu_id" });
 
 console.log("\nIsi automation/erp-bot/.env dengan:");
 console.log(`BOT_EMAIL=${bot.email}`);
