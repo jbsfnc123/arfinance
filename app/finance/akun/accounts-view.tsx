@@ -17,6 +17,7 @@ type Account = {
   has_pin: boolean;
   pin_optional: boolean;
   chatbot_enabled: boolean;
+  system_account: boolean;
 };
 
 function Feedback({ state }: { state: ActionResult }) {
@@ -148,12 +149,15 @@ function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: 
             {role?.name ?? "—"}
             {" · "}{role?.kind === "sa" ? "Semua workspace" : `Divisi ${DIVISION_LABEL[account.division as Division] ?? "AR"}`}
             {account.collection_name && ` · ${account.collection_name}`}
-            {!account.has_pin && !account.pin_optional && " · belum ada PIN"}
+            {!account.has_pin && !account.pin_optional && !account.system_account && " · belum ada PIN"}
             {" · "}{isSa ? "semua menu" : `${mine.length} menu`}
           </div>
         </div>
         {custom && (
           <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent" title="Akses menu berbeda dari default role">Menu disesuaikan</span>
+        )}
+        {account.system_account && (
+          <span className="rounded-full bg-fg/10 px-2 py-0.5 text-xs text-fg-2" title="Dipakai otomasi (mis. Bot ERP); tidak bisa login dari halaman login">Akun sistem</span>
         )}
         {account.pin_optional && (
           <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning" title="Login cukup nama">Tanpa PIN</span>

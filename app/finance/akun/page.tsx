@@ -12,7 +12,7 @@ export default async function AkunPage() {
   const [{ data: accounts }, { data: roles }, { data: accountMenus }, { data: roleMenus }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, display_name, collection_name, active, role_id, division, pin_hash, pin_optional, chatbot_enabled, created_at")
+      .select("id, display_name, collection_name, active, role_id, division, pin_hash, pin_optional, chatbot_enabled, system_account, created_at")
       .order("display_name"),
     supabase.from("roles").select("id, name, kind").order("name"),
     supabase.from("profile_menus").select("user_id, submenu_id"),

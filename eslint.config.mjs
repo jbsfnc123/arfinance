@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Aplikasi Presentasi lama (JS klasik) disalin apa adanya.
     "public/presentasi-app/**",
+    // Bot ERP lokal: paket npm terpisah (automation/erp-bot).
+    "automation/**",
   ]),
 ]);
 

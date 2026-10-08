@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Bot ERP lokal (Fase 55)
+!automation/erp-bot/.env.example
+automation/erp-bot/node_modules/
+automation/erp-bot/downloads/
+automation/erp-bot/logs/
