@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { findMenuByHref, type MenuGroup } from "@/lib/menu";
-import { AlarmMenuButton } from "@/components/alarm/alarm-provider";
+import { AccountMenuItems, Avatar } from "@/components/account/account-tools";
 import { Popover } from "@/components/popover";
 import { toolbarBtn } from "@/components/ui";
 import { useTheme, type ThemeMode } from "@/lib/ui/prefs";
@@ -21,7 +21,7 @@ export const useShortcutLabel = () => useSyncExternalStore(noSub, () => (isApple
 
 export function TopBar({ title, icon, menu, portalHref, user, onSearch, onRefresh, refreshing, signOut }: {
   title: string; icon: string; menu: MenuGroup[]; portalHref?: string | null;
-  user: { name: string; role: string; collection: string | null };
+  user: { name: string; role: string; collection: string | null; avatar?: string | null };
   onSearch: () => void; onRefresh: () => void; refreshing: boolean;
   signOut: (e: React.FormEvent<HTMLFormElement>) => void;
 }) {
@@ -63,7 +63,7 @@ export function TopBar({ title, icon, menu, portalHref, user, onSearch, onRefres
         <span className="relative">
           <button type="button" data-popover-anchor aria-label="Akun" aria-expanded={panel === "me"} onClick={() => setPanel(panel === "me" ? null : "me")}
             className={`${toolbarBtn} ml-0.5 !px-1 ${panel === "me" ? "!bg-fg/12" : ""}`}>
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-[10px] font-semibold text-accent">{initials(user.name)}</span>
+            <Avatar name={user.name} url={user.avatar} size={24} />
             <span className="hidden max-w-32 truncate text-xs text-fg md:inline">{user.name}</span>
           </button>
           <ProfileMenu open={panel === "me"} onClose={() => setPanel(null)} user={user} portalHref={portalHref} signOut={signOut} />
@@ -73,7 +73,6 @@ export function TopBar({ title, icon, menu, portalHref, user, onSearch, onRefres
   );
 }
 
-const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
 
 function Clock() {
   const [now, setNow] = useState<Date | null>(null);
@@ -95,7 +94,7 @@ function Clock() {
 const THEMES: { v: ThemeMode; l: string }[] = [{ v: "dark", l: "Gelap" }, { v: "light", l: "Terang" }, { v: "system", l: "Sistem" }];
 
 function ProfileMenu({ open, onClose, user, portalHref, signOut }: {
-  open: boolean; onClose: () => void; user: { name: string; role: string; collection: string | null }; portalHref?: string | null;
+  open: boolean; onClose: () => void; user: { name: string; role: string; collection: string | null; avatar?: string | null }; portalHref?: string | null;
   signOut: (e: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const [theme, setTheme] = useTheme();
@@ -103,7 +102,7 @@ function ProfileMenu({ open, onClose, user, portalHref, signOut }: {
   return (
     <Popover open={open} onClose={onClose} label="Menu akun" className="right-0 top-full mt-1.5 w-64 p-1.5">
       <div className="flex items-center gap-3 px-2.5 py-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent">{initials(user.name)}</span>
+        <Avatar name={user.name} url={user.avatar} size={36} />
         <span className="min-w-0">
           <span className="block truncate text-[13px] font-semibold">{user.name}</span>
           <span className="block truncate text-[11px] text-fg-2">{user.role}{user.collection && ` · ${user.collection}`}</span>
@@ -120,7 +119,7 @@ function ProfileMenu({ open, onClose, user, portalHref, signOut }: {
         </span>
       </div>
       <div className="mx-2 my-1 border-t border-hairline" />
-      <AlarmMenuButton className={item} onOpen={onClose} />
+      <AccountMenuItems className={item} onPick={onClose} />
       {portalHref && <a href={portalHref} className={item}><Icon name="apps" size={17} />Ganti workspace</a>}
       <form action="/auth/signout" method="post" onSubmit={signOut}>
         <button type="submit" className={item}><Icon name="logout" size={17} />Keluar</button>

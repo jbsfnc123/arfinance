@@ -9,7 +9,7 @@ import { clearViewState, ensureViewOwner } from "@/lib/ui/view-state";
 import { ToastProvider, useToast } from "@/components/toast";
 import { deniedMessage } from "@/components/lock-dot";
 import { ConsultantChat } from "@/components/consultant-chat";
-import { AlarmProvider } from "@/components/alarm/alarm-provider";
+import { AccountToolsProvider } from "@/components/account/account-tools";
 import { TopBar } from "./shell/top-bar";
 import { Dock, MobileNav } from "./shell/dock";
 import { AppLauncher } from "./shell/app-launcher";
@@ -27,13 +27,13 @@ type ShellProps = {
   menu: NavGroup[];           // SEMUA menu; `locked` = tanpa akses (titik merah, klik → pesan)
   homeLocked: boolean;
   consultantEnabled: boolean; // ditentukan server dari role.kind, bukan label role
-  user: { id: string; name: string; role: string; collection: string | null };
+  user: { id: string; name: string; role: string; collection: string | null; avatar: string | null };
   children: React.ReactNode;
 };
 
 // ToastProvider membungkus seluruh shell agar Dock/Launcher/Spotlight bisa menampilkan pesan "tidak memiliki akses".
 export function ShellChrome(props: ShellProps) {
-  return <ToastProvider><AlarmProvider><ShellFrame {...props} /></AlarmProvider></ToastProvider>;
+  return <ToastProvider><AccountToolsProvider userId={props.user.id} hasPhoto={!!props.user.avatar}><ShellFrame {...props} /></AccountToolsProvider></ToastProvider>;
 }
 
 function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabled, user, children }: ShellProps) {

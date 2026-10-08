@@ -40,15 +40,14 @@ export async function createAccount(_prev: ActionResult, fd: FormData): Promise<
   const collection = str(fd, "collection_name") || null;
   const division = str(fd, "division");
   const pin = str(fd, "pin");
-  const pinOptional = fd.get("pin_optional") === "on";
   if (!isDivision(division)) return err("Pilih divisi AR, AP, atau AR + AP.");
 
   if (!name) return err("Nama wajib diisi.");
-  // PIN boleh kosong hanya untuk akun "Login tanpa PIN".
-  if (pin ? !isValidPin(pin) : !pinOptional) return err("PIN harus 6 digit angka.");
   const kind = await roleKind(roleId);
   if (!kind) return err("Role tidak ditemukan.");
-  if (kind === "sa" && pinOptional) return err("Akun Super Admin wajib memakai PIN.");
+  // Login tanpa PIN hanya untuk role Kurir (Aplikasi Kolektor); PIN boleh kosong hanya untuk akun itu.
+  const pinOptional = kind === "kurir" && fd.get("pin_optional") === "on";
+  if (pin ? !isValidPin(pin) : !pinOptional) return err("PIN harus 6 digit angka.");
 
   const admin = createAdminClient();
   const id = crypto.randomUUID();
@@ -104,13 +103,12 @@ export async function updateAccount(_prev: ActionResult, fd: FormData): Promise<
   const collection = str(fd, "collection_name") || null;
   const division = str(fd, "division");
   const active = fd.get("active") === "on";
-  const pinOptional = fd.get("pin_optional") === "on";
   if (!isDivision(division)) return err("Pilih divisi AR, AP, atau AR + AP.");
 
   if (!name) return err("Nama wajib diisi.");
   const kind = await roleKind(roleId);
   if (!kind) return err("Role tidak ditemukan.");
-  if (kind === "sa" && pinOptional) return err("Akun Super Admin wajib memakai PIN.");
+  const pinOptional = kind === "kurir" && fd.get("pin_optional") === "on";
   // Cegah Super Admin mengunci dirinya sendiri.
   if (id === me.id && (!active || kind !== "sa")) {
     return err("Anda tidak bisa menonaktifkan atau menurunkan role akun Anda sendiri.");
