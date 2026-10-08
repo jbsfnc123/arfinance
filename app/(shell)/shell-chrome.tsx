@@ -8,6 +8,7 @@ import { reloadLoaded } from "@/lib/local/store";
 import { clearViewState, ensureViewOwner } from "@/lib/ui/view-state";
 import { ToastProvider, useToast } from "@/components/toast";
 import { deniedMessage } from "@/components/lock-dot";
+import { ConsultantChat } from "@/components/consultant-chat";
 import { AlarmProvider } from "@/components/alarm/alarm-provider";
 import { TopBar } from "./shell/top-bar";
 import { Dock, MobileNav } from "./shell/dock";
@@ -89,6 +90,7 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, user, children 
       <main className="min-w-0 flex-1 overflow-auto px-4 pt-4 md:px-6 md:pt-5" style={{ paddingBottom: "var(--dock-reserve)" }}>
         <div key={pathname} className="page-in">{children}</div>
       </main>
+      <ConsultantChat key={user.id} />
       <Dock menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
       <MobileNav menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
       <AppLauncher open={overlay === "launcher"} onClose={closeOverlay} menu={menu} homeLocked={homeLocked} onDenied={denyAccess} />

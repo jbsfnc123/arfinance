@@ -1,0 +1,50 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useDialog } from "@/components/use-dialog";
+
+export const CONSULTANT_URL = "https://script.google.com/macros/s/AKfycbyBUUcfrXV0Bw_R6thB8UCRxWj1vw-9KOvvOW9JCjWZoddcJUtas5eQX-7mzZWctw3wbA/exec";
+
+// Load the remote bot only after the first click. Keep its conversation when minimized.
+// No application data, credentials or session tokens are sent to this external frame.
+export function ConsultantChat() {
+  const [open, setOpen] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const panel = useRef<HTMLElement>(null);
+  const layer = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  function close() { setOpen(false); trigger.current?.focus(); }
+  useDialog(open, close, panel, { kind: "popover", layerRef: layer });
+  useEffect(() => { if (open) closeButton.current?.focus(); }, [open]);
+
+  return <div ref={layer} className="fixed right-3 z-40 flex flex-col items-end gap-2 sm:right-5" style={{ bottom: "calc(var(--dock-reserve, 92px) + env(safe-area-inset-bottom, 0px))" }}>
+    {started && <section ref={panel} id="consultant-chat-panel" hidden={!open} role="dialog" aria-label="Asst. Bang Mando" aria-modal="false"
+      className="w-[min(400px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl"
+      style={{ height: "min(600px, calc(100dvh - var(--dock-reserve, 92px) - env(safe-area-inset-bottom, 0px) - 116px))" }}>
+      <div className="flex h-full min-h-0 flex-col">
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-2">
+          <span className="text-sm font-semibold">Asst. Bang Mando</span>
+          <button ref={closeButton} type="button" onClick={close} aria-label="Tutup chat" className="flex h-8 w-8 items-center justify-center rounded-lg text-fg-2 hover:bg-fg/5 focus-visible:outline-2 focus-visible:outline-accent">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          </button>
+        </header>
+        {!loaded && <p role="status" className="px-3 py-2 text-xs text-fg-2">Memuat chatbot…</p>}
+        <iframe src={CONSULTANT_URL} title="Percakapan dengan Asst. Bang Mando" onLoad={() => setLoaded(true)}
+          className="min-h-0 w-full flex-1 border-0 bg-white" referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" />
+        <footer className="shrink-0 border-t border-line px-3 py-2 text-xs text-fg-2">
+          <a href={CONSULTANT_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Buka chat di tab baru</a>
+        </footer>
+      </div>
+    </section>}
+    <button ref={trigger} type="button" aria-label={open ? "Tutup konsultan chat" : "Buka konsultan chat"} aria-expanded={open}
+      aria-controls={started ? "consultant-chat-panel" : undefined} title="Asst. Bang Mando"
+      onClick={() => { if (open) close(); else { setStarted(true); setOpen(true); } }}
+      className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface/95 text-accent shadow-lg backdrop-blur-xl transition hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+      <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z" /><path d="M8 11h.01M12 11h.01M16 11h.01" /></svg>
+    </button>
+  </div>;
+}
