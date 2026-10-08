@@ -6,8 +6,8 @@ import { useDialog } from "@/components/use-dialog";
 export const CONSULTANT_URL = "https://script.google.com/macros/s/AKfycbyBUUcfrXV0Bw_R6thB8UCRxWj1vw-9KOvvOW9JCjWZoddcJUtas5eQX-7mzZWctw3wbA/exec";
 
 // Load the remote bot only after the first click. Keep its conversation when minimized.
-// Only the display name is sent for greeting lookup; no credentials or financial data.
-export function ConsultantChat({ accountName = "" }: { accountName?: string }) {
+// Display name and account ID scope greeting/browser memory; no credentials or financial data.
+export function ConsultantChat({ accountName = "", accountId = "" }: { accountName?: string; accountId?: string }) {
   const [open, setOpen] = useState(false);
   const [started, setStarted] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -17,6 +17,7 @@ export function ConsultantChat({ accountName = "" }: { accountName?: string }) {
   const closeButton = useRef<HTMLButtonElement>(null);
   const chatUrl = new URL(CONSULTANT_URL);
   if (accountName.trim()) chatUrl.searchParams.set("account", accountName.trim());
+  if (accountId) chatUrl.searchParams.set("accountId", accountId);
 
   function close() { setOpen(false); trigger.current?.focus(); }
   useDialog(open, close, panel, { kind: "popover", layerRef: layer });
