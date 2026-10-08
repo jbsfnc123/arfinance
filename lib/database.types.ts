@@ -888,6 +888,7 @@ export type Database = {
       profiles: {
         Row: {
           active: boolean
+          chatbot_enabled: boolean
           collection_name: string | null
           created_at: string
           display_name: string
@@ -900,6 +901,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          chatbot_enabled?: boolean
           collection_name?: string | null
           created_at?: string
           display_name: string
@@ -912,6 +914,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          chatbot_enabled?: boolean
           collection_name?: string | null
           created_at?: string
           display_name?: string

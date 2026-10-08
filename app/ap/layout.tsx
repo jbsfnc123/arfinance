@@ -4,6 +4,7 @@ import { currentHost } from "@/lib/workspace-server";
 import { WORKSPACES, workspaceUrl } from "@/lib/workspace";
 import { WorkspaceDenied } from "@/components/workspace-denied";
 import { ShellChrome } from "../(shell)/shell-chrome";
+import { canUseConsultant } from "@/lib/consultant-access";
 
 // AP Workspace (ap.tangki.space): kerangka sama dengan AR; menu diisi fase berikutnya.
 export default async function ApLayout({ children }: LayoutProps<"/ap">) {
@@ -15,7 +16,7 @@ export default async function ApLayout({ children }: LayoutProps<"/ap">) {
     .filter((g) => g.children.length > 0);
 
   return (
-    <ShellChrome title={WORKSPACES.ap.label} icon={WORKSPACES.ap.icon} menu={menu} homeLocked={false} consultantEnabled={role.kind === "sa"}
+    <ShellChrome title={WORKSPACES.ap.label} icon={WORKSPACES.ap.icon} menu={menu} homeLocked={false} consultantEnabled={canUseConsultant(role.kind, profile.chatbot_enabled)}
       portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null}
       user={{ id: profile.id, name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}

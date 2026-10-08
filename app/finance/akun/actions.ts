@@ -69,6 +69,7 @@ export async function createAccount(_prev: ActionResult, fd: FormData): Promise<
     collection_name: collection,
     division,
     pin_optional: pinOptional,
+    chatbot_enabled: kind === "sa" || fd.get("chatbot_enabled") === "on",
   });
   const { error: pinError } = profileError || !pin
     ? { error: profileError }
@@ -119,10 +120,12 @@ export async function updateAccount(_prev: ActionResult, fd: FormData): Promise<
   const { data: before } = await supabase.from("profiles").select("role_id").eq("id", id).single();
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: name, role_id: roleId, collection_name: collection, division, active, pin_optional: pinOptional })
+    .update({ display_name: name, role_id: roleId, collection_name: collection, division, active, pin_optional: pinOptional,
+      chatbot_enabled: kind === "sa" || fd.get("chatbot_enabled") === "on" })
     .eq("id", id);
   if (error) return err(error.message);
 
+  revalidatePath("/", "layout"); // perubahan izin terlihat saat halaman/layout berikutnya dimuat
   // Role diganti + dicentang "Ganti akses menu dengan default role baru" → menu akun = default role baru.
   const roleChanged = !!before && before.role_id !== roleId;
   if (roleChanged && fd.get("reset_menus") === "on") {

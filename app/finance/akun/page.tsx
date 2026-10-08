@@ -12,7 +12,7 @@ export default async function AkunPage() {
   const [{ data: accounts }, { data: roles }, { data: accountMenus }, { data: roleMenus }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, display_name, collection_name, active, role_id, division, pin_hash, pin_optional, created_at")
+      .select("id, display_name, collection_name, active, role_id, division, pin_hash, pin_optional, chatbot_enabled, created_at")
       .order("display_name"),
     supabase.from("roles").select("id, name, kind").order("name"),
     supabase.from("profile_menus").select("user_id, submenu_id"),
@@ -30,6 +30,7 @@ export default async function AkunPage() {
         Setiap akun masuk dengan nama &amp; PIN 6 digit. PIN tidak pernah ditampilkan ulang; gunakan &quot;Reset PIN&quot; bila lupa.
         Akun yang dicentang &quot;Login tanpa PIN&quot; cukup memilih nama (tidak berlaku untuk Super Admin).
         Akses menu diatur per akun (tombol &quot;Akses menu&quot;); akun baru otomatis mendapat default menu role-nya.
+        Akses chatbot Bang Mando dapat diaktifkan pada formulir Tambah atau Ubah akun; Super Admin selalu memiliki akses.
       </p>
       <AccountsView
         me={profile.id}
