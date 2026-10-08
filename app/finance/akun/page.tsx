@@ -28,7 +28,8 @@ export default async function AkunPage() {
       <h1 className="text-[22px] font-semibold tracking-tight">Akun &amp; PIN</h1>
       <p className="mt-1 text-sm text-fg-2">
         Setiap akun masuk dengan nama &amp; PIN 6 digit. PIN tidak pernah ditampilkan ulang; gunakan &quot;Reset PIN&quot; bila lupa.
-        Akun yang dicentang &quot;Login tanpa PIN&quot; cukup memilih nama (tidak berlaku untuk Super Admin).
+        Akun yang belum punya PIN wajib membuat PIN saat pertama kali masuk; setiap akun dapat mengganti PIN dan foto profil sendiri dari menu akun.
+        Hanya akun role Kurir yang dapat dicentang &quot;Masuk Aplikasi Kolektor tanpa PIN&quot;.
         Akses menu diatur per akun (tombol &quot;Akses menu&quot;); akun baru otomatis mendapat default menu role-nya.
         Akses chatbot QnA AR Workspace dapat diaktifkan pada formulir Tambah atau Ubah akun; Super Admin selalu memiliki akses.
       </p>

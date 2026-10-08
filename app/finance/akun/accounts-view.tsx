@@ -44,14 +44,14 @@ function PinInput(props: { name?: string; required?: boolean }) {
   );
 }
 
-// Login cukup nama. Siapa pun yang mengetik nama ini bisa masuk → hanya untuk akun berisiko rendah.
+// Login cukup nama — hanya akun role Kurir di Aplikasi Kolektor (Fase 54). Akun lain wajib PIN.
 function NoPinCheck({ defaultChecked, onChange }: { defaultChecked?: boolean; onChange?: (v: boolean) => void }) {
   return (
-    <label className="flex items-start gap-2 text-sm sm:col-span-6" title="Tidak berlaku untuk role Super Admin">
+    <label className="flex items-start gap-2 text-sm sm:col-span-6" title="Hanya untuk role Kurir">
       <input type="checkbox" name="pin_optional" defaultChecked={defaultChecked} onChange={(e) => onChange?.(e.target.checked)} className="mt-1" />
       <span>
-        Login tanpa PIN (cukup nama)
-        <span className="block text-xs text-warning">Siapa pun yang mengetik nama ini bisa masuk sebagai akun ini. Tidak berlaku untuk Super Admin.</span>
+        Masuk Aplikasi Kolektor tanpa PIN (cukup nama)
+        <span className="block text-xs text-warning">Siapa pun yang mengetik nama ini bisa masuk Aplikasi Kolektor sebagai akun ini.</span>
       </span>
     </label>
   );
@@ -95,6 +95,8 @@ function DivisionSelect({ defaultValue }: { defaultValue?: string }) {
 function CreateForm({ roles }: { roles: Role[] }) {
   const [state, action, pending] = useActionState(createAccount, null);
   const [noPin, setNoPin] = useState(false);
+  const [roleId, setRoleId] = useState("");
+  const kurir = roles.find((r) => r.id === roleId)?.kind === "kurir";
   return (
     <form
       action={action}
@@ -103,14 +105,14 @@ function CreateForm({ roles }: { roles: Role[] }) {
     >
       <h2 className="font-medium sm:col-span-6">Tambah akun</h2>
       <input name="display_name" required placeholder="Nama" className={inputCls} />
-      <RoleSelect roles={roles} />
+      <RoleSelect roles={roles} onChange={setRoleId} />
       <DivisionSelect />
       <input name="collection_name" placeholder="Collection awal Daftar Tagihan (opsional)" title="Collection yang terbuka pertama kali di Daftar Tagihan" className={inputCls} />
-      <PinInput required={!noPin} />
+      <PinInput required={!(kurir && noPin)} />
       <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Menyimpan…" : "Tambah"}
       </button>
-      <NoPinCheck onChange={setNoPin} />
+      {kurir && <NoPinCheck onChange={setNoPin} />}
       <ChatbotCheck />
       <div className="sm:col-span-6">
         <Feedback state={state} />
@@ -195,7 +197,7 @@ function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: 
           <button type="submit" disabled={editPending} className={btnPrimary}>
             Simpan
           </button>
-          {role?.kind !== "sa" && <NoPinCheck defaultChecked={account.pin_optional} />}
+          {picked?.kind === "kurir" && <NoPinCheck defaultChecked={account.pin_optional} />}
           <ChatbotCheck defaultChecked={account.chatbot_enabled} superAdmin={picked?.kind === "sa"} />
           {pickedRole !== account.role_id && picked?.kind !== "sa" && (
             <label className="flex items-start gap-2 text-sm sm:col-span-6">

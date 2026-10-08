@@ -9,7 +9,7 @@ import { canEnterWorkspace, homeWorkspace, isDivision } from "@/lib/menu";
 import { isSharedHost, parseNext, staysOnKolektor, workspaceFromHost, workspaceUrl } from "@/lib/workspace";
 import { loginAllowedHere } from "@/lib/auth/login-names";
 
-export type LoginState = { error: string; at: number; needPin?: boolean; go?: string } | null;
+export type LoginState = { error: string; at: number; needPin?: boolean; needSetup?: boolean; go?: string } | null;
 
 type PinLoginResult =
   | { status: "ok"; user_id: string; email: string }
@@ -22,23 +22,32 @@ async function clientIp() {
   return { h, ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown" };
 }
 
-// Login: Nama (+ PIN bila akun tidak diizinkan tanpa PIN), lalu diarahkan ke workspace sesuai akses akun
-// (atau kembali ke alamat asal ?next bila akun boleh membukanya). Satu pintu di tangki.space; Aplikasi Kolektor
-// (kolektor.tangki.space) punya halaman login sendiri. PIN kosong → coba login cukup nama (name_login).
+// Login: Nama + PIN (wajib; akun yang belum punya PIN membuatnya dulu lewat `setup`), lalu diarahkan ke workspace sesuai
+// akses akun (atau kembali ke ?next bila boleh). Pengecualian: akun kolektor "tanpa PIN" di Aplikasi Kolektor
+// (kolektor.tangki.space) cukup nama. PIN kosong → name_login menentukan: ok (kolektor) / need_pin / need_setup.
 export async function loginWithPin(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const name = String(formData.get("name") ?? "").trim();
   const pin = String(formData.get("pin") ?? "");
+  const setup = formData.get("setup") === "1";
   if (!name) return fail("Pilih nama terlebih dahulu.");
   const { h, ip } = await clientIp();
   const admin = createAdminClient();
 
-  let result: PinLoginResult | { status: "need_pin" };
-  if (!pin) {
-    // Akun yang dicentang "Login tanpa PIN" (bukan Super Admin) langsung masuk; lainnya diminta PIN.
+  let result: PinLoginResult | { status: "need_pin" | "need_setup" };
+  if (setup) {
+    // Buat PIN pertama kali (hanya berhasil bila akun ini memang belum punya PIN), lalu langsung masuk.
+    if (!isValidPin(pin)) return { ...fail("PIN harus 6 digit angka."), needSetup: true };
+    const { data, error } = await admin.rpc("pin_setup_named" as never, { p_name: name, p_pin: pin, p_ip: ip } as never);
+    if (error) return { ...fail("Gagal membuat PIN. Coba lagi."), needSetup: true };
+    result = data as unknown as PinLoginResult;
+    if (result.status === "invalid") return { ...fail("PIN akun ini sudah dibuat. Masuk dengan PIN Anda."), needPin: true };
+  } else if (!pin) {
+    // Hanya akun kolektor "tanpa PIN" yang langsung masuk; lainnya diminta PIN atau membuat PIN.
     const { data, error } = await admin.rpc("name_login", { p_name: name, p_ip: ip });
     if (error) return fail("Login gagal. Coba lagi.");
-    result = data as PinLoginResult | { status: "need_pin" };
+    result = data as PinLoginResult | { status: "need_pin" | "need_setup" };
     if (result.status === "need_pin") return { error: "", at: Date.now(), needPin: true };
+    if (result.status === "need_setup") return { error: "", at: Date.now(), needSetup: true };
   } else {
     if (!isValidPin(pin)) return { ...fail("PIN harus 6 digit angka."), needPin: true };
     // pin_login_named juga mencatat percobaan & menerapkan batas brute-force.
