@@ -18,6 +18,12 @@ The separately deployed GAS package supports session conversation context and op
 
 Memory is bounded and treated as untrusted context by GAS. The help desk prompt responds empathetically to signs of frustration without diagnosis/profiling, redirects unclear/off-topic questions, and permits occasional respectful Bible paraphrases or light humor when appropriate. These behaviors require updating the manual-paste GAS files and the existing deployment.
 
+## Separate AI settings page
+
+Finance navigation and portal link to `/ai-settings`, routed to `app/finance/ai-settings`. The server checks `role.kind === "sa"` before rendering any external frame. The iframe uses the same GAS deployment with `?page=ai-settings`. GAS renders a separate Settings template and retains its existing verified Google admin/password checks; the URL parameter grants no privilege. The normal Index template contains no settings controls or admin editor JavaScript.
+
+The GAS chat notice has been removed, while guide-mode truthfulness remains in the system prompt. The chat avatar uses the credited CC BY 3.0 Lee Jong Suk photograph from Wikimedia (K-POPIT 케이팝잇); the image is cropped visually to a circle, with BM fallback on failure. These external-template changes require pasting Code.gs, Index.html and the new Settings.html, then updating the existing GAS deployment. Vercel publishing alone does not update GAS source.
+
 ## External source access needed
 
 Script ID: `1bM1QCyczdQjJAUe3i4MxzsNMP1c4onMXxrpAKyuuur8zpQUGEBZJ5Ern`.

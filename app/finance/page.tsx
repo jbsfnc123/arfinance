@@ -41,11 +41,12 @@ export default async function FinancePortal() {
         ))}
       </div>
 
-      {isSa && <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      {isSa && <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Akun", value: accounts ?? 0, sub: `${active ?? 0} aktif`, href: "/akun" },
           { label: "Role", value: roles ?? 0, sub: "atur akses menu & workspace", href: "/acl" },
           { label: "Database", value: "Kuota", sub: "pemakaian Supabase", href: "/database" },
+          { label: "Pengaturan AI", value: "Bang Mando", sub: "agent, API key & model", href: "/ai-settings" },
         ].map((s) => (
           <a key={s.label} href={s.href} className="rounded-xl border border-hairline bg-surface p-3 shadow-sm transition-shadow hover:shadow-md">
             <div className="text-xs text-fg-2">{s.label}</div>
