@@ -15,7 +15,7 @@ export default async function ApLayout({ children }: LayoutProps<"/ap">) {
     .filter((g) => g.children.length > 0);
 
   return (
-    <ShellChrome title={WORKSPACES.ap.label} icon={WORKSPACES.ap.icon} menu={menu} homeLocked={false}
+    <ShellChrome title={WORKSPACES.ap.label} icon={WORKSPACES.ap.icon} menu={menu} homeLocked={false} consultantEnabled={role.kind === "sa"}
       portalHref={canEnterWorkspace("finance", access) ? workspaceUrl("finance", host) : null}
       user={{ id: profile.id, name: profile.display_name, role: role.name, collection: profile.collection_name }}>
       {children}
