@@ -25,7 +25,7 @@ const ITEM_GLYPH: Record<string, string> = {
   "tukar.jadwal": "event", "tukar.detail": "smartphone", "tukar.ekspedisi": "local_shipping", "tukar.upload": "upload_file",
   "rek.mitra10": "storefront", "tukar.rkm": "storefront", "tukar.monitor_sj": "fact_check",
   "inv.pengajuan": "edit_note", "inv.batal": "summarize", "inv.hold": "pause_circle", "ext.ltkp": "picture_as_pdf", "rek.coretax": "code",
-  "bill.detail": "receipt_long", "bill.ecom": "shopping_cart", "bill.komisi": "payments",
+  "bill.detail": "receipt_long", "bill.email": "mail", "bill.komisi": "payments",
   "rek.cekharga": "compare_arrows", "rek.marketplace": "storefront",
   "tool.pdf": "picture_as_pdf",
   "set.update": "cloud_upload", "set.target": "target", "set.watpl": "chat",
