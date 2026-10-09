@@ -60,7 +60,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
     // Keputusan user 2026-09-25: Billing tetap di GAS, dibuka lewat link langsung.
     { id: "bill.detail", label: "Tagihan Bulanan Detail", external: true,
       href: "https://script.google.com/a/macros/penguin.id/s/AKfycbySpc4mhfrsuVa4434OO9Ac0rPW7l5vMUZ8Nbe8TGYuzZDmndAZ-jpVc7D_cPOhvJ7_gQ/exec" },
-    { id: "bill.ecom",   label: "E-Commerce",             href: "/billing/ecommerce" },
+    { id: "bill.email",  label: "Email Customer",         href: "/billing/email-customer" },
     { id: "bill.komisi", label: "Komisi dan Cashback",    href: "/billing/komisi" },
   ]},
   { id: "rekon", label: "Rekonsiliasi", icon: "rule", children: [

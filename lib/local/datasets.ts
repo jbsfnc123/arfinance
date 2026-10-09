@@ -40,6 +40,8 @@ export type SjUpload = { at: string; file_name: string; rows: number; uploader: 
 export type SjLog = { at: string; action: string; old_name: string | null; new_name: string | null; by_name: string };
 export type Account = { code: string; last4: string; sort: number; active: boolean };
 
+import type { EmailData } from "@/lib/modules/email-customer";
+
 export type Datasets = {
   aging: { month: string | null; uploadedAt: string | null; lines: AgingLine[] };
   activity: { notes: Note[]; promises: Promise_[]; exchanges: Exchange[] };
@@ -59,6 +61,7 @@ export type Datasets = {
   rkmMarks: { marks: RowMark[] };
   // Receive Date SJ (Receiver aktif) untuk kolom Daftar Tagihan (migrasi 0047).
   sjReceive: { rows: { sj_key: string; receive_date: string }[] };
+  emailCustomer: EmailData;
   // Monitor Surat Jalan (migrasi 0045): SJ aging terbaru, penerimaan tersimpan, daftar Receiver, riwayat upload & perubahan.
   sj: { aging: SjAging[]; receipts: SjReceipt[]; receivers: SjReceiver[]; log: SjLog[]; uploads: SjUpload[];
     agingAt: { month: string; at: string } | null; canManage: boolean };
@@ -97,6 +100,7 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string
   payhist: { rpc: "pack_erp_recent", deps: ["erp"], decode: (r) => ({ ...decodeErp(r), counts: (r.counts as Record<string, number>) ?? undefined }) },
   m10Marks: { rpc: "pack_row_marks", args: { p_module: "m10" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
   rkmMarks: { rpc: "pack_row_marks", args: { p_module: "rkm" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
+  emailCustomer: { rpc: "pack_email_customer", deps: ["email_customer", "aging", "erp"], decode: (r) => tables(r, ["groups", "customers", "emails", "lookup"]) as Datasets["emailCustomer"] },
   sjReceive: { rpc: "pack_sj_receive", deps: ["sj"], decode: (r) => ({ rows: unpack<{ sj_key: string; receive_date: string }>(r as Packed) }) },
   sj: { rpc: "pack_sj", deps: ["sj", "aging"], decode: (r) => ({
     ...(tables(r, ["aging", "receipts", "receivers", "log", "uploads"]) as Omit<Datasets["sj"], "canManage" | "agingAt">),
