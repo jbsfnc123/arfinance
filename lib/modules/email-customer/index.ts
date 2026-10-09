@@ -1,3 +1,5 @@
+import { parseDate } from "@/lib/parsers/date";
+
 // Modul Billing › Email Customer (Fase 60): daftar email Business Partner untuk pengiriman tagihan.
 // Empat tab seperti file "Email Customer.xlsx": BP CBD, Group CBD, BP TOP, Group TOP. Tab Group: PIC & email milik
 // Payment Group (berlaku untuk semua BP anggotanya). Payment Group / Collection / Marketing yang kosong diisi dari
@@ -12,7 +14,14 @@ export type EmailCustomer = {
 };
 export type EmailAddress = { customer_id: number | null; group_id: number | null; email: string };
 export type BpLookup = { bp_key: string; payment_group: string | null; collection_name: string | null; marketing: string | null; sales_name: string | null; branch: string | null; bp_name: string | null; in_aging: boolean };
-export type EmailData = { groups: EmailGroup[]; customers: EmailCustomer[]; emails: EmailAddress[]; lookup: BpLookup[] };
+export type SalesMark = { bp_value: string; sale_date: string };
+export type TopSale = { bp_key: string; invoice_date: string };
+export type SalesUpload = { at: string; kind: "cbd" | "erp"; file_name: string | null; rows: number | null; uploader: string };
+export type EmailData = {
+  groups: EmailGroup[]; customers: EmailCustomer[]; emails: EmailAddress[]; lookup: BpLookup[];
+  // Fase 61: sumber kolom penjualan mingguan — CBD dari upload "CBD sales" (hanya tanda), TOP dari invoice ERP.
+  cbdMarks?: SalesMark[]; topSales?: TopSale[]; uploads?: SalesUpload[];
+};
 
 export const TABS = [
   { key: "bp-cbd", label: "BP CBD", term: "CBD", level: "BP" },
@@ -40,9 +49,80 @@ export function monthWeeks(month: string): Week[] {
   return out;
 }
 
-/** Penjualan per minggu untuk satu BP. Sumber data belum ditentukan (tahap berikutnya) → semua "tidak ada". */
-export function weeklySales(_bpKey: string | null, weeks: Week[]): boolean[] {
-  return weeks.map(() => false);
+/** ✓ per minggu bila ada tanggal penjualan BP di rentang minggu itu. */
+export function weeklySales(dates: ReadonlySet<string> | undefined, weeks: Week[]): boolean[] {
+  if (!dates?.size) return weeks.map(() => false);
+  const list = [...dates];
+  return weeks.map((w) => list.some((d) => d >= w.start && d <= w.end));
+}
+
+// ── Pencocokan tanda penjualan ke BP ─────────────────────────────────────────────────────────────────
+const normKey = (s: string | null | undefined) => (s ?? "").toUpperCase().replace(/\s+/g, " ").trim();
+const leadNum = (s: string | null | undefined) => /^\d+/.exec((s ?? "").trim())?.[0] ?? "";
+
+/**
+ * Tanggal penjualan per id BP. TOP: invoice ERP dengan Key BP yang sama. CBD: Value di file (`Nama_Value`) sama persis
+ * dengan Value/Key BP (tanpa beda huruf/spasi); selain itu angka depan bila hanya menunjuk satu Value BP CBD.
+ */
+export function salesDatesById(data: EmailData): Map<number, Set<string>> {
+  const out = new Map<number, Set<string>>();
+  const add = (id: number, d: string) => (out.get(id) ?? out.set(id, new Set()).get(id)!).add(d);
+  const top = new Map<string, string[]>();
+  for (const t of data.topSales ?? []) (top.get(t.bp_key) ?? top.set(t.bp_key, []).get(t.bp_key)!).push(t.invoice_date);
+  const exact = new Map<string, number[]>(); const byNum = new Map<string, Map<string, number[]>>();
+  for (const c of data.customers) {
+    if (c.term === "TOP") { for (const d of (c.bp_key && top.get(c.bp_key)) || []) add(c.id, d); continue; }
+    for (const k of new Set([normKey(c.bp_value), normKey(c.bp_key)].filter(Boolean))) (exact.get(k) ?? exact.set(k, []).get(k)!).push(c.id);
+    const num = leadNum(c.bp_value) || leadNum(c.bp_key);
+    if (!num) continue;
+    const vals = byNum.get(num) ?? byNum.set(num, new Map()).get(num)!;
+    const v = normKey(c.bp_value || c.bp_key);
+    (vals.get(v) ?? vals.set(v, []).get(v)!).push(c.id);
+  }
+  for (const m of data.cbdMarks ?? []) {
+    let ids = exact.get(normKey(m.bp_value));
+    if (!ids) { const vals = byNum.get(leadNum(m.bp_value)); ids = vals && vals.size === 1 ? [...vals.values()][0] : []; }
+    for (const id of new Set(ids)) add(id, m.sale_date);
+  }
+  return out;
+}
+
+// ── File "CBD sales" (ERP: Payment/Receipt) ──────────────────────────────────────────────────────────
+export const CBD_TYPES = ["AR Receipt (Prepaid)", "AR Receipt (Prepaid-ESPAY)"];
+export type CbdParse = { marks: SalesMark[]; from: string; to: string; receipts: number; reversed: number; bps: number; noValue: number };
+
+/** Ambil penjualan CBD: Document Type Prepaid/Prepaid-ESPAY, bukan Reversed, tanggal = Transaction Date,
+ *  Business Partner "Nama_Value" → Value. Hanya tanda unik (Value, tanggal) yang dikembalikan, tanpa nominal. */
+export function parseCbdSales(sheets: { name: string; rows: unknown[][] }[]): CbdParse {
+  const norm = (v: unknown) => String(v ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+  for (const sh of sheets) {
+    const hi = sh.rows.slice(0, 15).findIndex((r) => r.some((c) => norm(c) === "document type") && r.some((c) => norm(c) === "transaction date"));
+    if (hi < 0) continue;
+    const h = sh.rows[hi].map(norm);
+    const col = (name: string) => h.indexOf(name);
+    const [cType, cDate, cBp, cStatus] = [col("document type"), col("transaction date"), col("business partner"), col("document status")];
+    if (cBp < 0) throw new Error("Kolom Business Partner tidak ditemukan.");
+    const types = new Set(CBD_TYPES.map(norm));
+    const seen = new Map<string, SalesMark>(); const bps = new Set<string>();
+    let from = "", to = "", receipts = 0, reversed = 0, noValue = 0;
+    for (const r of sh.rows.slice(hi + 1)) {
+      const date = parseDate(r[cDate]);
+      if (!date) continue;
+      if (!from || date < from) from = date;
+      if (!to || date > to) to = date;
+      if (!types.has(norm(r[cType]))) continue;
+      if (cStatus >= 0 && norm(r[cStatus]) === "reversed") { reversed++; continue; }
+      const bp = String(r[cBp] ?? "").trim(); const cut = bp.lastIndexOf("_");
+      const value = cut >= 0 ? bp.slice(cut + 1).trim() : "";
+      if (!value) { noValue++; continue; }
+      receipts++; bps.add(value.toUpperCase());
+      const k = `${value.toUpperCase()}|${date}`;
+      if (!seen.has(k)) seen.set(k, { bp_value: value, sale_date: date });
+    }
+    if (!from) throw new Error("Tidak ada Transaction Date yang terbaca.");
+    return { marks: [...seen.values()], from, to, receipts, reversed, bps: bps.size, noValue };
+  }
+  throw new Error("Bukan file CBD sales: kolom Document Type / Transaction Date tidak ditemukan.");
 }
 
 // ── Baris tabel ────────────────────────────────────────────────────────────────────────────────────
@@ -54,7 +134,7 @@ export type EmailRow = {
   [week: `w${number}`]: string;
 };
 
-export function buildRows(data: EmailData, term: Term, level: Level, weeks: Week[]): EmailRow[] {
+export function buildRows(data: EmailData, term: Term, level: Level, weeks: Week[], sales = salesDatesById(data)): EmailRow[] {
   const groups = new Map(data.groups.map((g) => [g.id, g]));
   const look = new Map(data.lookup.map((l) => [l.bp_key, l]));
   const byCustomer = new Map<number, string[]>(); const byGroup = new Map<number, string[]>();
@@ -67,7 +147,7 @@ export function buildRows(data: EmailData, term: Term, level: Level, weeks: Week
     const g = c.group_id != null ? groups.get(c.group_id) : undefined;
     const l = c.bp_key ? look.get(c.bp_key) : undefined;
     const manualPg = (g?.payment_group ?? c.payment_group ?? "").trim();
-    const sales = weeklySales(c.bp_key, weeks);
+    const weekly = weeklySales(sales.get(c.id), weeks);
     const row: EmailRow = {
       id: c.id, group_id: c.group_id, term: c.term, level: c.level,
       payment_group: manualPg || l?.payment_group || "", pg_from_db: !manualPg && !!l?.payment_group,
@@ -78,7 +158,7 @@ export function buildRows(data: EmailData, term: Term, level: Level, weeks: Week
       email_note: join(g?.email_note, c.email_note), keterangan: join(g?.keterangan, c.keterangan),
       match: c.bp_key ? "Cocok" : "Tidak cocok",
     };
-    weeks.forEach((w, i) => { row[w.key] = sales[i] ? "✓" : "✗"; });
+    weeks.forEach((w, i) => { row[w.key] = weekly[i] ? "✓" : "✗"; });
     return row;
   });
 }
