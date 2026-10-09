@@ -9,7 +9,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, monthLabel } from "@/lib/format";
 import { readAllSheets } from "@/lib/xlsx-client";
 import {
-  buildRows, monthWeeks, parseCbdSales, salesDatesById, splitEmails, TABS, type EmailCustomer, type EmailData, type EmailGroup, type EmailRow, type Level, type TabKey, type Term,
+  buildRows, CELL, monthWeeks, parseCbdSales, salesDatesById, splitEmails, TABS, weekKpi, type EmailCustomer, type EmailData, type EmailGroup, type EmailRow, type Level, type TabKey, type Term,
 } from "@/lib/modules/email-customer";
 import { useToast } from "@/components/toast";
 import { Tabs } from "@/components/tabs";
@@ -18,8 +18,8 @@ import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { Icon } from "@/components/icons";
 
 const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
-const WEEK_BADGE = { "✓": "bg-success/15 text-success", "✗": "bg-danger/10 text-danger" };
-const HIDDEN = ["bp_key", "sales", "branch", "email_note", "match"];
+// Kolom default: Payment Group, Business Partner, Value, Marketing + kolom minggu (Fase 62).
+const HIDDEN = ["bp_key", "collection", "sales", "branch", "pic_ar", "emails", "email_note", "keterangan", "match"];
 
 // Billing › Email Customer: 4 tab seperti file Excel. Klik baris = ubah; tombol Tambah BP / Tambah Grup.
 export function EmailCustomerView() {
@@ -31,12 +31,34 @@ export function EmailCustomerView() {
   const [editBp, setEditBp] = useState<Partial<EmailCustomer> | null>(null);
   const [editGroup, setEditGroup] = useState<Partial<EmailGroup> | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [shown, setShown] = useState<EmailRow[] | null>(null);
+  const [pending, setPending] = useState<Record<string, boolean>>({}); // klik yang sedang disimpan (optimistis)
   const fileRef = useRef<HTMLInputElement>(null);
   const t = TABS.find((x) => x.key === tab) ?? TABS[0];
   const weeks = useMemo(() => monthWeeks(month), [month]);
   const data: EmailData = useMemo(() => ds.data ?? { groups: [], customers: [], emails: [], lookup: [] }, [ds.data]);
   const sales = useMemo(() => salesDatesById(data), [data]);
-  const rows = useMemo(() => buildRows(data, t.term, t.level, weeks, sales), [data, t.term, t.level, weeks, sales]);
+  const rows = useMemo(() => {
+    const base = buildRows(data, t.term, t.level, weeks, sales);
+    if (!Object.keys(pending).length) return base;
+    return base.map((r) => {
+      const o = { ...r };
+      for (const w of weeks) { const k = `${r.id}|${w.start}`; if (k in pending && r[w.key] !== CELL.none) o[w.key] = pending[k] ? CELL.done : CELL.pending; }
+      return o;
+    });
+  }, [data, t.term, t.level, weeks, sales, pending]);
+  const kpi = useMemo(() => weekKpi(shown ?? rows, weeks), [shown, rows, weeks]);
+
+  // Klik ✓: kuning (belum dikirim) ⇄ hijau (email sudah dikirim) untuk BP & minggu itu.
+  async function toggleSent(r: EmailRow, w: (typeof weeks)[number]) {
+    const next = r[w.key] !== CELL.done;
+    const k = `${r.id}|${w.start}`;
+    setPending((p) => ({ ...p, [k]: next }));
+    const { error } = await supabase.rpc("email_week_sent_set" as never, { p_customer: r.id, p_week_start: w.start, p_sent: next } as never);
+    if (error) toast(`Gagal menyimpan status kirim: ${error.message}`, "danger");
+    await ds.reload();
+    setPending((p) => { const n = { ...p }; delete n[k]; return n; });
+  }
   const lastCbd = data.uploads?.find((u) => u.kind === "cbd");
   const lastErp = data.uploads?.find((u) => u.kind === "erp");
   const groups = useMemo(() => data.groups.filter((g) => g.term === t.term)
@@ -59,8 +81,21 @@ export function EmailCustomerView() {
     { k: "email_note", l: "Catatan Email", w: 220, wrap: true },
     { k: "keterangan", l: "Keterangan", w: 240, wrap: true },
     { k: "match", l: "Key BP", w: 100, badge: { Cocok: "bg-success/15 text-success", "Tidak cocok": "bg-warning/15 text-warning" } },
-    ...weeks.map((w) => ({ k: w.key, l: w.label, w: 74, badge: WEEK_BADGE } as LCol<EmailRow>)),
-  ], [weeks]);
+    ...weeks.map((w) => ({ k: w.key, l: w.label, w: 92, text: (r: EmailRow) => r[w.key],
+      render: (r: EmailRow) => {
+        const v = r[w.key];
+        if (v === CELL.none) return <span className="text-fg-2" aria-label="Tidak ada penjualan">✗</span>;
+        const done = v === CELL.done;
+        return (
+          <button type="button" onClick={(e) => { e.stopPropagation(); void toggleSent(r, w); }}
+            title={done ? `${r.sentInfo[w.key] ?? "Email sudah dikirim"} — klik untuk membatalkan` : "Ada penjualan, email belum dikirim — klik bila sudah dikirim"}
+            aria-label={`${r.business_partner} ${w.label}: ${done ? "email sudah dikirim" : "email belum dikirim"}`}
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${done ? "bg-success/20 text-success" : "bg-warning/25 text-warning"}`}>
+            ✓
+          </button>
+        );
+      } } as LCol<EmailRow>)),
+  ], [weeks]); // eslint-disable-line react-hooks/exhaustive-deps -- toggleSent stabil secara fungsi
   const filters = useMemo(() => [
     { k: "payment_group" as const, l: "Payment Group", options: uniq(rows.map((r) => r.payment_group)) },
     { k: "collection" as const, l: "Collection", options: uniq(rows.map((r) => r.collection)) },
@@ -125,7 +160,15 @@ export function EmailCustomerView() {
       <Tabs tabs={TABS.map((x) => ({ key: x.key, label: `${x.label} (${counts[x.key] ?? 0})`, icon: x.level === "BP" ? "person" : "groups" }))}
         value={tab} onChange={setTab} />
       {ds.error && <p className="text-sm text-danger">Gagal memuat data: {ds.error.message}</p>}
-      <LocalTable key={tab} title={`Email Customer ${t.label}`} stateKey={`email-customer-${tab}`} hideKey="email-customer" defaultHidden={HIDDEN}
+      <div className="grid grid-cols-3 gap-3 sm:max-w-xl" role="group" aria-label="KPI kirim email">
+        {([["Total", kpi.total, "text-fg"], ["Pending", kpi.pending, "text-warning"], ["Done", kpi.done, "text-success"]] as const).map(([l, v, c]) => (
+          <div key={l} className="rounded-xl border border-line bg-surface px-4 py-3">
+            <div className="text-xs text-fg-2">{l}</div>
+            <div className={`text-2xl font-semibold tabular-nums ${c}`}>{v.toLocaleString("id-ID")}</div>
+          </div>
+        ))}
+      </div>
+      <LocalTable key={tab} title={`Email Customer ${t.label}`} stateKey={`email-customer-${tab}`} hideKey="email-customer-v2" defaultHidden={HIDDEN} onRowsChange={setShown}
         rows={rows} cols={cols} rowKey={(r) => r.id} loading={!ds.data}
         search={["business_partner", "bp_value", "payment_group", "emails", "pic_ar", "collection", "keterangan"]}
         filters={filters} onRowClick={(r) => setEditBp(data.customers.find((c) => c.id === r.id) ?? null)} rowClass={() => "cursor-pointer"}
@@ -153,7 +196,7 @@ export function EmailCustomerView() {
         emptyText={ds.data ? "Belum ada data di tab ini." : "Memuat…"} />
       <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden aria-label="Pilih file CBD sales" onChange={(e) => void uploadCbd(e.target.files?.[0])} />
       <p className="text-xs text-fg-2">
-        Kolom minggu ({monthLabel(month)}, dipotong setiap Sabtu): ✓ ada penjualan, ✗ tidak ada.{" "}
+        Kolom minggu ({monthLabel(month)}, dipotong setiap Sabtu): ✓ kuning = ada penjualan, email belum dikirim · klik → ✓ hijau = sudah dikirim · ✗ tidak ada penjualan. KPI mengikuti bulan, tab & filter tabel.{" "}
         {t.term === "TOP"
           ? <>Sumber: invoice ERP &ldquo;Invoice and Payment Date Comparison&rdquo; (Pusat Upload){lastErp ? `, upload terakhir ${fmtTimestamp(lastErp.at)}` : ""} — dicocokkan lewat Key BP.</>
           : <>Sumber: upload CBD Sales (AR Receipt Prepaid &amp; Prepaid-ESPAY){lastCbd ? `, terakhir ${lastCbd.file_name} · ${fmtTimestamp(lastCbd.at)} oleh ${lastCbd.uploader}` : " — belum ada upload"}. Hanya tanda yang disimpan, tanpa nominal.</>}
