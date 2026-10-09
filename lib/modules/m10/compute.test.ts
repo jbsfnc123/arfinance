@@ -54,6 +54,15 @@ describe("Mitra10 compute", () => {
     expect(c.worksheet[2]).toMatchObject({ gr: "Pending", status: "Lunas", lama_tf: null });
   });
 
+  it("Jadwal Bayar terpadu (Fase 58): field per invoice menang atas jadwal KW; tanpa field → jadwal KW", () => {
+    const base = { worksheet: c.worksheet, gr: [], kwitansi: [
+      kw({ id: 1, vendor_invoice_no: "SI1", kuitansi_no: "KW1", kuitansi_date: "2026-09-10", total_net: 1500000 }),
+    ], schedule: [{ no_kw: "KW1", spp: null, nilai_kw: 0, tgl_tukar_faktur: "2026-09-10", jadwal_transfer: "2026-09-25", notes: null }], aging };
+    const manual = computeM10({ ...base, promises: [{ invoice_no: "SI1", promise_date: "2026-09-30" }, { invoice_no: "SI2", promise_date: "2026-10-02" }] });
+    expect(manual.worksheet.map((w) => w.jadwal_bayar)).toEqual(["2026-09-30", "2026-10-02", null]);
+    expect(computeM10(base).worksheet[0].jadwal_bayar).toBe("2026-09-25");
+  });
+
   it("GR: PO Aging & Check (tidak peka huruf); Kwitansi: Aging & Selisih", () => {
     expect(c.gr.map((g) => [g.po_aging, g.check_status])).toEqual([["PO1", "Done"], ["PO2", "Check"], ["Kosong", "Check"]]);
     expect(c.kwitansi.map((k) => [k.jadwal_bayar, k.aging, k.selisih])).toEqual([["2026-09-25", 2000000, -500000], [null, 2000000, -1500000], [null, 50000, -40000]]);

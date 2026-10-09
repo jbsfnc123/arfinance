@@ -90,7 +90,7 @@ export function CollectionView(props: {
     });
   }, []);
 
-  // Realtime: catatan / janji bayar / tukar faktur dari pengguna lain langsung ditambal ke baris.
+  // Realtime: catatan / jadwal bayar / tukar faktur dari pengguna lain langsung ditambal ke baris.
   useEffect(() => {
     if (!coll) return;
     const filter = `collection_name=eq.${coll}`;

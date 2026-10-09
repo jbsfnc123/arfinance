@@ -1,6 +1,6 @@
 import { daysBetween } from "@/lib/parsers/date";
 import { num } from "@/lib/local/pack";
-import type { AgingLine, Gr, Kwitansi, Schedule, Worksheet } from "@/lib/local/datasets";
+import type { AgingLine, Gr, Kwitansi, M10Promise, Schedule, Worksheet } from "@/lib/local/datasets";
 import { remarkKey } from "@/lib/modules/remarks";
 import { bpShort } from "@/lib/modules/bp";
 
@@ -50,7 +50,9 @@ export function currentM10Worksheet(worksheet: Worksheet[], aging: AgingLine[]):
 }
 
 // remarks = Keterangan invoice bersama (Collection / Mitra10 / Hold Faktur Pajak).
-export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[]; aging: AgingLine[]; remarks?: Map<string, string> }) {
+// promises = Jadwal Bayar terpadu per invoice (sama dengan Daftar Tagihan & Dashboard Collection, Fase 58); bila belum
+// ada, jatuh ke Jadwal Bayar KW pertama invoice (data upload Mitra10).
+export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[]; aging: AgingLine[]; remarks?: Map<string, string>; promises?: M10Promise[] }) {
   const aging = input.aging; // sudah difilter Tax Name
   const agingInv = new Map<string, number>();       // Invoice No → Open Amt (baris pertama)
   const agingSjPo = new Map<string, string | null>(); // No SJ → No PO (baris pertama)
@@ -59,6 +61,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
     if (a.no_sj && !agingSjPo.has(a.no_sj)) agingSjPo.set(a.no_sj, a.no_po);
   }
   const sched = new Map(input.schedule.map((s) => [s.no_kw, s.jadwal_transfer]));
+  const promised = new Map((input.promises ?? []).filter((p) => p.promise_date).map((p) => [p.invoice_no, p.promise_date as string]));
   const grSj = new Set(input.gr.map((g) => g.sj_no).filter(Boolean) as string[]);
   const kwSum = new Map<string, number>();
   const kwFirst = new Map<string, Kwitansi>();
@@ -81,7 +84,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
       tukar_faktur: total > 10000 ? "Done" : "Pending",
       selisih: num(w.open_amt) - total,
       status: w.invoice_no && agingInv.has(w.invoice_no) ? "Outstanding" : "Lunas",
-      jadwal_bayar: first?.kuitansi_no ? sched.get(first.kuitansi_no) ?? null : null,
+      jadwal_bayar: (w.invoice_no ? promised.get(w.invoice_no) : undefined) ?? (first?.kuitansi_no ? sched.get(first.kuitansi_no) ?? null : null),
       lama_tf: first?.kuitansi_date && w.invoice_date ? daysBetween(first.kuitansi_date, w.invoice_date) : null,
       tf_date: first?.kuitansi_date ?? null,
     };

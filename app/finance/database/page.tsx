@@ -16,7 +16,7 @@ const TABLES = [
   { table: "erp_payments", desc: "Pembayaran ERP per dokumen → Mutasi, Presentasi (late days), Marketplace" },
   { table: "ar_targets", desc: "Target bulanan → Dashboard Controller & Mutasi" },
   { table: "notes", desc: "Catatan collection (Reminder, No Respon, Case, Administratif)" },
-  { table: "payment_promises", desc: "Janji bayar" },
+  { table: "payment_promises", desc: "Jadwal bayar" },
   { table: "invoice_exchanges", desc: "Tukar faktur (Kolektor, Ekspedisi, Sistem, WA, Email) — tidak permanen" },
   { table: "invoice_remarks", desc: "Keterangan invoice bersama (tidak permanen: hilang bila SJ/invoice keluar dari Aging)" },
   { table: "courier_updates", desc: "Laporan harian kolektor (tidak permanen)" },

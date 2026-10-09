@@ -134,7 +134,7 @@ export const COLUMN_DEFS: { key: ColumnKey; label: string; default?: boolean; mo
   { key: "invoice_no", label: "No Invoice", default: true },
   { key: "invoice_date", label: "Invoice Date", default: true },
   { key: "due_date", label: "Due Date", default: true },
-  { key: "janji_bayar", label: "Janji Bayar" },
+  { key: "janji_bayar", label: "Jadwal Bayar" },
   { key: "aging", label: "Aging" },
   { key: "open_amt", label: "Nominal", default: true, money: true },
   { key: "bp_value", label: "Value" },
@@ -197,7 +197,7 @@ export function cellText(r: CollectionRow, key: ColumnKey): string {
 }
 
 // ── Filter ─────────────────────────────────────────────────────────
-export const CATEGORY_CARDS = ["Case", "Janji Bayar", "Reminder", "No Respon", "Tidak Ada Catatan"] as const;
+export const CATEGORY_CARDS = ["Case", "Jadwal Bayar", "Reminder", "No Respon", "Tidak Ada Catatan"] as const;
 export type CategoryFilter = (typeof CATEGORY_CARDS)[number] | "Administratif";
 
 export type Filters = {
@@ -229,7 +229,7 @@ function passes(r: CollectionRow, f: Filters, skip: "pg" | "bp" | null) {
     } else if (r.aging !== f.aging) return false;
   }
   if (f.category) {
-    if (f.category === "Janji Bayar") {
+    if (f.category === "Jadwal Bayar") {
       if (!r.janji_bayar) return false;
     } else if (f.category === "Tidak Ada Catatan") {
       if (r.catatan) return false;
@@ -293,12 +293,12 @@ export function dueRecap(rows: CollectionRow[]) {
   return { months, total };
 }
 
-// Kartu kategori. "Janji Bayar" dihitung terpisah (bisa tumpang tindih), seperti versi lama.
+// Kartu kategori. "Jadwal Bayar" dihitung terpisah (bisa tumpang tindih), seperti versi lama.
 export function categoryCounts(rows: CollectionRow[]) {
   const out: Record<string, Agg> = {};
   for (const c of [...CATEGORY_CARDS, "Administratif"]) out[c] = { count: 0, nominal: 0 };
   for (const r of rows) {
-    if (r.janji_bayar) out["Janji Bayar"] = add(out["Janji Bayar"], r);
+    if (r.janji_bayar) out["Jadwal Bayar"] = add(out["Jadwal Bayar"], r);
     const c = categoryOf(r.catatan);
     out[c] = add(out[c], r);
   }

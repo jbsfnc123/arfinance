@@ -29,7 +29,7 @@ const AGING_CARDS: { key: Filters["aging"]; label: string; color: string }[] = [
 
 const CATEGORY_COLOR: Record<string, string> = {
   Case: "text-danger",
-  "Janji Bayar": "text-accent",
+  "Jadwal Bayar": "text-accent",
   Reminder: "text-orange-300",
   "No Respon": "text-fg-2",
   "Tidak Ada Catatan": "text-fg",
