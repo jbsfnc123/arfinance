@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRows, monthWeeks, parseCbdSales, salesDatesById, splitEmails, weeklySales, type EmailData } from ".";
+import { buildRows, CELL, weekKpi, monthWeeks, parseCbdSales, salesDatesById, splitEmails, weeklySales, type EmailData } from ".";
 
 describe("monthWeeks (cut-off Sabtu)", () => {
   it("Oktober 2026: 1–3, 4–10, 11–17, 18–24, 25–31", () => {
@@ -79,6 +79,21 @@ describe("penjualan mingguan (Fase 61)", () => {
     expect([...m.get(3)!]).toEqual(["2026-10-03"]);
     const weeks = monthWeeks("2026-10");
     expect(weeklySales(m.get(4), weeks)).toEqual([false, false, true, false, false]);
-    expect(buildRows(data, "CBD", "BP", weeks)[0]).toMatchObject({ w1: "✓", w2: "✗" });
+    expect(buildRows(data, "CBD", "BP", weeks)[0]).toMatchObject({ w1: "✓ Pending", w2: "✗" });
+  });
+});
+
+describe("status kirim email & KPI (Fase 62)", () => {
+  it("✓ kuning → terkirim per minggu; KPI total/pending/done", () => {
+    const base = { term: "CBD" as const, level: "BP" as const, group_id: null, bp_key: null, payment_group: null, pic_ar: null, keterangan: null, email_note: null, updated_at: "" };
+    const data: EmailData = { groups: [], emails: [], lookup: [],
+      customers: [{ ...base, id: 1, business_partner: "A", bp_value: "1" }, { ...base, id: 2, business_partner: "B", bp_value: "2" }],
+      cbdMarks: [{ bp_value: "1", sale_date: "2026-10-02" }, { bp_value: "1", sale_date: "2026-10-05" }, { bp_value: "2", sale_date: "2026-10-05" }],
+      sent: [{ customer_id: 1, week_start: "2026-10-04", updated_at: "2026-10-06T09:00:00", by_name: "Leti" }] };
+    const weeks = monthWeeks("2026-10");
+    const rows = buildRows(data, "CBD", "BP", weeks);
+    expect([rows[0].w1, rows[0].w2, rows[0].w3]).toEqual([CELL.pending, CELL.done, CELL.none]);
+    expect(rows[0].sentInfo.w2).toBe("Dikirim 2026-10-06 09:00 oleh Leti");
+    expect(weekKpi(rows, weeks)).toEqual({ total: 3, done: 1, pending: 2 });
   });
 });

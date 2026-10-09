@@ -16,11 +16,14 @@ export type EmailAddress = { customer_id: number | null; group_id: number | null
 export type BpLookup = { bp_key: string; payment_group: string | null; collection_name: string | null; marketing: string | null; sales_name: string | null; branch: string | null; bp_name: string | null; in_aging: boolean };
 export type SalesMark = { bp_value: string; sale_date: string };
 export type TopSale = { bp_key: string; invoice_date: string };
+export type SentMark = { customer_id: number; week_start: string; updated_at: string; by_name: string };
 export type SalesUpload = { at: string; kind: "cbd" | "erp"; file_name: string | null; rows: number | null; uploader: string };
 export type EmailData = {
   groups: EmailGroup[]; customers: EmailCustomer[]; emails: EmailAddress[]; lookup: BpLookup[];
   // Fase 61: sumber kolom penjualan mingguan — CBD dari upload "CBD sales" (hanya tanda), TOP dari invoice ERP.
   cbdMarks?: SalesMark[]; topSales?: TopSale[]; uploads?: SalesUpload[];
+  // Fase 62: minggu yang emailnya sudah dikirim (hijau).
+  sent?: SentMark[];
 };
 
 export const TABS = [
@@ -131,8 +134,21 @@ export type EmailRow = {
   payment_group: string; pg_from_db: boolean; business_partner: string; bp_value: string; bp_key: string;
   collection: string; marketing: string; sales: string; branch: string;
   pic_ar: string; emails: string; email_note: string; keterangan: string; match: "Cocok" | "Tidak cocok";
+  sentInfo: Record<string, string>; // kunci minggu -> keterangan waktu & pengirim
   [week: `w${number}`]: string;
 };
+
+// Nilai sel minggu: ada penjualan & belum dikirim (kuning) / sudah dikirim (hijau) / tidak ada penjualan.
+export const CELL = { pending: "✓ Pending", done: "✓ Terkirim", none: "✗" } as const;
+
+/** KPI per tab & bulan: Total = sel ✓, Done = sudah dikirim, Pending = sisanya. */
+export function weekKpi(rows: EmailRow[], weeks: Week[]) {
+  let total = 0, done = 0;
+  for (const r of rows) for (const w of weeks) {
+    if (r[w.key] === CELL.done) { total++; done++; } else if (r[w.key] === CELL.pending) total++;
+  }
+  return { total, done, pending: total - done };
+}
 
 export function buildRows(data: EmailData, term: Term, level: Level, weeks: Week[], sales = salesDatesById(data)): EmailRow[] {
   const groups = new Map(data.groups.map((g) => [g.id, g]));
@@ -142,6 +158,7 @@ export function buildRows(data: EmailData, term: Term, level: Level, weeks: Week
     if (e.customer_id != null) (byCustomer.get(e.customer_id) ?? byCustomer.set(e.customer_id, []).get(e.customer_id)!).push(e.email);
     else if (e.group_id != null) (byGroup.get(e.group_id) ?? byGroup.set(e.group_id, []).get(e.group_id)!).push(e.email);
   }
+  const sent = new Map((data.sent ?? []).map((m) => [`${m.customer_id}|${m.week_start}`, m]));
   const join = (...xs: (string | null | undefined)[]) => xs.filter((x) => x && x.trim()).join(" · ");
   return data.customers.filter((c) => c.term === term && c.level === level).map((c) => {
     const g = c.group_id != null ? groups.get(c.group_id) : undefined;
@@ -156,9 +173,13 @@ export function buildRows(data: EmailData, term: Term, level: Level, weeks: Week
       pic_ar: (g ? g.pic_ar : c.pic_ar) ?? "",
       emails: [...(g ? byGroup.get(g.id) ?? [] : []), ...(byCustomer.get(c.id) ?? [])].join(", "),
       email_note: join(g?.email_note, c.email_note), keterangan: join(g?.keterangan, c.keterangan),
-      match: c.bp_key ? "Cocok" : "Tidak cocok",
+      match: c.bp_key ? "Cocok" : "Tidak cocok", sentInfo: {},
     };
-    weeks.forEach((w, i) => { row[w.key] = weekly[i] ? "✓" : "✗"; });
+    weeks.forEach((w, i) => {
+      const m = sent.get(`${c.id}|${w.start}`);
+      row[w.key] = !weekly[i] ? CELL.none : m ? CELL.done : CELL.pending;
+      if (m && weekly[i]) row.sentInfo[w.key] = `Dikirim ${m.updated_at.slice(0, 16).replace("T", " ")} oleh ${m.by_name}`;
+    });
     return row;
   });
 }
