@@ -16,7 +16,8 @@ export function useCollectionPeriod(month: string) {
     if (error) throw error;
     return data as unknown as CollectionPeriod;
   }, [client, month]);
-  const result = useCachedQuery(`collection-period:v2:${month}`, OPEN, load, { depsFor: periodDeps });
+  // Catatan/Jadwal Bayar/tukar faktur bisa berubah beruntun: muat ulang otomatis digabung tiap 30 dtk (Refresh tetap langsung).
+  const result = useCachedQuery(`collection-period:v2:${month}`, OPEN, load, { depsFor: periodDeps, liveDelayMs: 30_000 });
   return {
     ...result,
     data: result.data?.month === month ? result.data : null,

@@ -26,3 +26,12 @@ create table private.upload_batches(id uuid primary key,kind text,file_name text
 create table private.upload_rows(batch uuid references private.upload_batches(id) on delete cascade,seq int,data jsonb);
 create function private.take_batch(p uuid,k text) returns private.upload_batches language sql as $$select b from private.upload_batches b where id=p and kind=k$$;
 create function private.m10_append_from_aging() returns integer language sql as $$select 0$$;
+-- Seperti produksi: tabel sumber Dashboard Collection membump data_versions (dipakai cache Fase 59).
+insert into public.data_versions(key) values ('aging'),('targets'),('activity'),('erp'),('settings') on conflict do nothing;
+create trigger bv_targets after insert or update or delete on public.ar_targets for each statement execute function private.bump_version('targets');
+create trigger bv_aging_lines after insert or update or delete on public.ar_aging_lines for each statement execute function private.bump_version('aging');
+create trigger bv_aging_snapshots after insert or update or delete on public.ar_aging_snapshots for each statement execute function private.bump_version('aging');
+create trigger bv_erp after insert or update or delete on public.erp_payments for each statement execute function private.bump_version('erp');
+create trigger bv_notes after insert or update or delete on public.notes for each statement execute function private.bump_version('activity');
+create trigger bv_promises after insert or update or delete on public.payment_promises for each statement execute function private.bump_version('activity');
+create trigger bv_settings after insert or update or delete on public.app_settings for each statement execute function private.bump_version('settings');
