@@ -28,6 +28,8 @@ export type Worksheet = { id: number; payment_group: string | null; business_par
 export type Gr = { id: number; no: string | null; store_no: string | null; delivery_to: string | null; gr_no: string | null; gr_date: string | null; po_no: string | null; po_date: string | null; vendor_ship_no: string | null; item_code: string | null; item_name: string | null; uom: string | null; qty_order: number | null; qty_received: number | null; status: string | null; sj_no: string | null };
 export type Kwitansi = { id: number; username: string | null; invoice_no: string; vendor_invoice_no: string | null; invoice_date: string | null; kuitansi_no: string | null; kuitansi_date: string | null; accepted_date: string | null; pfi_no: string | null; gr_no: string | null; po_no: string | null; total_net: number };
 export type Schedule = { no_kw: string; spp: string | null; nilai_kw: number; tgl_tukar_faktur: string | null; jadwal_transfer: string | null; notes: string | null };
+/** Jadwal Bayar terbaru per invoice (field terpadu payment_promises, Fase 58). */
+export type M10Promise = { invoice_no: string; promise_date: string | null };
 // RKM Tukar Faktur (Anyar Retail Indonesia): Kertas Kerja dari aging + file portal RKM (kunci No SJ).
 export type RkmWorksheet = { id: number; business_partner: string | null; invoice_no: string | null; invoice_date: string | null; due_date: string | null; open_amt: number; branch: string | null; no_po: string | null; no_sj: string };
 export type RkmGr = { id: number; no: string | null; grpo_no: string | null; no_sj: string | null; tgl_grpo: string | null; jumlah_grpo_grn: number | null; no_faktur_pajak: string | null; tgl_pajak: string | null; jumlah: number | null; selisih: number | null; cabang: string | null; no_po: string | null; jumlah_grpo: number | null; no_grn: string | null; jumlah_grn: number | null };
@@ -42,7 +44,7 @@ export type Datasets = {
   aging: { month: string | null; uploadedAt: string | null; lines: AgingLine[] };
   activity: { notes: Note[]; promises: Promise_[]; exchanges: Exchange[] };
   targets: { targets: Target[] };
-  m10: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[] };
+  m10: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[]; promises?: M10Promise[] };
   rkm: { worksheet: RkmWorksheet[]; gr: RkmGr[]; kwitansi: RkmKw[] };
   mutasi: { accounts: Account[]; mutations: Mutation[] };
   erp: { invoices: ErpInvoice[]; payments: { invoice_no: string; payment_date: string; amount: number }[] };
@@ -85,7 +87,7 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string
   aging: { rpc: "pack_aging", deps: ["aging"], decode: (r) => ({ month: (r.month as string) ?? null, uploadedAt: (r.uploadedAt as string) ?? null, lines: unpack<AgingLine>(r.lines as Packed) }) },
   activity: { rpc: "pack_activity", deps: ["activity"], decode: (r) => tables(r, ["notes", "promises", "exchanges"]) as Datasets["activity"] },
   targets: { rpc: "pack_targets", deps: ["targets"], decode: (r) => tables(r, ["targets"]) as Datasets["targets"] },
-  m10: { rpc: "pack_m10", deps: ["m10", "aging"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi", "schedule"]) as Datasets["m10"] },
+  m10: { rpc: "pack_m10", deps: ["m10", "aging", "activity"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi", "schedule", "promises"]) as Datasets["m10"] },
   rkm: { rpc: "pack_rkm", deps: ["rkm"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi"]) as Datasets["rkm"] },
   mutasi: { rpc: "pack_mutasi", deps: ["mutasi"], decode: (r) => tables(r, ["accounts", "mutations"]) as Datasets["mutasi"] },
   erp: { rpc: "pack_erp", deps: ["erp"], decode: decodeErp },

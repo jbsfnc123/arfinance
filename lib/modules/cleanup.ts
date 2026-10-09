@@ -18,7 +18,7 @@ export const CLEANUP_CATEGORIES: readonly CleanupCategory[] = [
     desc: "Jadwal tukar faktur yang invoicenya sudah tidak ada di Aging." },
   { key: "catatan", group: "aging", usesCutoff: false, label: "Catatan collection",
     desc: "Catatan (Reminder, No Respon, Case, Administratif) untuk invoice yang sudah lunas." },
-  { key: "janji_bayar", group: "aging", usesCutoff: false, label: "Janji bayar", desc: "Janji bayar untuk invoice yang sudah lunas." },
+  { key: "janji_bayar", group: "aging", usesCutoff: false, label: "Jadwal bayar", desc: "Jadwal bayar untuk invoice yang sudah lunas." },
   { key: "hold_faktur", group: "aging", usesCutoff: false, label: "Hold faktur pajak", desc: "Hold faktur pajak untuk invoice yang sudah lunas." },
   { key: "penerimaan_sj", group: "aging", usesCutoff: false, label: "Penerimaan SJ (Monitor SJ)",
     desc: "Receive Date & Receiver Monitor Surat Jalan untuk No SJ yang tidak ada lagi di Aging terbaru." },

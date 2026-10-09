@@ -64,7 +64,7 @@ const KW_COLS: LCol<KwRow>[] = [
 ];
 const JADWAL_COLS: LCol<Schedule>[] = [
   { k: "no_kw", l: "NO KW" }, { k: "spp", l: "SPP" }, { k: "nilai_kw", l: "Nilai KW", n: true },
-  { k: "tgl_tukar_faktur", l: "Tgl Tukar Faktur", d: true }, { k: "jadwal_transfer", l: "Jadwal Transfer", d: true }, { k: "notes", l: "Notes" },
+  { k: "tgl_tukar_faktur", l: "Tgl Tukar Faktur", d: true }, { k: "jadwal_transfer", l: "Jadwal Bayar", d: true }, { k: "notes", l: "Notes" },
 ];
 
 type AddKind = { table: "gr" | "kwitansi"; fields: { k: string; l: string; t?: "number" | "date" }[] } | null;

@@ -12,20 +12,20 @@ import { Icon } from "@/components/icons";
 
 export type Contact = { id?: number; business_partner: string; nama: string | null; no_wa: string; kode_bp?: string | null };
 
-export const NOTE_CATEGORIES = ["Janji Bayar", "Reminder", "No Respon", "Case", "Administratif"] as const;
+export const NOTE_CATEGORIES = ["Jadwal Bayar", "Reminder", "No Respon", "Case", "Administratif"] as const;
 
-// ── Catatan / Janji Bayar ────────────────────────────────────────────
+// ── Catatan / Jadwal Bayar ────────────────────────────────────────────
 export function NoteModal(props: {
   open: boolean;
   onClose: () => void;
   count: number;
   onSave: (kategori: string, isi: string, date: string) => Promise<boolean>;
 }) {
-  const [kategori, setKategori] = useState<string>("Janji Bayar");
+  const [kategori, setKategori] = useState<string>("Jadwal Bayar");
   const [isi, setIsi] = useState("");
   const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false);
-  const janji = kategori === "Janji Bayar";
+  const janji = kategori === "Jadwal Bayar";
   const valid = janji ? !!date : !!isi.trim();
 
   async function save() {
@@ -33,7 +33,7 @@ export function NoteModal(props: {
     const ok = await props.onSave(kategori, isi.trim(), date);
     setBusy(false);
     if (ok) {
-      setKategori("Janji Bayar");
+      setKategori("Jadwal Bayar");
       setIsi("");
       setDate("");
       props.onClose();
@@ -63,7 +63,7 @@ export function NoteModal(props: {
         </label>
         {janji && (
           <label className="block">
-            <span className="text-fg-2">Tanggal Janji *</span>
+            <span className="text-fg-2">Tanggal Jadwal Bayar *</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputCls} mt-1`} />
           </label>
         )}
@@ -76,21 +76,38 @@ export function NoteModal(props: {
   );
 }
 
-// ── Tukar Faktur via WA / Email ──────────────────────────────────────
+// ── Tukar Faktur via WA / Email / Kolektor ───────────────────────────
+// "Kolektor" = cadangan bila kolektor lupa update di Aplikasi Kolektor: staff mencatat manual tanpa foto dan hasilnya
+// sama seperti update kolektor (Jadwal Kolektor, Laporan Harian, keluar dari daftar pending kolektor).
+export type TukarVia = "WA" | "Email" | "Kolektor";
 export function TukarModal(props: {
   open: boolean;
   onClose: () => void;
   count: number;
   total: number;
-  onSave: (via: "WA" | "Email", date: string) => Promise<boolean>;
+  onSave: (via: TukarVia, date: string, kurir: string | null) => Promise<boolean>;
 }) {
-  const [via, setVia] = useState<"WA" | "Email">("WA");
+  const supabase = useMemo(() => createClient(), []);
+  const [via, setVia] = useState<TukarVia>("WA");
   const [date, setDate] = useState(todayJakarta());
+  const [kurir, setKurir] = useState("");
+  const [names, setNames] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const kolektor = via === "Kolektor";
+
+  // Daftar nama kolektor dimuat saat "Kolektor" dipilih pertama kali.
+  useEffect(() => {
+    if (!props.open || !kolektor || names) return;
+    supabase.rpc("kolektor_names" as never).then(({ data }) => {
+      setNames(((data ?? []) as { name: string }[]).map((r) => r.name));
+    });
+  }, [props.open, kolektor, names, supabase]);
+
+  const valid = !!date && date <= todayJakarta() && (!kolektor || !!kurir);
 
   async function save() {
     setBusy(true);
-    const ok = await props.onSave(via, date);
+    const ok = await props.onSave(via, date, kolektor ? kurir : null);
     setBusy(false);
     if (ok) props.onClose();
   }
@@ -103,7 +120,7 @@ export function TukarModal(props: {
       footer={
         <>
           <button type="button" className={btnGhost} onClick={props.onClose}>Batal</button>
-          <button type="button" className={btnPrimary} disabled={!date || busy} onClick={save}>Simpan</button>
+          <button type="button" className={btnPrimary} disabled={!valid || busy} onClick={save}>{busy ? "Menyimpan…" : "Simpan"}</button>
         </>
       }
     >
@@ -111,16 +128,32 @@ export function TukarModal(props: {
       <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
         <label>
           <span className="text-fg-2">Via</span>
-          <select value={via} onChange={(e) => setVia(e.target.value as "WA" | "Email")} className={`${inputCls} mt-1`}>
+          <select value={via} onChange={(e) => setVia(e.target.value as TukarVia)} className={`${inputCls} mt-1`}>
             <option>WA</option>
             <option>Email</option>
+            <option>Kolektor</option>
           </select>
         </label>
         <label>
           <span className="text-fg-2">Tanggal Tukar Faktur *</span>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`${inputCls} mt-1`} />
+          <input type="date" value={date} max={todayJakarta()} onChange={(e) => setDate(e.target.value)} className={`${inputCls} mt-1`} />
         </label>
+        {kolektor && (
+          <label className="col-span-2">
+            <span className="text-fg-2">Nama Kolektor *</span>
+            <select value={kurir} onChange={(e) => setKurir(e.target.value)} className={`${inputCls} mt-1`} disabled={!names}>
+              <option value="">{names ? "Pilih kolektor…" : "Memuat…"}</option>
+              {names?.map((n) => <option key={n}>{n}</option>)}
+            </select>
+          </label>
+        )}
       </div>
+      {kolektor && (
+        <p className="mt-3 rounded-lg bg-accent/10 px-3 py-2 text-xs text-fg-2">
+          Untuk kolektor yang lupa update di Aplikasi Kolektor. Tanpa foto; dicatat sebagai <b>input manual</b> atas nama Anda
+          dan ikut Jadwal Kolektor &amp; Laporan Harian Kolektor. Invoice yang sudah diupdate kolektor dilewati.
+        </p>
+      )}
     </Modal>
   );
 }

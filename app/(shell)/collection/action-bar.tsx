@@ -12,7 +12,7 @@ import type { Patch } from "./collection-view";
 import type { PayHistTarget } from "@/components/payment-history-modal";
 import { exportExcel, printRows } from "./export";
 import {
-  ContactsModal, FotoModal, NoteModal, readDeviceTemplate, ResiModal, TukarModal, WaEditModal, type Contact,
+  ContactsModal, FotoModal, NoteModal, readDeviceTemplate, ResiModal, TukarModal, WaEditModal, type Contact, type TukarVia,
 } from "./modals";
 import { Icon } from "@/components/icons";
 
@@ -88,7 +88,7 @@ export function ActionBar(props: {
     const before = new Map(selected.map((r) => [r.invoice_no, r]));
     const restore = () => patch(invoices, (r) => before.get(r.invoice_no) ?? r);
 
-    if (kategori === "Janji Bayar") {
+    if (kategori === "Jadwal Bayar") {
       patch(invoices, (r) => withSearch({ ...r, janji_bayar: date }));
       const { error } = await supabase.from("payment_promises").insert(
         selected.map((r) => ({
@@ -127,7 +127,8 @@ export function ActionBar(props: {
       .catch((e: Error) => { patch(invoices, (r) => before.get(r.invoice_no) ?? r); toast(`Gagal menyimpan: ${e.message}`, "danger"); });
   }
 
-  async function saveTukar(via: "WA" | "Email", date: string) {
+  async function saveTukar(via: TukarVia, date: string, kurir: string | null) {
+    if (via === "Kolektor") return saveTukarKolektor(date, kurir ?? "");
     const before = new Map(selected.map((r) => [r.invoice_no, r]));
     patch(invoices, (r) => applyExchange(r, { metode: via, tanggal: date, keterangan: null, resi: null, foto_path: null }));
     const { error } = await supabase.from("invoice_exchanges").insert(
@@ -139,6 +140,20 @@ export function ActionBar(props: {
       return false;
     }
     toast(`Tukar faktur via ${via} dicatat.`, "success");
+    clear();
+    return true;
+  }
+
+  // Via Kolektor (input manual, tanpa foto): RPC menulis update kolektor + tukar faktur sekaligus.
+  async function saveTukarKolektor(date: string, kurir: string) {
+    const { data, error } = await supabase.rpc("tukar_manual_kolektor" as never,
+      { p_invoices: invoices, p_tanggal: date, p_kurir: kurir } as never);
+    if (error) { toast(`Gagal menyimpan: ${error.message}`, "danger"); return false; }
+    const r = data as { count: number; skipped: number; kode: string | null; kurir: string };
+    if (r.count) patch(invoices, (row) => applyExchange(row, { metode: "Kolektor", tanggal: date, keterangan: r.kode, resi: null, foto_path: null }));
+    toast(r.count
+      ? `Tukar faktur via Kolektor (${r.kurir}) dicatat untuk ${r.count} invoice${r.skipped ? ` · ${r.skipped} dilewati (sudah diupdate kolektor)` : ""}.`
+      : "Tidak ada yang dicatat: invoice terpilih sudah diupdate kolektor.", r.count ? "success" : "warning", 7000);
     clear();
     return true;
   }

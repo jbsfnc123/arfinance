@@ -74,7 +74,7 @@ export function DashboardView() {
           <KpiStrip d={data} />
           <div className="grid grid-cols-12 gap-4">
             <DonutCard className="col-span-12 md:col-span-6 xl:col-span-4" title="Pencapaian" d={data} kind="pencapaian" />
-            <DonutCard className="col-span-12 md:col-span-6 xl:col-span-4" title="Terkumpul + Janji Bayar" d={data} kind="forecast" />
+            <DonutCard className="col-span-12 md:col-span-6 xl:col-span-4" title="Terkumpul + Jadwal Bayar" d={data} kind="forecast" />
             <AgingCard className="col-span-12 xl:col-span-4" d={data} />
             <AllocationCard className="col-span-12 xl:col-span-7" a={alloc} />
             <TopOverdue className="col-span-12 xl:col-span-5" d={data} />
@@ -129,7 +129,7 @@ function KpiStrip({ d }: { d: SpvSummary }) {
       <Kpi label="Sudah Terkumpul" value={rupiah(d.terkumpul)} sub={`${d.invLunas} lunas`} tone="success" />
       <Kpi label="Sisa Outstanding" value={rupiah(d.sisa)} sub={`${d.invBelum} belum lunas`} tone="warning" />
       <Kpi label="Case" value={rupiah(d.caseData.nom)} sub={`${d.caseData.count} inv case`} badge={`${casePct}%`} tone="danger" />
-      <Kpi label="Janji Bayar" value={rupiah(d.forecast)} sub={`${d.forecastCount} invoice`} badge={`${janjiPct}% dari target`} tone="accent" />
+      <Kpi label="Jadwal Bayar" value={rupiah(d.forecast)} sub={`${d.forecastCount} invoice`} badge={`${janjiPct}% dari target`} tone="accent" />
     </div>
   );
 }
@@ -173,15 +173,15 @@ function DonutCard({ title, d, kind, className }: { title: string; d: SpvSummary
   };
   const legend = kind === "pencapaian"
     ? [{ c: pctColor(pct, theme), l: "Terkumpul", v: rupiah(d.terkumpul) }, { c: t.track, l: "Sisa", v: rupiah(d.sisa) }]
-    : [{ c: S.collected, l: "Terkumpul", v: `${round1(pct)}%` }, { c: S.promise, l: "Janji Bayar", v: `${round1(fPct)}%` }];
+    : [{ c: S.collected, l: "Terkumpul", v: `${round1(pct)}%` }, { c: S.promise, l: "Jadwal Bayar", v: `${round1(fPct)}%` }];
   return (
     <section className={`${card} p-4 ${className ?? ""}`}>
-      <CardHead title={title} sub={kind === "pencapaian" ? `Target ${rupiah(d.target)}` : `${d.forecastCount} invoice berjanji bayar`} />
+      <CardHead title={title} sub={kind === "pencapaian" ? `Target ${rupiah(d.target)}` : `${d.forecastCount} invoice punya jadwal bayar`} />
       <div className="relative">
         <Chart option={option} height={210} />
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-[32px] font-bold leading-none tabular-nums" style={{ color: accent }}>{center}%</span>
-          <span className="mt-1 text-[11px] uppercase tracking-wide text-fg-2">{kind === "pencapaian" ? "Pencapaian" : "Terkumpul + Janji"}</span>
+          <span className="mt-1 text-[11px] uppercase tracking-wide text-fg-2">{kind === "pencapaian" ? "Pencapaian" : "Terkumpul + Jadwal"}</span>
         </div>
       </div>
       <ul className="mt-1 space-y-1.5 text-xs">
@@ -300,7 +300,7 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
   return (
     <section className={`${card} overflow-hidden ${className ?? ""}`}>
       <div className="px-4 pt-4">
-        <CardHead title="Rincian Pencapaian" sub="Target, terkumpul, sisa & janji bayar per kelompok"
+        <CardHead title="Rincian Pencapaian" sub="Target, terkumpul, sisa & jadwal bayar per kelompok"
           right={
             <div className="flex gap-0.5 rounded-[10px] bg-fill-3 p-[3px]">
               {TABS.map((t) => (
@@ -318,7 +318,7 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
             <tr>
               <th className={th}>Nama</th><th className={`${th} text-right`}>Lunas/Total</th>
               <th className={`${th} text-right`}>Terkumpul</th><th className={`${th} text-right`}>Sisa</th>
-              <th className={`${th} text-right`}>Janji Bayar</th><th className={`${th} w-48`}>Pencapaian</th>
+              <th className={`${th} text-right`}>Jadwal Bayar</th><th className={`${th} w-48`}>Pencapaian</th>
             </tr>
           </thead>
           <tbody>
@@ -349,7 +349,7 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
 
 const juta = (n: number | null) => (n === null ? null : Math.round(n / 1e4) / 100);
 
-// Pengganti "Janji Bayar per tanggal": pergerakan Alokasi Target per tanggal (data Mutasi vs Realisasi).
+// Pengganti "Jadwal Bayar per tanggal": pergerakan Alokasi Target per tanggal (data Mutasi vs Realisasi).
 function AllocationCard({ a, className }: { a: ReturnType<typeof allocationSeries> | null; className?: string }) {
   const S = seriesColors(useResolvedTheme());
   const t = chartTheme();

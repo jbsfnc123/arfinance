@@ -35,7 +35,7 @@ describe("view-model Collection", () => {
 
   it("filter kategori, aging, BP, dan pencarian", () => {
     expect(filterRows(rows, { ...EMPTY_FILTERS, category: "Case" }).map((r) => r.invoice_no)).toEqual(["A"]);
-    expect(filterRows(rows, { ...EMPTY_FILTERS, category: "Janji Bayar" }).map((r) => r.invoice_no)).toEqual(["B"]);
+    expect(filterRows(rows, { ...EMPTY_FILTERS, category: "Jadwal Bayar" }).map((r) => r.invoice_no)).toEqual(["B"]);
     expect(filterRows(rows, { ...EMPTY_FILTERS, category: "Tidak Ada Catatan" }).map((r) => r.invoice_no)).toEqual(["C", "D"]);
     expect(filterRows(rows, { ...EMPTY_FILTERS, aging: "Sudah Jatuh Tempo" }).map((r) => r.invoice_no)).toEqual(["B", "C"]);
     expect(filterRows(rows, { ...EMPTY_FILTERS, search: "toko b" }).map((r) => r.invoice_no)).toEqual(["C"]);
@@ -52,9 +52,9 @@ describe("view-model Collection", () => {
     expect(dueRecap(rows).months.map((m) => m.key)).toEqual(["2026-09", "2026-07", "__KOSONG__"]);
   });
 
-  it("kartu kategori (Janji Bayar tumpang tindih)", () => {
+  it("kartu kategori (Jadwal Bayar tumpang tindih)", () => {
     const c = categoryCounts(rows);
-    expect(c["Janji Bayar"].count).toBe(1);
+    expect(c["Jadwal Bayar"].count).toBe(1);
     expect(c["Reminder"].count).toBe(1);
     expect(c["Tidak Ada Catatan"].count).toBe(2);
   });
