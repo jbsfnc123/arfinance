@@ -22,6 +22,7 @@ beforeAll(async()=>{
  await db.exec(readFileSync("supabase/migrations/20261004095247_collection_monthly_closing.sql","utf8"));
  await db.exec(readFileSync("supabase/migrations/20261004151000_collection_source_payment_join.sql","utf8"));
  await db.exec(readFileSync("supabase/migrations/20261004154911_collection_aging_upload_reference.sql","utf8"));
+ await db.exec(readFileSync("supabase/migrations/20261009190000_collection_source_fast.sql","utf8"));
  await db.exec(`insert into ar_targets values('2026-09','INV1',1000,'M','C','BP','2026-09-10','JKT','SJ/1/XXVI/TRA'),('2026-10','INV1',600,'M','C','BP','2026-09-10','JKT','SJ/1/XXVI/TRA');
  insert into erp_payments values('INV1','2026-09-15',400),('OTHER','2026-09-15',50);
  insert into payment_promises values(1,'INV1','2026-09-28');`);
@@ -100,6 +101,7 @@ describe("database closing with actual production upload functions",()=>{
   const first=(await value<{v:CollectionPeriod["source"]}>("select collection_closing_source('2026-09',1) v")).v;
   expect(closingReport(first).alloc.totalAllocT).toBe(400);
   await db.exec(readFileSync("supabase/migrations/20261004151000_collection_source_payment_join.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261009190000_collection_source_fast.sql","utf8"));
  await db.exec(`insert into ar_targets values('2026-07','OLD',2000,'M','C','BP','2026-07-10','JKT','SJ/A-SJ/B');
     insert into ar_aging_snapshots(month,as_of,file_name,report_date) values('2026-07','2026-07-31','July','2026-07-31') on conflict (month) do update set report_date=excluded.report_date;
     insert into ar_aging_lines(snapshot_id,line_no,invoice_no,no_sj,open_amt,due_date)
@@ -111,6 +113,7 @@ describe("database closing with actual production upload functions",()=>{
  });
  it("handles monthly volume with compact source projection",async()=>{
   await db.exec(readFileSync("supabase/migrations/20261004151000_collection_source_payment_join.sql","utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261009190000_collection_source_fast.sql","utf8"));
  await db.exec(`insert into ar_targets(month,invoice_no,target,no_sj) select '2026-06','I'||g,10000,'SJ/'||g from generate_series(1,9000) g;
     insert into ar_aging_snapshots(month,as_of,file_name,report_date) values('2026-06','2026-06-30','June','2026-06-30');
     insert into ar_aging_lines(snapshot_id,line_no,invoice_no,no_sj,open_amt,due_date)
@@ -121,5 +124,25 @@ describe("database closing with actual production upload functions",()=>{
   expect(closingReport(p.source).data.sisa).toBe(36000000);
   console.info(`Closing volume: 9000 targets / 22000 aging; read ${Math.round(ms)}ms; source ${JSON.stringify(p.source).length} chars`);
  },30000);
+ it("fast source (Fase 59) is byte-identical to v1 for snapshot pointers incl. multi-SJ and payments outside month",async()=>{
+  await db.exec(`update collection_periods set aging_data=jsonb_build_object('snapshotId',(select id from ar_aging_snapshots where month='2026-06')) where month='2026-06';
+    update collection_periods set aging_data=jsonb_build_object('snapshotId',(select id from ar_aging_snapshots where month='2026-07')) where month='2026-07';
+    insert into erp_payments values('I5','2026-05-02',100),('I6','2026-06-03',200),('NEW','2026-08-01',50),('ZZZ','2026-06-20',70),('I7',null,5);`);
+  for(const m of ['2026-06','2026-07','2026-09','2026-10']) for(const d of ['2026-06-30','2026-10-01']){
+   const same=await value<{ok:boolean}>("select md5(private.collection_source($1,$2::date)::text)=md5(private.collection_source_v1($1,$2::date)::text) ok",[m,d]);
+   expect(same.ok,`${m} ${d}`).toBe(true);
+  }
+  const p=await get('2026-06');expect(p.source.aging?.lines.length).toBe(9000);expect(closingReport(p.source).data.sisa).toBe(36000000);
+ },30000);
+ it("caches open-month source per data version and rebuilds after a change",async()=>{
+  const a=await get('2026-10');
+  const built=await value<{b:string}>("select built_at::text b from private.collection_source_cache where month='2026-10'");
+  expect((await get('2026-10')).source).toEqual(a.source);
+  expect((await value<{b:string}>("select built_at::text b from private.collection_source_cache where month='2026-10'")).b).toBe(built.b);
+  await sql("insert into payment_promises values(99,'INV1','2026-10-25')");
+  const b=await get('2026-10');
+  expect(b.source.promises.find((x)=>x.invoice_no==='INV1')?.promise_date).toBe('2026-10-25');
+  expect((await value<{b:string}>("select built_at::text b from private.collection_source_cache where month='2026-10'")).b).not.toBe(built.b);
+ });
 
 });

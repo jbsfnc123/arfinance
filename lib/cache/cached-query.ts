@@ -74,7 +74,8 @@ export function useCachedQuery<T>(
   key: string | null,
   deps: readonly DatasetKey[],
   load: () => Promise<T>,
-  opts: { live?: boolean; depsFor?: (data: T) => readonly DatasetKey[] } = {},
+  // liveDelayMs: jeda muat ulang otomatis setelah dataset berubah (default 1,5 dtk); perubahan beruntun digabung.
+  opts: { live?: boolean; depsFor?: (data: T) => readonly DatasetKey[]; liveDelayMs?: number } = {},
 ) {
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState<{ key: string | null; data: T | null; fromCache: boolean; at: number | null; error: Error | null; loading: boolean }>(
@@ -115,10 +116,10 @@ export function useCachedQuery<T>(
     const off = onVersionChange((k) => {
       if (!deps.has(k)) return;
       clearTimeout(t);
-      t = setTimeout(() => setNonce((n) => n + 1), 1500);
+      t = setTimeout(() => setNonce((n) => n + 1), opts.liveDelayMs ?? 1500);
     });
     return () => { off(); clearTimeout(t); };
-  }, [key, depsKey, opts.live, opts.depsFor, state.data]);
+  }, [key, depsKey, opts.live, opts.depsFor, opts.liveDelayMs, state.data]);
 
   const reload = useCallback((force = true) => { forceRef.current = force; setNonce((n) => n + 1); }, []);
   return { data: state.data, fromCache: state.fromCache, at: state.at, error: state.error, loading: state.loading, reload };
