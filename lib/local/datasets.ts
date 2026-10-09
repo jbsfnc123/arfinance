@@ -100,7 +100,7 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string
   payhist: { rpc: "pack_erp_recent", deps: ["erp"], decode: (r) => ({ ...decodeErp(r), counts: (r.counts as Record<string, number>) ?? undefined }) },
   m10Marks: { rpc: "pack_row_marks", args: { p_module: "m10" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
   rkmMarks: { rpc: "pack_row_marks", args: { p_module: "rkm" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
-  emailCustomer: { rpc: "pack_email_customer", deps: ["email_customer", "aging", "erp"], decode: (r) => tables(r, ["groups", "customers", "emails", "lookup"]) as Datasets["emailCustomer"] },
+  emailCustomer: { rpc: "pack_email_customer", deps: ["email_customer", "aging", "erp"], decode: (r) => tables(r, ["groups", "customers", "emails", "lookup", "cbdMarks", "topSales", "uploads"]) as Datasets["emailCustomer"] },
   sjReceive: { rpc: "pack_sj_receive", deps: ["sj"], decode: (r) => ({ rows: unpack<{ sj_key: string; receive_date: string }>(r as Packed) }) },
   sj: { rpc: "pack_sj", deps: ["sj", "aging"], decode: (r) => ({
     ...(tables(r, ["aging", "receipts", "receivers", "log", "uploads"]) as Omit<Datasets["sj"], "canManage" | "agingAt">),

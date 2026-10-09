@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useDataset } from "@/lib/local/store";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import { useViewState } from "@/lib/ui/view-state";
 import { todayJakarta } from "@/lib/parsers/date";
-import { monthLabel } from "@/lib/format";
+import { fmtTimestamp, monthLabel } from "@/lib/format";
+import { readAllSheets } from "@/lib/xlsx-client";
 import {
-  buildRows, monthWeeks, splitEmails, TABS, type EmailCustomer, type EmailData, type EmailGroup, type EmailRow, type Level, type TabKey, type Term,
+  buildRows, monthWeeks, parseCbdSales, salesDatesById, splitEmails, TABS, type EmailCustomer, type EmailData, type EmailGroup, type EmailRow, type Level, type TabKey, type Term,
 } from "@/lib/modules/email-customer";
 import { useToast } from "@/components/toast";
 import { Tabs } from "@/components/tabs";
@@ -29,10 +30,15 @@ export function EmailCustomerView() {
   const [month, setMonth] = useViewState("email-customer:month", todayJakarta().slice(0, 7));
   const [editBp, setEditBp] = useState<Partial<EmailCustomer> | null>(null);
   const [editGroup, setEditGroup] = useState<Partial<EmailGroup> | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const t = TABS.find((x) => x.key === tab) ?? TABS[0];
   const weeks = useMemo(() => monthWeeks(month), [month]);
   const data: EmailData = useMemo(() => ds.data ?? { groups: [], customers: [], emails: [], lookup: [] }, [ds.data]);
-  const rows = useMemo(() => buildRows(data, t.term, t.level, weeks), [data, t.term, t.level, weeks]);
+  const sales = useMemo(() => salesDatesById(data), [data]);
+  const rows = useMemo(() => buildRows(data, t.term, t.level, weeks, sales), [data, t.term, t.level, weeks, sales]);
+  const lastCbd = data.uploads?.find((u) => u.kind === "cbd");
+  const lastErp = data.uploads?.find((u) => u.kind === "erp");
   const groups = useMemo(() => data.groups.filter((g) => g.term === t.term)
     .sort((a, b) => a.payment_group.localeCompare(b.payment_group, "id")), [data.groups, t.term]);
   const counts = useMemo(() => Object.fromEntries(TABS.map((x) => [x.key,
@@ -79,6 +85,28 @@ export function EmailCustomerView() {
     await ds.reload();
     return true;
   }
+  // Upload "CBD sales": dibaca di browser; yang dikirim hanya tanda (Value BP + tanggal), tanpa nominal/dokumen.
+  async function uploadCbd(file: File | undefined) {
+    if (fileRef.current) fileRef.current.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const parsed = parseCbdSales(await readAllSheets(file));
+      const matched = salesDatesById({ ...data, cbdMarks: parsed.marks, topSales: [] });
+      const cbdIds = new Set(data.customers.filter((c) => c.term === "CBD").map((c) => c.id));
+      const hit = [...matched.keys()].filter((id) => cbdIds.has(id)).length;
+      const { data: res, error } = await supabase.rpc("email_cbd_sales_upload" as never,
+        { p_rows: parsed.marks.map((m) => ({ bp_value: m.bp_value, date: m.sale_date })), p_from: parsed.from, p_to: parsed.to, p_file_name: file.name } as never);
+      if (error) throw new Error(error.message);
+      const r = res as { marks: number; deactivated: number };
+      toast(`CBD sales ${parsed.from} s/d ${parsed.to}: ${parsed.receipts} penerimaan Prepaid (${parsed.reversed} Reversed diabaikan) · ` +
+        `${parsed.bps} BP → ${hit} BP CBD cocok · ${r.marks} tanda tersimpan${r.deactivated ? ` · ${r.deactivated} tanda lama dibatalkan` : ""}.`, "success", 10000);
+      await ds.reload();
+    } catch (e) {
+      toast(`Upload CBD sales gagal: ${(e as Error).message}`, "danger", 8000);
+    } finally { setUploading(false); }
+  }
+
   async function archive(customer: number | null, group: number | null, label: string) {
     if (!confirm(`Hapus ${label}? Data diarsipkan (tidak tampil lagi).`)) return;
     const { error } = await supabase.rpc("email_customer_archive" as never, { p_customer: customer, p_group: group } as never);
@@ -109,6 +137,12 @@ export function EmailCustomerView() {
             <button type="button" className={btnPrimary} onClick={() => setEditBp({ term: t.term, level: t.level })}>
               <Icon name="add" size={16} />Tambah BP
             </button>
+            {t.term === "CBD" && (
+              <button type="button" className={btnGhost} disabled={uploading} onClick={() => fileRef.current?.click()}
+                title="File ERP Payment/Receipt; dipakai: AR Receipt (Prepaid) & (Prepaid-ESPAY), Transaction Date, bukan Reversed">
+                <Icon name="upload" size={16} />{uploading ? "Membaca…" : "Upload CBD Sales"}
+              </button>
+            )}
             {t.level === "Group" && (
               <button type="button" className={btnGhost} onClick={() => setEditGroup({ term: t.term })}>
                 <Icon name="add" size={16} />Tambah Grup
@@ -117,9 +151,12 @@ export function EmailCustomerView() {
           </span>
         }
         emptyText={ds.data ? "Belum ada data di tab ini." : "Memuat…"} />
+      <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden aria-label="Pilih file CBD sales" onChange={(e) => void uploadCbd(e.target.files?.[0])} />
       <p className="text-xs text-fg-2">
-        Kolom minggu ({monthLabel(month)}, dipotong setiap Sabtu): ✓ ada penjualan, ✗ tidak ada. Sumber data penjualan akan
-        disambungkan pada tahap berikutnya — sementara semua ✗.
+        Kolom minggu ({monthLabel(month)}, dipotong setiap Sabtu): ✓ ada penjualan, ✗ tidak ada.{" "}
+        {t.term === "TOP"
+          ? <>Sumber: invoice ERP &ldquo;Invoice and Payment Date Comparison&rdquo; (Pusat Upload){lastErp ? `, upload terakhir ${fmtTimestamp(lastErp.at)}` : ""} — dicocokkan lewat Key BP.</>
+          : <>Sumber: upload CBD Sales (AR Receipt Prepaid &amp; Prepaid-ESPAY){lastCbd ? `, terakhir ${lastCbd.file_name} · ${fmtTimestamp(lastCbd.at)} oleh ${lastCbd.uploader}` : " — belum ada upload"}. Hanya tanda yang disimpan, tanpa nominal.</>}
       </p>
 
       {editBp && (
