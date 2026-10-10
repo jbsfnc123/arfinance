@@ -75,6 +75,7 @@ export const MENU_REGISTRY: MenuGroup[] = [
     { id: "set.update",   label: "Pusat Upload Data",      href: "/pengaturan/upload",         needs: "ctrl" },
     { id: "set.target",   label: "Upload Target Bulanan",  href: "/pengaturan/target",         needs: "ctrl" },
     { id: "set.watpl",    label: "Template WA",            href: "/pengaturan/wa-template",    needs: "ctrl" },
+    { id: "set.arsip",    label: "Arsip Data",             href: "/pengaturan/arsip" },
   ]},
 ];
 

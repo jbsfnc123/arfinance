@@ -1,4 +1,4 @@
-// Pengaturan: kredensial (rahasia hanya ditulis, tidak pernah ditampilkan), koneksi AR Workspace & Drive, browser,
+// Pengaturan: kredensial (rahasia hanya ditulis, tidak pernah ditampilkan), koneksi AR Workspace, browser,
 // penyimpanan, tampilan, uji koneksi, dan impor dari aplikasi lama.
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
@@ -108,16 +108,6 @@ export function SettingsPage() {
         <div className="mt-3"><TestButton target="arw" label="Uji login" res={res} setRes={setRes} /></div>
       </Card>
 
-      <Card title="Arsip Google Drive">
-        <div className="grid gap-3">
-          <Switch checked={cfg.drive.enabled} onChange={(v) => patch((c) => ({ ...c, drive: { ...c.drive, enabled: v } }))} label="Arsipkan file yang dikirim" />
-          <div className="grid gap-3 md:grid-cols-2">
-            <CfgInput label="URL Web App Drive Inbox" value={cfg.drive.url} placeholder="https://script.google.com/…/exec" onSave={(v) => patch((c) => ({ ...c, drive: { ...c.drive, url: v } }))} />
-            <SecretInput k="driveSecret" label="Rahasia Drive Inbox" />
-          </div>
-          <TestButton target="drive" label="Uji koneksi" res={res} setRes={setRes} />
-        </div>
-      </Card>
 
       <Card title="Browser bot">
         <div className="flex flex-wrap items-center gap-4">

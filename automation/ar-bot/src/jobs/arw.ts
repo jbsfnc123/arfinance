@@ -1,5 +1,5 @@
 // Kirim ke database AR Workspace lewat jalur yang SAMA dengan aplikasi web (parser lib/* + RPC upload), login sebagai
-// akun sistem "Bot ERP". Juga arsip Google Drive (Web App "ERP Drive Inbox") dan deteksi file kembar.
+// akun sistem "Bot ERP", dan deteksi file kembar. (Arsip file unduhan ke Drive dihapus — Fase 66: arsip kini di level database.)
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -148,56 +148,3 @@ export function unchanged(ctx: RunContext, job: string, sha: string) {
   return true;
 }
 export const markPushed = (job: string, sha: string) => setLastPush(job, sha);
-
-const MIME: Record<string, string> = {
-  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ".xls": "application/vnd.ms-excel",
-  ".csv": "text/csv",
-  ".pdf": "application/pdf",
-};
-
-/** Arsip ke Google Drive. Gagal arsip hanya peringatan (update database tetap jalan). */
-export async function archive(ctx: RunContext, file: string, month: string) {
-  const { enabled, url } = ctx.config.drive;
-  const secret = ctx.secrets.driveSecret;
-  if (!enabled) return;
-  if (!url || !secret) { ctx.warn("Arsip Drive dilewati: URL / rahasia Drive Inbox belum diisi."); return; }
-  for (let i = 1; i <= 2; i++) {
-    try {
-      const d = await driveUpload(file, month, url, secret);
-      ctx.info(`Drive: tersimpan di folder ${d.folder}`);
-      return;
-    } catch (e) {
-      if (i === 2) ctx.warn(`Arsip Drive gagal: ${(e as Error).message}`);
-    }
-  }
-}
-
-export async function driveUpload(file: string, month: string, url: string, secret: string) {
-  const body = JSON.stringify({
-    secret, fileName: path.basename(file), month,
-    mimeType: MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream",
-    base64: fs.readFileSync(file).toString("base64"),
-  });
-  // Web App menjawab POST dengan 302 ke googleusercontent; fetch mengikutinya (GET) dan membaca hasil JSON.
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body, redirect: "follow" });
-  const text = await res.text();
-  let out: { ok?: boolean; error?: string; fileId?: string; url?: string; folder?: string };
-  try { out = JSON.parse(text); } catch { throw new Error(`jawaban bukan JSON (HTTP ${res.status}); periksa URL Web App & akses "Anyone".`); }
-  if (!out.ok) throw new Error(`Drive menolak: ${out.error ?? "tidak diketahui"}`);
-  return { fileId: out.fileId!, url: out.url!, folder: out.folder! };
-}
-
-/**
- * Uji Drive tanpa mengunggah: kirim rahasia tanpa file. Web App (gas/Code.gs) menjawab "denied" bila rahasia salah dan
- * "empty" bila rahasia benar tetapi tidak ada file.
- */
-export async function testDrive(url: string, secret: string) {
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ secret }), redirect: "follow" });
-  const text = await res.text();
-  let out: { ok?: boolean; error?: string };
-  try { out = JSON.parse(text); } catch { throw new Error(`jawaban bukan JSON (HTTP ${res.status}); periksa URL Web App & akses "Anyone"`); }
-  if (out.error === "denied") throw new Error("rahasia ditolak");
-  if (out.error === "empty" || out.ok) return "terhubung, rahasia diterima";
-  throw new Error(out.error ?? "jawaban tidak dikenal");
-}

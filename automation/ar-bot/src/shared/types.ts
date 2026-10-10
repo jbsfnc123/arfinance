@@ -24,7 +24,7 @@ export type JobSpec = { id: JobId; params?: JobParams };
 
 export type RunRequest = {
   jobs: JobSpec[];
-  /** Unduh & baca saja (tanpa arsip Drive / database / unggah). */
+  /** Unduh & baca saja (tanpa kirim ke database / unggah). */
   dryRun?: boolean;
   /** Kirim walau file identik dengan kiriman sukses terakhir. */
   force?: boolean;
@@ -86,7 +86,6 @@ export type Config = {
   retentionDays: number;
   jasper: { username: string; organization: string };
   arw: { supabaseUrl: string; anonKey: string; botEmail: string };
-  drive: { enabled: boolean; url: string };
   edi: { accounts: EdiAccount[] };
   jobs: Partial<Record<JobId, JobParams>>;
   chains: Chain[];
@@ -96,7 +95,7 @@ export type Config = {
 };
 
 /** Nama rahasia yang disimpan terenkripsi (DPAPI). Password EDI: `edi:<id akun>`. */
-export type SecretKey = "jasperPassword" | "botPassword" | "driveSecret" | `edi:${string}`;
+export type SecretKey = "jasperPassword" | "botPassword" | `edi:${string}`;
 export type Secrets = Partial<Record<SecretKey, string>>;
 
 /** Status yang dikirim ke UI (tanpa nilai rahasia). */

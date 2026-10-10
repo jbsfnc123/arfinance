@@ -72,7 +72,8 @@ export function CleanupSection() {
   }
 
   const count = (k: string) => Number(ov?.categories.find((c) => c.category === k)?.count ?? 0);
-  const groups = (["aging", "teknis", "arsip"] as CleanupGroup[]).map((g) => ({ g, cats: CLEANUP_CATEGORIES.filter((c) => c.group === g) }));
+  // Kategori "arsip" (ERP, mutasi) tidak lagi dihapus permanen di sini: dipindah ke Arsip ke Google Drive (Fase 66).
+  const groups = (["aging", "teknis"] as CleanupGroup[]).map((g) => ({ g, cats: CLEANUP_CATEGORIES.filter((c) => c.group === g) }));
 
   return (
     <section className={`${card} space-y-4 p-4`} aria-labelledby="cleanup-title">

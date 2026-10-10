@@ -5,6 +5,7 @@ import { fmtTimestamp } from "@/lib/format";
 import { card, emptyTd, td, th } from "@/components/ui";
 import { fmtBytes, QUOTA, quotaState, SUPABASE_PLAN, SUPABASE_USAGE_URL, type UsageReport } from "@/lib/modules/usage";
 import { TableBox } from "@/components/table-box";
+import { ArchiveSection } from "./archive";
 import { CleanupSection } from "./cleanup";
 
 // Pengganti modal "Database" (peta arsitektur) di aplikasi lama: isi tabel & riwayat import.
@@ -50,6 +51,8 @@ export default async function DatabasePage() {
       </div>
 
       {usage ? <UsageSection u={usage as unknown as UsageReport} /> : null}
+
+      <ArchiveSection />
 
       <CleanupSection />
 

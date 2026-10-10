@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { EChartsOption } from "echarts";
 import { useDataset } from "@/lib/local/store";
+import { useArchiveMonths, useMonthArchive } from "@/lib/archive/hooks";
 import { mutasiRaw } from "@/lib/modules/mutasi/compute";
 import { todayJakarta } from "@/lib/parsers/date";
 import { monthLabel, rupiah } from "@/lib/format";
@@ -22,18 +23,26 @@ const num = (n: number) => Math.round(n).toLocaleString("id-ID");
 export function MutasiDashboard() {
   const today = todayJakarta();
   const [month, setMonth] = useViewState("mutasi:dash:month", today.slice(0, 7));
-  const mutasi = useDataset("mutasi");
-  const erp = useDataset("erp");
-  const targets = useDataset("targets");
+  const mutasiDs = useDataset("mutasi");
+  const erpDs = useDataset("erp");
+  const targetsDs = useDataset("targets");
+  // Bulan yang sudah dipindah ke arsip Google Drive (Fase 66): datanya dimuat dari arsip & digabung.
+  const arch = useMonthArchive(month, { erp: true, targets: true, mutasi: true });
+  const { applyErp, applyTargets, applyMutations } = arch;
+  const archMonths = useArchiveMonths(["erp_payments", "ar_targets", "bank_mutations"]);
+  const mutasi = { data: useMemo(() => applyMutations(mutasiDs.data), [applyMutations, mutasiDs.data]) };
+  const erp = { data: useMemo(() => applyErp(erpDs.data), [applyErp, erpDs.data]) };
+  const targets = { data: useMemo(() => (targetsDs.data ? { targets: applyTargets(targetsDs.data.targets)! } : targetsDs.data), [applyTargets, targetsDs.data]) };
   // Dihitung di browser dari data lokal (port mutasi_dashboard); ikut berubah saat data diperbarui.
-  const raw: MutasiRaw | null = useMemo(() => (mutasi.data && erp.data && targets.data
+  const raw: MutasiRaw | null = useMemo(() => (mutasi.data && erp.data && targets.data && !arch.loading
     ? mutasiRaw({ month, today, mutasi: mutasi.data, erp: erp.data, targets: targets.data.targets }) : null),
-  [month, today, mutasi.data, erp.data, targets.data]);
+  [month, today, mutasi.data, erp.data, targets.data, arch.loading]);
+  const months = useMemo(() => [...new Set([...(raw?.months ?? []), ...archMonths, month])].sort().reverse(), [raw, archMonths, month]);
 
   const v = raw ? buildMutasi(raw, today) : null;
-  const alloc = useMemo(() => (mutasi.data && erp.data && targets.data
+  const alloc = useMemo(() => (mutasi.data && erp.data && targets.data && !arch.loading
     ? allocationOf({ month, mutasi: mutasi.data, erp: erp.data, targets: targets.data.targets }) : null),
-  [month, mutasi.data, erp.data, targets.data]);
+  [month, mutasi.data, erp.data, targets.data, arch.loading]);
   const theme = useResolvedTheme();
   const sc = seriesColors(theme), ct = chartTheme();
   const days = v?.daily.map((d) => String(Number(d.date.slice(8)))) ?? [];
@@ -52,8 +61,11 @@ export function MutasiDashboard() {
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm text-fg-2">Bulan</span>
         <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} !w-auto`}>
-          {(raw?.months?.length ? raw.months : [month]).map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
+        {arch.loading && <span className="text-xs text-fg-2">Memuat arsip…</span>}
+        {arch.fromArchive && !arch.loading && <span className="text-xs text-accent">Data bulan ini dari arsip Google Drive</span>}
+        {arch.error && <span className="text-xs text-danger">Arsip: {arch.error}</span>}
       </div>
 
       {alloc && <AllocationFlow a={alloc} />}

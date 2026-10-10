@@ -139,6 +139,12 @@ export const MENU_HELP: MenuHelp[] = [
     "Target menjadi dasar Total Target & Sudah Terkumpul di Dashboard Collection. Upload ulang untuk bulan yang sama mengganti target bulan itu.",
     "Kolom wajib: Invoice No dan Target (atau Open Amt). Opsional: Marketing, Collection Name, Business Partner, Due Date, Branch — bila kosong diambil dari data tagihan. Tata letak lama sheet \"Tagihan\" (A = Target, F = Invoice, J = Branch) juga diterima.",
   ] },
+  { href: "/pengaturan/arsip", menu: "Pengaturan › Arsip Data", text: [
+    "Arsip Data: data historis yang sudah dipindah dari Supabase ke Google Drive (Pembayaran ERP, Invoice ERP, Snapshot Aging, Target Collection, Mutasi Bank). Pilih jenis data & periode → tabel bisa dicari, difilter, dan diunduh Excel.",
+    "Pembayaran ERP di arsip membawa salinan data invoice-nya (BP, tanggal invoice, jatuh tempo, termin).",
+    "Cadangan mingguan (khusus Super Admin): setiap Senin 01:00 WIB semua tabel master (pelanggan & email customer, kontak, catatan, jadwal bayar, tukar faktur, Mitra10/RKM, akun tanpa PIN, pengaturan, data closing) disalin ke Google Drive; 12 cadangan terakhir disimpan. Bisa dicadangkan manual & diunduh sebagai Excel (1 sheet per tabel).",
+    "Hak baca arsip mengikuti hak baca data aslinya (mis. pemegang menu Mutasi Bank bisa membaca arsip mutasi & ERP).",
+  ] },
   { href: "/pengaturan/wa-template", menu: "Pengaturan › Template WA", text: [
     "Template bawaan untuk semua collection; collection tetap bisa mengubah pesan di perangkatnya lewat \"Edit Pesan WA\".",
     "Placeholder {{collection}} = nama collection, {{total}} = total tagihan.",
@@ -158,6 +164,10 @@ export const MENU_HELP: MenuHelp[] = [
     "Database Supabase project arfinance: isi tabel utama & riwayat import. ar_aging_snapshots/lines = Aging per bulan; erp_invoices/erp_payments = laporan Invoice & Payment; ar_targets = target bulanan; notes = catatan collection; payment_promises = Jadwal Bayar; invoice_exchanges = tukar faktur; invoice_remarks = keterangan invoice bersama; courier_updates = laporan harian kolektor; contacts = kontak WA per BP.",
     "Pembersihan Data: data yang invoice/SJ-nya sudah tidak ada di Aging terbaru (lunas) masuk daftar, tetapi TIDAK dihapus otomatis. Pilih kategori, periksa, centang, lalu hapus (permanen). Server hanya menghapus baris yang masih memenuhi syarat; penghapusan dicatat. Unduh Excel sebagai cadangan sebelum menghapus. Kontak tidak pernah masuk daftar ini.",
     "Egress/bandwidth tidak bisa dibaca dari database — lihat dashboard Supabase › Usage.",
+    "Arsip ke Google Drive (Fase 66): Supabase hanya menyimpan data operasional. Yang tetap di Supabase: snapshot Aging terbaru + snapshot periode Collection yang masih terbuka, pembayaran ERP bulan berjalan + bulan Collection terbuka, invoice ERP yang masih di Aging / punya pembayaran yang masih disimpan / terbit di bulan yang disimpan, target bulan yang belum Closed, mutasi bank bulan berjalan + bulan terbuka. Selain itu menjadi kandidat arsip.",
+    "Tombol Arsipkan: data diekspor, disimpan di Google Drive (folder AR Workspace Arsip, file .json.gz per dataset & periode), diverifikasi (ukuran + sha256 dibaca ulang dari Drive), dicatat, baru dihapus dari Supabase. Bila data berubah sejak diekspor, penghapusan ditolak (arsipkan ulang). Arsipkan ulang periode yang sama menggabungkan file lama + baris baru.",
+    "Urutan: Pembayaran ERP dulu — invoice ERP baru menjadi kandidat setelah pembayarannya diarsip. Data arsip tetap bisa dilihat di menu Arsip Data, dan History Pembayaran, Mutasi Bank, grafik alokasi KPI & Email Customer otomatis mengambil bulan lama dari arsip.",
+    "Pembersihan Data kini hanya untuk catatan invoice lunas & sisa proses; data ERP & mutasi tidak lagi dihapus permanen di sana (pakai Arsip ke Google Drive).",
   ] },
   { href: "/ai-settings", menu: "/ai-settings", text: [
     "Pengaturan AI: atur agent, API key, model, dan prioritas cadangan AR Helpdesk (khusus Super Admin).",

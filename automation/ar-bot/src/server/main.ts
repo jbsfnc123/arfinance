@@ -233,7 +233,7 @@ async function api(req: http.IncomingMessage, res: http.ServerResponse, url: URL
   }
   if (p === "/api/secrets" && m === "POST") {
     const patch = await body<Partial<Record<SecretKey, string | null>>>(req);
-    for (const k of Object.keys(patch)) if (!/^(jasperPassword|botPassword|driveSecret|edi:[\w-]{1,40})$/.test(k)) throw new Error(`Kunci rahasia tidak dikenal: ${k}`);
+    for (const k of Object.keys(patch)) if (!/^(jasperPassword|botPassword|edi:[\w-]{1,40})$/.test(k)) throw new Error(`Kunci rahasia tidak dikenal: ${k}`);
     updateSecrets(patch);
     return send(res, 200, publicState());
   }

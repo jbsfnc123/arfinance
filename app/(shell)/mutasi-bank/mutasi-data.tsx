@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { optimistic, useDataset } from "@/lib/local/store";
+import { useMonthArchive } from "@/lib/archive/hooks";
 import { todayJakarta } from "@/lib/parsers/date";
 import { useToast } from "@/components/toast";
 import { LocalTable, type LCol } from "@/lib/local/table";
@@ -38,7 +39,12 @@ export function MutasiData() {
   const toast = useToast();
   const [month, setMonth] = useViewState("mutasi:data:month", todayJakarta().slice(0, 7));
   const [note, setNote] = useState(NOTES[0]);
-  const mutasi = useDataset("mutasi");
+  const mutasiDs = useDataset("mutasi");
+  // Bulan yang sudah dipindah ke arsip Google Drive (Fase 66): tampil dari arsip, hanya-baca.
+  const arch = useMonthArchive(month, { mutasi: true });
+  const { applyMutations } = arch;
+  const mutasi = { data: useMemo(() => applyMutations(mutasiDs.data), [applyMutations, mutasiDs.data]) };
+  const readOnly = arch.fromArchive;
 
   // Filter bulan di sini; rekening, status, cari, sort & total di tabel (semua di browser).
   const accounts = useMemo(() => (mutasi.data?.accounts ?? []).map((a) => a.code), [mutasi.data]);
@@ -59,12 +65,16 @@ export function MutasiData() {
   }
 
   return (
-    <LocalTable title={`Mutasi ${month}`} stateKey="mutasi-data" rows={rows} cols={COLS} rowKey={(r) => r.id} loading={!mutasi.data}
+    <LocalTable title={`Mutasi ${month}`} stateKey="mutasi-data" rows={rows} cols={COLS} rowKey={(r) => r.id} loading={!mutasi.data || arch.loading}
       search={["keterangan", "catatan", "account"]}
       filters={[{ k: "account", l: "Rekening", options: accounts }, { k: "status", l: "Status", options: ["Dihitung", "Tidak dihitung"] }]}
       rowClass={(r) => (r.excluded ? "text-fg-2 [&>td:not(:last-child)]:line-through [&>td]:decoration-danger/60" : "")}
-      toolbar={<input type="month" value={month} onChange={(e) => setMonth(e.target.value)} aria-label="Bulan" className={`${inputCls} !w-auto`} />}
-      selectable
+      toolbar={<span className="flex items-center gap-2">
+        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} aria-label="Bulan" className={`${inputCls} !w-auto`} />
+        {readOnly && <span className="text-xs text-accent">Arsip Google Drive · hanya-baca</span>}
+        {arch.error && <span className="text-xs text-danger">Arsip: {arch.error}</span>}
+      </span>}
+      selectable={!readOnly}
       actions={(sel, clear) => (
         <span className="flex flex-wrap items-center gap-2">
           <input list="mutasi-exc-notes" value={note} onChange={(e) => setNote(e.target.value)} className={`${inputCls} !w-56`} placeholder="Alasan" aria-label="Alasan" />
