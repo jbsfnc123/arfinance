@@ -2,6 +2,7 @@
 // Gagal kirim = job gagal; laporan kosong = dilewati tanpa mengubah data lama.
 import fs from "node:fs";
 import { todayJakarta } from "@/lib/parsers/date";
+import { weekToDate } from "~/shared/catalog";
 import type { JobParams, JobResult } from "~/shared/types";
 import { jobDir } from "~/core/paths";
 import type { RunContext } from "~/runner/ctx";
@@ -59,7 +60,9 @@ export async function agingJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
 export async function sendInvoiceJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const js = jasperOf(ctx);
   const today = todayJakarta();
-  const start = p.start || today, end = p.end || today;
+  // Bawaan: Senin minggu ini s/d hari ini (bisa diubah manual dari halaman job).
+  const week = weekToDate(today);
+  const start = p.start || week.start, end = p.end || week.end;
   await js.openReport("Send Invoice To Customer");
   await js.setDate("whenStart", start, "Tanggal Awal");
   await js.setDate("whenEnd", end, "Tanggal Akhir");
@@ -72,7 +75,8 @@ export async function sendInvoiceJob(ctx: RunContext, p: JobParams): Promise<Job
   const s = inspectSchedule(buf.toString("utf8"), today);
   const summary = `${num(s.rows.length)} invoice · ${s.skipped} baris dilewati`;
   ctx.info(`Baca: ${summary} · tanggal kirim ${s.dates.join(", ") || "-"}`);
-  if (s.otherDates.length) ctx.warn(`Ada tanggal kirim selain hari ini: ${s.otherDates.join(", ")}.`);
+  const outside = s.dates.filter((d) => d < start || d > end);
+  if (outside.length) ctx.warn(`Ada tanggal kirim di luar ${start} s/d ${end}: ${outside.join(", ")}.`);
   if (!s.rows.length) return { status: "skipped", files: [file], summary: "Tidak ada invoice terbaca — jadwal lama dibiarkan." };
   const sha = await shouldPush(ctx, "jasper.send-invoice", p, buf, file, today.slice(0, 7));
   if (!sha) return { files: [file], rows: s.rows.length, summary, pushed: false };

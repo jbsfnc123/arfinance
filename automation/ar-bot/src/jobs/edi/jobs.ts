@@ -9,6 +9,8 @@ import { delay, type RunContext } from "~/runner/ctx";
 import type { JobOut } from "../jasper/jobs";
 import { ediLogin, ediLogout, ediPage, openEdiReport, pickAccounts, selectPartner, waitNewFile } from "./session";
 import { ediUploadFakturJob } from "./faktur";
+import { archive, inspectM10Gr, inspectM10Kw, markPushed, num, pushM10Gr, pushM10Kw, sha256, unchanged } from "../arw";
+import { todayJakarta } from "@/lib/parsers/date";
 
 export { ediUploadFakturJob };
 
@@ -17,6 +19,22 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
 
 type Acc = ReturnType<typeof pickAccounts>[number];
+
+/**
+ * Kirim file satu akun ke AR Workspace (Mitra10). Lewati bila uji coba / kirim nonaktif / file identik dengan kiriman
+ * sukses terakhir akun ini; arsip Drive lalu kirim. Mengembalikan ringkasan hasil kirim, atau null bila tidak dikirim.
+ */
+async function pushFile(ctx: RunContext, p: JobParams, key: string, file: string, send: () => Promise<string>) {
+  if (ctx.opts.dryRun) { ctx.info("Uji coba: tidak diarsip & tidak dikirim."); return null; }
+  if (!p.push) { ctx.info("Kirim ke AR Workspace nonaktif untuk job ini."); return null; }
+  const sha = sha256(fs.readFileSync(file));
+  if (unchanged(ctx, key, sha)) return null;
+  await archive(ctx, file, todayJakarta().slice(0, 7));
+  const msg = await send();
+  markPushed(key, sha);
+  ctx.log("ok", `AR Workspace: ${msg}`);
+  return msg;
+}
 
 /** Jalankan `fn` per akun dengan login/partner/logout; kumpulkan file & akun yang gagal. */
 async function perAccount(ctx: RunContext, accounts: Acc[], dir: string, fn: (page: Page, acc: Acc) => Promise<string>) {
@@ -52,6 +70,7 @@ export async function ediGrJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const today = new Date();
   const start = p.start || iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30)), end = p.end || iso(today);
   ctx.info(`Periode ${start} s/d ${end} · ${accounts.length} akun`);
+  let newRows = 0, pushed = false;
   const r = await perAccount(ctx, accounts, dir, async (page, acc) => {
     await openEdiReport(page, "gr-report-detail");
     await page.waitForSelector("#startDate", { timeout: 20_000 });
@@ -78,9 +97,18 @@ export async function ediGrJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
     const final = path.join(dir, `GR Report ${safe(acc.label || acc.username)} ${stamp()}.csv`);
     fs.renameSync(file, final);
     ctx.info(`Terunduh: ${path.basename(final)}`);
+    const parsed = inspectM10Gr(fs.readFileSync(final, "utf8"));
+    ctx.info(`Baca: ${num(parsed.lines)} baris CSV · ${num(parsed.rows.length)} baris GR · ${num(parsed.sjCount)} SJ NO`);
+    const sent = await pushFile(ctx, p, `edi.gr:${acc.id}`, final, async () => {
+      const added = await pushM10Gr(ctx, final, parsed);
+      newRows += added;
+      pushed = true;
+      return `GR ${acc.label || acc.username}: ${num(added)} data baru (sisanya sudah ada).`;
+    });
+    if (sent === null && !ctx.opts.dryRun && p.push) pushed = true;
     return final;
   });
-  return { files: r.files, summary: r.summary };
+  return { files: r.files, summary: pushed ? `${r.summary} · ${num(newRows)} GR baru` : r.summary, pushed };
 }
 
 export async function ediKwitansiJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
@@ -89,6 +117,7 @@ export async function ediKwitansiJob(ctx: RunContext, p: JobParams): Promise<Job
   const now = new Date();
   const month = p.start?.slice(0, 7) || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   ctx.info(`Bulan ${month} · ${accounts.length} akun`);
+  let newRows = 0, pushed = false;
   const r = await perAccount(ctx, accounts, dir, async (page, acc) => {
     await openEdiReport(page, "invoice-summary");
     await page.waitForSelector("#bulan", { visible: true, timeout: 20_000 });
@@ -152,7 +181,16 @@ export async function ediKwitansiJob(ctx: RunContext, p: JobParams): Promise<Job
     const final = path.join(dir, `Kwitansi ${safe(acc.label || acc.username)} ${month} ${stamp()}.csv`);
     fs.renameSync(file, final);
     ctx.info(`Terunduh: ${path.basename(final)}`);
+    const parsed = inspectM10Kw(fs.readFileSync(final, "utf8"));
+    ctx.info(`Baca: ${num(parsed.rows.length)} kwitansi · ${parsed.dupInFile} ganda dalam file`);
+    const sent = await pushFile(ctx, p, `edi.kwitansi:${acc.id}`, final, async () => {
+      const k = await pushM10Kw(ctx, final, parsed, acc.username);
+      newRows += k.added;
+      pushed = true;
+      return `Kwitansi (${acc.label || acc.username}): ${num(k.added)} baru, ${num(k.skipped)} sudah ada.`;
+    });
+    if (sent === null && !ctx.opts.dryRun && p.push) pushed = true;
     return final;
   });
-  return { files: r.files, summary: r.summary };
+  return { files: r.files, summary: pushed ? `${r.summary} · ${num(newRows)} kwitansi baru` : r.summary, pushed };
 }

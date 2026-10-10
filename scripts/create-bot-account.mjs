@@ -4,7 +4,7 @@
 //
 // Akun sistem: tidak tampil di daftar login & tidak bisa masuk lewat halaman login (system_account), PIN acak,
 // akses menu HANYA set.update (Pusat Upload: Aging) + tukar.upload (Upload Jadwal Tukar Faktur, Fase 56)
-// + tukar.monitor_sj (Upload Laporan Serah Terima Surat Jalan, Fase 57).
+// + tukar.monitor_sj (Upload Laporan Serah Terima Surat Jalan, Fase 57) + rek.mitra10 (Upload CSV GR & Import Kwitansi Mitra10, AR Bot Fase 65b).
 // Mencetak BOT_EMAIL & BOT_PASSWORD untuk automation/erp-bot/.env. Kunci service role tidak perlu ada di PC bot.
 // Bila akun sudah ada: hanya mencetak ulang kredensialnya (dan merapikan akses menu).
 import { createHmac, randomInt, randomUUID } from "node:crypto";
@@ -44,7 +44,7 @@ if (!bot) {
 }
 
 // Akses menu: hanya yang dipakai bot (trigger default role menambahkan menu Collection saat akun dibuat).
-const BOT_MENUS = ["set.update", "tukar.upload", "tukar.monitor_sj"];
+const BOT_MENUS = ["set.update", "tukar.upload", "tukar.monitor_sj", "rek.mitra10"];
 await admin.from("profile_menus").delete().eq("user_id", bot.id).not("submenu_id", "in", `(${BOT_MENUS.join(",")})`);
 await admin.from("profile_menus").upsert(BOT_MENUS.map((submenu_id) => ({ user_id: bot.id, submenu_id })), { onConflict: "user_id,submenu_id" });
 

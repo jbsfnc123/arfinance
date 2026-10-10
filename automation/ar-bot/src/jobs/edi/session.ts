@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Page } from "puppeteer-core";
 import type { EdiAccount } from "~/shared/types";
 import { delay, type RunContext } from "~/runner/ctx";
+import { waitDownload } from "~/runner/download";
 
 const LOGIN_URL = "https://edi.mitra10.com/site/login";
 
@@ -89,17 +90,8 @@ export async function ediLogout(page: Page) {
 }
 
 /** Tunggu file baru (bukan .crdownload) yang cocok `re` muncul di `dir`. */
-export async function waitNewFile(ctx: RunContext, dir: string, before: Set<string>, re: RegExp, seconds = 90) {
-  for (let s = 0; s < seconds; s++) {
-    ctx.check();
-    await delay(1000);
-    const all = fs.readdirSync(dir);
-    if (all.some((f) => f.endsWith(".crdownload") || f.endsWith(".tmp"))) continue;
-    const hit = all.filter((f) => re.test(f) && !before.has(f)).at(-1);
-    if (hit) return path.join(dir, hit);
-  }
-  return null;
-}
+export const waitNewFile = (ctx: RunContext, dir: string, before: Set<string>, re: RegExp, seconds = 90) =>
+  waitDownload(ctx, dir, before, re, seconds);
 
 /** Uji login satu akun (Pengaturan / halaman Akun). */
 export async function testEdiLogin(ctx: RunContext, accountId: string) {

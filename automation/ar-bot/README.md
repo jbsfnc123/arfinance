@@ -6,13 +6,14 @@ Semua bot berjalan di PC ini. Kredensial dan file tidak meninggalkan PC, kecuali
 | Grup | Job | Hasil | Kirim ke AR Workspace |
 |---|---|---|---|
 | Jaspersoft | Aging Detail | Excel | `aging_commit` (Snapshot Aging / Daftar Tagihan) |
-| | Send Invoice To Customer | CSV | `schedule_replace` (jadwal kurir diganti) |
+| | Send Invoice To Customer (Senin s/d hari ini) | CSV | `schedule_replace` (jadwal kurir diganti) |
 | | Serah Terima Surat Jalan (7 hari) | CSV | `sj_receipts_apply` (insert-only) |
 | | Invoice & Payment Date Comparison (bulan berjalan) | Excel | upload `erp` (bawaan: **nonaktif**) |
-| EDI Mitra 10 | GR Report Detail (multi-akun) | CSV | – |
-| | Download Kwitansi (multi-akun) | CSV | – |
+| EDI Mitra 10 | GR Report Detail (multi-akun, 30 hari) | CSV per akun | Mitra10 "Upload CSV GR": `m10_gr_add` (insert-only) |
+| | Download Kwitansi (multi-akun, bulan berjalan) | CSV per akun | Mitra10 "Import Kwitansi": `m10_kw_add`, Username = akun EDI (insert-only) |
 | | Upload Faktur Pajak Coretax | PDF dipecah per faktur | – (unggah ke EDI, dengan konfirmasi) |
-| Alat | Invoice Checklist Penguin ERP | skrip Console | – |
+
+Akun Bot ERP butuh menu `set.update`, `tukar.upload`, `tukar.monitor_sj`, `rek.mitra10` (`scripts/create-bot-account.mjs`).
 
 ## Pakai
 

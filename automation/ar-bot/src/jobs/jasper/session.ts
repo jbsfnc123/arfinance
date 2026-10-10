@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Page } from "puppeteer-core";
 import { delay, type RunContext } from "~/runner/ctx";
+import { waitDownload } from "~/runner/download";
 
 const LOGIN_URL = "https://report.tangki.id/jasperserver/login.html";
 const LOADERS = ["#loading", ".dimmer", "#exportLoadingIndicator"];
@@ -223,16 +224,9 @@ export class JasperSession {
     if (!btn) throw new Error(`menu Export tidak menampilkan pilihan ${label}`);
     await btn.click(); // TEPAT satu klik (klik ganda = dua file)
     this.stage = "Unduh file";
-    let file: string | null = null;
-    for (let s = 0; s < 240 && !file; s++) {
-      this.ctx.check();
-      await delay(1000);
-      const all = fs.readdirSync(dir);
-      if (all.some((f) => f.endsWith(".crdownload") || f.endsWith(".tmp"))) continue;
-      file = all.filter((f) => ext.test(f) && !before.has(f)).at(-1) ?? null;
-    }
+    const file = await waitDownload(this.ctx, dir, before, ext, 240);
     if (!file) throw new Error(`file ${label} tidak terunduh dalam 4 menit`);
-    return path.join(dir, file);
+    return file;
   }
 }
 

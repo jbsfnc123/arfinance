@@ -5,7 +5,6 @@ import { JOBS } from "~/shared/catalog";
 import type { JobId } from "~/shared/types";
 import { useApp } from "./store";
 import { ChainsPage } from "./pages/chains";
-import { ChecklistPage } from "./pages/checklist";
 import { Dashboard } from "./pages/dashboard";
 import { EdiAccountsPage } from "./pages/edi-accounts";
 import { FakturPage } from "./pages/faktur";
@@ -19,7 +18,6 @@ const NAV: { group?: string; items: NavItem[] }[] = [
   { items: [{ key: "dashboard", label: "Dashboard", icon: "space_dashboard" }] },
   { group: "Jaspersoft", items: [job("jasper.aging"), job("jasper.send-invoice"), job("jasper.sj"), job("jasper.invoice-by-date")] },
   { group: "EDI Mitra 10", items: [{ key: "edi.accounts", label: "Akun", icon: "groups" }, job("edi.gr"), job("edi.kwitansi"), job("edi.upload-faktur")] },
-  { group: "Alat", items: [{ key: "checklist", label: "Invoice Checklist", icon: "fact_check" }] },
   { group: "Sistem", items: [{ key: "chains", label: "Rangkaian & Jadwal", icon: "event" }, { key: "history", label: "Riwayat", icon: "history" }, { key: "settings", label: "Pengaturan", icon: "settings" }] },
 ];
 
@@ -55,7 +53,6 @@ export function App() {
   if (page === "dashboard") body = <Dashboard go={go} />;
   else if (page === "edi.accounts") body = <EdiAccountsPage />;
   else if (page === "edi.upload-faktur") body = <FakturPage />;
-  else if (page === "checklist") body = <ChecklistPage />;
   else if (page === "chains") body = <ChainsPage />;
   else if (page === "history") body = <HistoryPage />;
   else if (page === "settings") body = <SettingsPage />;

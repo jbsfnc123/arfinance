@@ -1,7 +1,8 @@
 // Halaman satu job (Jaspersoft / EDI unduh): parameter, jalankan, log, file hasil.
 import { useMemo, useState } from "react";
-import { inputCls, toggleChip } from "@/components/ui";
-import { DEFAULT_PARAMS, jobInfo } from "~/shared/catalog";
+import { Icon } from "@/components/icons";
+import { btnGhost, inputCls, toggleChip } from "@/components/ui";
+import { DEFAULT_PARAMS, jobInfo, weekToDate } from "~/shared/catalog";
 import type { JobId, JobParams } from "~/shared/types";
 import { useApp } from "../store";
 import { Card, Field, FileList, PageHeader, Switch } from "../parts/common";
@@ -16,8 +17,10 @@ export function JobPage({ id }: { id: JobId }) {
   const cfg = state!.config;
   const saved: JobParams = { ...DEFAULT_PARAMS[id], ...cfg.jobs[id] };
   // Tanggal hanya untuk run ini (tidak disimpan) agar rangkaian terjadwal selalu memakai tanggal hari itu.
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  // Send Invoice: terisi Senin minggu ini s/d hari ini (sama dengan bawaan runner), bisa diubah.
+  const week = id === "jasper.send-invoice" ? weekToDate(today()) : null;
+  const [start, setStart] = useState(week?.start ?? "");
+  const [end, setEnd] = useState(week?.end ?? "");
   const setSaved = (p: JobParams) => save((c) => ({ ...c, jobs: { ...c.jobs, [id]: { ...c.jobs[id], ...p } } }));
 
   const isEdi = info.group === "edi";
@@ -57,6 +60,11 @@ export function JobPage({ id }: { id: JobId }) {
               <Field label="Tanggal akhir" className="w-44">
                 <input className={inputCls} type="date" value={end} max={today()} onChange={(e) => setEnd(e.target.value)} />
               </Field>
+              {week && (start !== week.start || end !== week.end) && (
+                <button type="button" className={btnGhost} onClick={() => { setStart(week.start); setEnd(week.end); }}>
+                  <Icon name="undo" />Senin s/d hari ini
+                </button>
+              )}
             </>
           )}
           {id === "edi.kwitansi" && (
