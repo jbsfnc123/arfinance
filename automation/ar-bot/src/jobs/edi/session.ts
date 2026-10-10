@@ -31,8 +31,7 @@ export async function ediPage(ctx: RunContext, dir?: string) {
     if (p) setTimeout(() => { if (!p.isClosed()) p.close().catch(() => {}); }, 2500);
   });
   if (dir) {
-    const cdp = await page.createCDPSession();
-    await cdp.send("Page.setDownloadBehavior", { behavior: "allow", downloadPath: dir });
+    await ctx.allowDownloads(page, dir);
   }
   return page;
 }

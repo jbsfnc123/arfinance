@@ -18,6 +18,11 @@ Akun Bot ERP butuh menu `set.update`, `tukar.upload`, `tukar.monitor_sj`, `rek.m
 ## Pakai
 
 - Buka lewat pintasan **AR Bot** (Desktop / Start Menu). Menutup jendela juga menghentikan server dalam ±20 detik; bot yang sedang berjalan tetap lanjut.
+- **Dashboard › Jalankan beberapa task**: centang beberapa task (tanggal terisi default, bisa diubah), jalankan
+  **paralel** (bawaan) atau berurutan. Pada mode paralel, tiap task memakai browser context sendiri (login, cookie, dan
+  folder unduhan terpisah). Galat satu task tidak menghentikan task lain; Hentikan menghentikan semuanya.
+  Default tanggal (`defaultDates`, sama untuk runner & UI): Send Invoice Senin s/d hari ini · GR 30 hari terakhir ·
+  Kwitansi bulan ini · Invoice by Date tanggal 1 s/d hari ini · SJ 7 hari.
 - **Uji Coba** hanya mengunduh dan membaca file, tanpa arsip Drive, tanpa kirim, dan tanpa unggah. Untuk Upload Faktur, Uji Coba hanya mencari dan memverifikasi di Draft.
 - **Rangkaian & Jadwal**: urutan job dan jadwal hari/jam didaftarkan ke Task Scheduler (`\ARBot\AR Bot - <id>`, tanpa admin). Jadwal tetap berjalan walau aplikasi tertutup dan mengejar jadwal yang terlewat. Upload Faktur tidak boleh masuk rangkaian.
 - **Pengaturan › Impor dari aplikasi lama**: membaca `.env` / `accounts.json` Assistent Mando dan `automation/erp-bot/.env` sekali, saat tombol diklik.

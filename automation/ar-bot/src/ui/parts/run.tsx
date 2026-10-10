@@ -21,8 +21,8 @@ export function useSaveConfig() {
   };
 }
 
-export function RunButtons({ jobs, pushable, confirm, disabledReason }: {
-  jobs: JobSpec[]; pushable?: boolean; confirm?: (go: () => void) => void; disabledReason?: string | null;
+export function RunButtons({ jobs, pushable, confirm, disabledReason, parallel }: {
+  jobs: JobSpec[]; pushable?: boolean; confirm?: (go: () => void) => void; disabledReason?: string | null; parallel?: boolean;
 }) {
   const { state, run, stop } = useApp();
   const toast = useToast();
@@ -33,7 +33,7 @@ export function RunButtons({ jobs, pushable, confirm, disabledReason }: {
   const start = async (dryRun: boolean) => {
     setBusy(true);
     try {
-      await run({ jobs, dryRun, force: pushable ? force : false });
+      await run({ jobs, dryRun, force: pushable ? force : false, parallel });
       toast(dryRun ? "Uji coba dimulai." : "Bot dimulai.", "info");
     } catch (e) { toast((e as Error).message, "danger", 6000); } finally { setBusy(false); }
   };

@@ -5,6 +5,7 @@ import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, cardTitle, chip, emptyTd, tableCls, td, th } from "@/components/ui";
 import type { JobStatus, RunEvent, RunStatus } from "~/shared/types";
+import { jobInfo } from "~/shared/catalog";
 import { api, fmtClock, fmtSize, fmtTime } from "../api";
 
 export function PageHeader({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -76,7 +77,7 @@ export function Kpi({ label, value, tone = "text-fg" }: { label: string; value: 
 
 const LEVEL: Record<string, string> = { info: "text-fg", warn: "text-warning", error: "text-danger", ok: "text-success" };
 
-export function LogView({ events, height = "h-72" }: { events: RunEvent[]; height?: string }) {
+export function LogView({ events, height = "h-72", showJob }: { events: RunEvent[]; height?: string; showJob?: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const toast = useToast();
   const lines = events.filter((e): e is Extract<RunEvent, { t: "log" }> => e.t === "log");
@@ -91,7 +92,7 @@ export function LogView({ events, height = "h-72" }: { events: RunEvent[]; heigh
         {!lines.length && <div className="text-fg-2">Belum ada log.</div>}
         {lines.map((l, i) => (
           <div key={i} className={`log-line whitespace-pre-wrap break-words ${LEVEL[l.level]}`}>
-            <span className="text-fg-2">{fmtClock(l.at)} </span>{l.msg}
+            <span className="text-fg-2">{fmtClock(l.at)} </span>{showJob && l.job && <span className="text-accent">[{jobInfo(l.job).short}] </span>}{l.msg}
           </div>
         ))}
       </div>

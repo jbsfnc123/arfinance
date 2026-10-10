@@ -17,7 +17,7 @@ export class JasperSession {
   private page: Page | null = null;
   stage = "Login";
 
-  constructor(private ctx: RunContext) {}
+  constructor(public ctx: RunContext) {}
 
   get currentPage() { return this.page; }
 
@@ -207,8 +207,7 @@ export class JasperSession {
     this.ctx.check();
     this.stage = `Export › ${label}`;
     this.ctx.info(`Export › ${label}…`);
-    const cdp = await page.createCDPSession();
-    await cdp.send("Page.setDownloadBehavior", { behavior: "allow", downloadPath: dir });
+    await this.ctx.allowDownloads(page, dir);
     await page.waitForFunction(() => {
       const b = document.querySelector<HTMLButtonElement>("#export");
       return !!b && !b.disabled && !b.hasAttribute("disabled");

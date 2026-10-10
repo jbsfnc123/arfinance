@@ -28,6 +28,8 @@ export type RunRequest = {
   dryRun?: boolean;
   /** Kirim walau file identik dengan kiriman sukses terakhir. */
   force?: boolean;
+  /** Jalankan semua job bersamaan (browser context per job). */
+  parallel?: boolean;
   trigger: "manual" | "schedule";
   chainId?: string;
   chainName?: string;
@@ -61,6 +63,7 @@ export type RunRecord = {
   trigger: RunRequest["trigger"];
   chainName?: string;
   dryRun?: boolean;
+  parallel?: boolean;
   startedAt: string;
   finishedAt?: string;
   status: RunStatus;
@@ -88,6 +91,8 @@ export type Config = {
   jobs: Partial<Record<JobId, JobParams>>;
   chains: Chain[];
   theme: "system" | "light" | "dark";
+  /** Pilihan terakhir kartu "Jalankan beberapa task" di Dashboard. */
+  multi: { jobs: JobId[]; parallel: boolean };
 };
 
 /** Nama rahasia yang disimpan terenkripsi (DPAPI). Password EDI: `edi:<id akun>`. */

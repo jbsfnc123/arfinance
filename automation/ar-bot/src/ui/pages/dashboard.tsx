@@ -6,6 +6,7 @@ import type { JobId } from "~/shared/types";
 import { fmtTime } from "../api";
 import { useApp } from "../store";
 import { Card, Kpi, LogView, PageHeader, StatusChip } from "../parts/common";
+import { MultiRunCard } from "../parts/multi";
 import { RunButtons } from "../parts/run";
 
 export function Dashboard({ go }: { go: (page: string) => void }) {
@@ -33,9 +34,11 @@ export function Dashboard({ go }: { go: (page: string) => void }) {
       {active && (
         <Card title={`Sedang berjalan · ${active.chainName ?? "manual"}${active.trigger === "schedule" ? " (jadwal)" : ""}`}
           actions={<RunButtons jobs={active.jobs} />}>
-          <LogView events={live.runId === active.runId ? live.events : []} height="h-64" />
+          <LogView events={live.runId === active.runId ? live.events : []} height="h-64" showJob={active.jobs.length > 1} />
         </Card>
       )}
+
+      <MultiRunCard />
 
       <Card title="Rangkaian">
         <div className="grid gap-2">

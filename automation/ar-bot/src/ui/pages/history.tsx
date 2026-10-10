@@ -50,7 +50,7 @@ export function HistoryPage() {
               {rows.map((r) => (
                 <tr key={r.runId} className="cursor-pointer" onClick={() => show(r)}>
                   <td className={td}>{fmtTime(r.startedAt)}</td>
-                  <td className={td}>{r.trigger === "schedule" ? "Jadwal" : "Manual"}{r.chainName ? ` · ${r.chainName}` : ""}{r.dryRun ? " · uji coba" : ""}</td>
+                  <td className={td}>{r.trigger === "schedule" ? "Jadwal" : "Manual"}{r.chainName ? ` · ${r.chainName}` : ""}{r.parallel ? " · paralel" : ""}{r.dryRun ? " · uji coba" : ""}</td>
                   <td className={`${td} whitespace-normal`}>
                     <div className="flex flex-wrap gap-1">
                       {r.jobs.map((j) => <span key={j.id} className="inline-flex items-center gap-1 text-xs">{jobInfo(j.id).short}<StatusChip status={j.status} /></span>)}

@@ -1,14 +1,12 @@
 // Halaman satu job (Jaspersoft / EDI unduh): parameter, jalankan, log, file hasil.
 import { useMemo, useState } from "react";
-import { Icon } from "@/components/icons";
-import { btnGhost, inputCls, toggleChip } from "@/components/ui";
-import { DEFAULT_PARAMS, jobInfo, weekToDate } from "~/shared/catalog";
+import { inputCls, toggleChip } from "@/components/ui";
+import { DEFAULT_PARAMS, jobInfo } from "~/shared/catalog";
 import type { JobId, JobParams } from "~/shared/types";
 import { useApp } from "../store";
 import { Card, Field, FileList, PageHeader, Switch } from "../parts/common";
+import { dateParams, initialDates, JobDates, type Dates } from "../parts/dates";
 import { JobLog, RunButtons, useSaveConfig } from "../parts/run";
-
-const today = () => new Date().toLocaleDateString("en-CA");
 
 export function JobPage({ id }: { id: JobId }) {
   const { state, history } = useApp();
@@ -17,16 +15,14 @@ export function JobPage({ id }: { id: JobId }) {
   const cfg = state!.config;
   const saved: JobParams = { ...DEFAULT_PARAMS[id], ...cfg.jobs[id] };
   // Tanggal hanya untuk run ini (tidak disimpan) agar rangkaian terjadwal selalu memakai tanggal hari itu.
-  // Send Invoice: terisi Senin minggu ini s/d hari ini (sama dengan bawaan runner), bisa diubah.
-  const week = id === "jasper.send-invoice" ? weekToDate(today()) : null;
-  const [start, setStart] = useState(week?.start ?? "");
-  const [end, setEnd] = useState(week?.end ?? "");
+  // Terisi default yang sama dengan runner (Send Invoice: Senin s/d hari ini, GR: 30 hari, Kwitansi: bulan ini).
+  const [dates, setDates] = useState<Dates | null>(() => initialDates(id));
   const setSaved = (p: JobParams) => save((c) => ({ ...c, jobs: { ...c.jobs, [id]: { ...c.jobs[id], ...p } } }));
 
   const isEdi = info.group === "edi";
   const accounts = cfg.edi.accounts;
   const chosen = saved.accounts?.length ? saved.accounts : accounts.filter((a) => a.active).map((a) => a.id);
-  const spec = useMemo(() => ({ id, params: { ...(start ? { start } : {}), ...(end ? { end } : {}) } }), [id, start, end]);
+  const spec = useMemo(() => ({ id, params: dateParams(id, dates) }), [id, dates]);
 
   let reason: string | null = null;
   if (info.group === "jasper" && (!cfg.jasper.username || !state!.secretsSet.includes("jasperPassword"))) reason = "Isi kredensial Jaspersoft di Pengaturan.";
@@ -52,26 +48,7 @@ export function JobPage({ id }: { id: JobId }) {
                 onChange={(e) => setSaved({ days: Math.min(31, Math.max(1, Number(e.target.value) || 7)) })} />
             </Field>
           )}
-          {(id === "jasper.send-invoice" || id === "jasper.invoice-by-date" || id === "edi.gr") && (
-            <>
-              <Field label="Tanggal awal" className="w-44">
-                <input className={inputCls} type="date" value={start} max={today()} onChange={(e) => setStart(e.target.value)} />
-              </Field>
-              <Field label="Tanggal akhir" className="w-44">
-                <input className={inputCls} type="date" value={end} max={today()} onChange={(e) => setEnd(e.target.value)} />
-              </Field>
-              {week && (start !== week.start || end !== week.end) && (
-                <button type="button" className={btnGhost} onClick={() => { setStart(week.start); setEnd(week.end); }}>
-                  <Icon name="undo" />Senin s/d hari ini
-                </button>
-              )}
-            </>
-          )}
-          {id === "edi.kwitansi" && (
-            <Field label="Bulan" className="w-44">
-              <input className={inputCls} type="month" value={start.slice(0, 7)} onChange={(e) => setStart(e.target.value ? `${e.target.value}-01` : "")} />
-            </Field>
-          )}
+          <JobDates id={id} value={dates} onChange={setDates} />
         </div>
         {isEdi && (
           <div className="mt-4 grid gap-1.5">
