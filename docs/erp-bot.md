@@ -6,6 +6,9 @@
 > - Jadwal "AR Bot - harian-ar" (Senin–Jumat 10:00) menggantikan tugas "AR Workspace - Bot ERP Aging". Tugas lama dinonaktifkan, tidak dihapus.
 >   Untuk kembali: `Enable-ScheduledTask -TaskName 'AR Workspace - Bot ERP Aging'` lalu matikan jadwal di AR Bot.
 >
+> - Fase 65b: GR Report & Kwitansi EDI dikirim ke Mitra10 (`m10_gr_add` / `m10_kw_add`, insert-only) — akun Bot ERP kini juga punya menu `rek.mitra10`.
+>   Send Invoice memakai rentang Senin minggu ini s/d hari ini.
+>
 > Dokumen di bawah tetap berlaku untuk `automation/erp-bot` (CLI) dan GAS Drive Inbox yang juga dipakai AR Bot.
 
 Setiap hari kerja (Task Scheduler, default Senin–Jumat), PC lokal menjalankan bot dengan tiga tugas berurutan:

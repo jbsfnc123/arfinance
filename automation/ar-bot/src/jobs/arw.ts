@@ -11,6 +11,8 @@ import { runUpload } from "@/lib/uploads/run";
 import { parseMasterCsv, type ScheduleRow } from "@/lib/modules/tukar/schedule";
 import { parseSjCsv, receiptCandidates } from "@/lib/modules/sj/parse";
 import { activeSet } from "@/lib/modules/sj/compute";
+import { parseGrCsv, parseKwCsv } from "@/lib/modules/m10/parse";
+import { todayJakarta } from "@/lib/parsers/date";
 import { loadState, setLastPush } from "~/core/store";
 import type { JobId } from "~/shared/types";
 import type { RunContext } from "~/runner/ctx";
@@ -105,14 +107,47 @@ export const pushSj = (ctx: RunContext, file: string, parsed: ReturnType<typeof 
   return { candidates: rows.length, result: data as SjResult };
 });
 
-/** true bila file identik dengan kiriman sukses terakhir job ini (dan tidak dipaksa). */
-export function unchanged(ctx: RunContext, job: JobId, sha: string) {
+// ── Mitra10 (EDI): sama dengan halaman Mitra10 › Upload (app/(shell)/mitra10/m10-upload.tsx) ──────────────
+const GR_CHUNK = 2000;
+
+/** "Upload CSV GR": parseGrCsv → m10_gr_add per 2.000 baris (insert-only; baris yang sudah ada dilewati). */
+export function inspectM10Gr(text: string) {
+  const r = parseGrCsv(text, Number(todayJakarta().slice(0, 4)));
+  if (!r.rows.length) throw new Error("File GR tidak berisi baris data (format CSV GR Report Detail?).");
+  return r;
+}
+export const pushM10Gr = (ctx: RunContext, file: string, parsed: ReturnType<typeof inspectM10Gr>) => withBot(ctx, async (c) => {
+  let added = 0;
+  for (let i = 0; i < parsed.rows.length; i += GR_CHUNK) {
+    const { data, error } = await c.rpc("m10_gr_add", { p_rows: parsed.rows.slice(i, i + GR_CHUNK), p_file_name: path.basename(file), p_first: i === 0 });
+    if (error) throw new Error(`m10_gr_add: ${error.message}`);
+    added += Number(data ?? 0);
+  }
+  return added;
+});
+
+/** "Import Kwitansi": parseKwCsv → m10_kw_add dengan Username = username akun EDI (Invoice No yang sudah ada dilewati). */
+export function inspectM10Kw(text: string) {
+  return parseKwCsv(text);
+}
+export const pushM10Kw = (ctx: RunContext, file: string, parsed: ReturnType<typeof inspectM10Kw>, username: string) => withBot(ctx, async (c) => {
+  const { data, error } = await c.rpc("m10_kw_add", { p_rows: parsed.rows, p_username: username, p_file_name: path.basename(file) });
+  if (error) throw new Error(`m10_kw_add: ${error.message}`);
+  const r = data as { added: number; skipped: number };
+  return { added: r.added, skipped: r.skipped + parsed.dupInFile };
+});
+
+/**
+ * true bila file identik dengan kiriman sukses terakhir (dan tidak dipaksa).
+ * `job` = id job, atau id job + akun untuk file per akun (mis. "edi.gr:akun-1").
+ */
+export function unchanged(ctx: RunContext, job: string, sha: string) {
   const last = loadState().lastPush[job];
   if (ctx.opts.force || last?.sha !== sha) return false;
   ctx.info(`File identik dengan kiriman sukses ${new Date(last.at).toLocaleString("id-ID")} — tidak dikirim ulang.`);
   return true;
 }
-export const markPushed = (job: JobId, sha: string) => setLastPush(job, sha);
+export const markPushed = (job: string, sha: string) => setLastPush(job, sha);
 
 const MIME: Record<string, string> = {
   ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

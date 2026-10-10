@@ -30,3 +30,17 @@ describe("rahasia & konfigurasi", () => {
     expect(c.chains[0].id).toBe("harian-ar");
   });
 });
+
+describe("rentang Send Invoice", () => {
+  it("Senin s/d hari ini; akhir pekan = Senin–Jumat", async () => {
+    const { weekToDate } = await import("./catalog");
+    expect(weekToDate("2026-10-12")).toEqual({ start: "2026-10-12", end: "2026-10-12" }); // Senin
+    expect(weekToDate("2026-10-13")).toEqual({ start: "2026-10-12", end: "2026-10-13" }); // Selasa
+    expect(weekToDate("2026-10-14")).toEqual({ start: "2026-10-12", end: "2026-10-14" }); // Rabu
+    expect(weekToDate("2026-10-16")).toEqual({ start: "2026-10-12", end: "2026-10-16" }); // Jumat
+    expect(weekToDate("2026-10-10")).toEqual({ start: "2026-10-05", end: "2026-10-09" }); // Sabtu
+    expect(weekToDate("2026-10-11")).toEqual({ start: "2026-10-05", end: "2026-10-09" }); // Minggu
+    expect(weekToDate("2026-11-02")).toEqual({ start: "2026-11-02", end: "2026-11-02" }); // Senin lintas bulan
+    expect(weekToDate("2026-10-01")).toEqual({ start: "2026-09-28", end: "2026-10-01" }); // Kamis lintas bulan
+  });
+});

@@ -22,8 +22,8 @@ export const JOBS: readonly JobInfo[] = [
   { id: "jasper.send-invoice", group: "jasper", label: "Send Invoice To Customer", short: "Jadwal TF", icon: "local_shipping", pushable: true, format: "CSV" },
   { id: "jasper.sj", group: "jasper", label: "Serah Terima Surat Jalan", short: "Surat Jalan", icon: "task_alt", pushable: true, format: "CSV" },
   { id: "jasper.invoice-by-date", group: "jasper", label: "Invoice & Payment Date Comparison", short: "Invoice by Date", nav: "Invoice by Date", icon: "payments", pushable: true, format: "Excel" },
-  { id: "edi.gr", group: "edi", label: "GR Report Detail", short: "GR Report", icon: "download", pushable: false, format: "CSV" },
-  { id: "edi.kwitansi", group: "edi", label: "Download Kwitansi", short: "Kwitansi", icon: "receipt_long", pushable: false, format: "CSV" },
+  { id: "edi.gr", group: "edi", label: "GR Report Detail", short: "GR Report", icon: "download", pushable: true, format: "CSV" },
+  { id: "edi.kwitansi", group: "edi", label: "Download Kwitansi", short: "Kwitansi", icon: "receipt_long", pushable: true, format: "CSV" },
   { id: "edi.upload-faktur", group: "edi", label: "Upload Faktur Pajak", short: "Upload Faktur", icon: "upload_file", pushable: false, format: "PDF", confirm: true },
 ];
 
@@ -34,8 +34,8 @@ export const DEFAULT_PARAMS: Record<JobId, JobParams> = {
   "jasper.send-invoice": { push: true },
   "jasper.sj": { push: true, days: 7 },
   "jasper.invoice-by-date": { push: false },
-  "edi.gr": {},
-  "edi.kwitansi": {},
+  "edi.gr": { push: true },
+  "edi.kwitansi": { push: true },
   "edi.upload-faktur": { mode: "draft" },
 };
 
@@ -105,4 +105,15 @@ export function redact(text: string, secrets: (string | undefined)[]) {
   let out = text;
   for (const s of secrets) if (s && s.length >= 4) out = out.split(s).join("●●●");
   return out;
+}
+
+/**
+ * Rentang bawaan Send Invoice: Senin minggu berjalan s/d hari ini (Senin = Senin–Senin, Rabu = Senin–Rabu).
+ * Sabtu/Minggu: Senin–Jumat minggu itu. `today` = YYYY-MM-DD (WIB).
+ */
+export function weekToDate(today: string): { start: string; end: string } {
+  const d = new Date(`${today}T00:00:00Z`);
+  const dow = (d.getUTCDay() + 6) % 7; // 0 = Senin … 6 = Minggu
+  const shift = (n: number) => { const x = new Date(d); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  return { start: shift(-dow), end: dow > 4 ? shift(4 - dow) : today };
 }
