@@ -10,9 +10,14 @@ describe("PPh komisi", () => {
     const r = hitungKomisi("orang", [100_000_000, 100_000_000]);
     expect(r.rows[0].pph).toBe(2_500_000);
     expect(r.rows[1].pph).toBe(6_500_000);
-    expect(r.rows[1].tarif).toBe("5% + 15%");
+    expect(r.rows[1].lapisan).toEqual([{ komisi: 20_000_000, dpp: 10_000_000, tarif: 0.05, pph: 500_000 }, { komisi: 80_000_000, dpp: 40_000_000, tarif: 0.15, pph: 6_000_000 }]);
     expect(r.pph).toBe(9_000_000);
     expect(r.neto).toBe(191_000_000);
+  });
+  it("rincian bertingkat 150 jt", () => {
+    const r = hitungKomisi("orang", [150_000_000]);
+    expect(r.rows[0].lapisan).toEqual([{ komisi: 120_000_000, dpp: 60_000_000, tarif: 0.05, pph: 3_000_000 }, { komisi: 30_000_000, dpp: 15_000_000, tarif: 0.15, pph: 2_250_000 }]);
+    expect(r.pph).toBe(5_250_000);
   });
   it("badan: PPh 23 2%", () => {
     expect(hitungKomisi("badan", [10_000_000]).pph).toBe(200_000);

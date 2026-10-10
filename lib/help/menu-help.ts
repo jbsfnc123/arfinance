@@ -96,7 +96,7 @@ export const MENU_HELP: MenuHelp[] = [
   { href: "/billing/komisi", menu: "Billing › Komisi dan Cashback", text: [
     "Tab Komisi adalah kalkulator PPh komisi; angka yang diisi tidak disimpan ke database dan hilang saat halaman ditutup.",
     "Orang Pribadi (PPh 21, penerima bukan pegawai): DPP = 50% × jumlah komisi bruto, lalu dikenai tarif progresif Pasal 17: 0–60 juta 5%, 60–250 juta 15%, 250–500 juta 25%, 500 juta–5 miliar 30%, di atas 5 miliar 35%.",
-    "Untuk beberapa baris, tarif progresif dihitung dari akumulasi DPP semua baris; kolom Tarif menampilkan lapisan yang kena (mis. \"5% + 15%\").",
+    "Untuk beberapa baris, tarif progresif dihitung dari akumulasi DPP semua baris; bila satu komisi melewati batas lapisan, rinciannya tampil sebagai sub-baris per lapisan (mis. komisi 150 jt = 120 jt: DPP 60 jt × 5% dan 30 jt: DPP 15 jt × 15%).",
     "Badan (PPh 23): PPh = 2% × jumlah komisi bruto.",
     "Diterima = jumlah komisi − PPh. Tidak ada pilihan tanpa NPWP karena NIK berlaku sebagai NPWP. Pembulatan rupiah ke bawah.",
     "Tab Cashback masih dalam pengembangan.",

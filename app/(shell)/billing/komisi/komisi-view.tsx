@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Tabs } from "@/components/tabs";
 import { btnGhost, card, inputCls, segGroup, segItem, tableCls, td, th } from "@/components/ui";
 import { Icon } from "@/components/icons";
@@ -60,20 +60,34 @@ function Komisi() {
           <tbody>
             {rows.map((r, i) => {
               const h = hasil.rows[i];
+              const satu = h.lapisan.length <= 1, l0 = h.lapisan[0];
+              const pct = (t: number) => `${Math.round(t * 100)}%`;
               return (
-                <tr key={r.id} className="border-t border-hairline">
-                  <td className={`${td} text-fg-2`}>{i + 1}</td>
-                  <td className={td}><input className={`${inputCls} w-48`} value={r.ket} aria-label={`Keterangan baris ${i + 1}`} onChange={(e) => set(r.id, { ket: e.target.value })} /></td>
-                  <td className={td}><input className={`${inputCls} w-40 text-right tabular-nums`} inputMode="numeric" value={r.jumlah} aria-label={`Jumlah komisi baris ${i + 1}`}
-                    onChange={(e) => set(r.id, { jumlah: ribuan(e.target.value) })} /></td>
-                  <td className={`${td} text-right tabular-nums`}>{rupiah(h.dpp)}</td>
-                  <td className={td}>{h.bruto ? h.tarif : "-"}</td>
-                  <td className={`${td} text-right tabular-nums text-danger`}>{rupiah(h.pph)}</td>
-                  <td className={`${td} text-right tabular-nums`}>{rupiah(h.neto)}</td>
-                  <td className={td}>{rows.length > 1 && (
-                    <button type="button" className={btnGhost} aria-label={`Hapus baris ${i + 1}`} onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}><Icon name="delete" /></button>
-                  )}</td>
-                </tr>
+                <Fragment key={r.id}>
+                  <tr className="border-t border-hairline">
+                    <td className={`${td} text-fg-2`}>{i + 1}</td>
+                    <td className={td}><input className={`${inputCls} w-48`} value={r.ket} aria-label={`Keterangan baris ${i + 1}`} onChange={(e) => set(r.id, { ket: e.target.value })} /></td>
+                    <td className={td}><input className={`${inputCls} w-40 text-right tabular-nums`} inputMode="numeric" value={r.jumlah} aria-label={`Jumlah komisi baris ${i + 1}`}
+                      onChange={(e) => set(r.id, { jumlah: ribuan(e.target.value) })} /></td>
+                    <td className={`${td} text-right tabular-nums`}>{rupiah(h.dpp)}</td>
+                    <td className={td}>{satu && l0 ? pct(l0.tarif) : ""}</td>
+                    <td className={`${td} text-right tabular-nums text-danger ${satu ? "" : "font-semibold"}`}>{rupiah(h.pph)}</td>
+                    <td className={`${td} text-right tabular-nums`}>{rupiah(h.neto)}</td>
+                    <td className={td}>{rows.length > 1 && (
+                      <button type="button" className={btnGhost} aria-label={`Hapus baris ${i + 1}`} onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}><Icon name="delete" /></button>
+                    )}</td>
+                  </tr>
+                  {!satu && h.lapisan.map((l, j) => (
+                    <tr key={j} className="text-fg-2" data-lapisan>
+                      <td className={td} /><td className={`${td} pl-6 text-xs`}>Lapisan {pct(l.tarif)}</td>
+                      <td className={`${td} text-right tabular-nums`}>{rupiah(l.komisi)}</td>
+                      <td className={`${td} text-right tabular-nums`}>{rupiah(l.dpp)}</td>
+                      <td className={td}>× {pct(l.tarif)}</td>
+                      <td className={`${td} text-right tabular-nums`}>{rupiah(l.pph)}</td>
+                      <td className={td} /><td className={td} />
+                    </tr>
+                  ))}
+                </Fragment>
               );
             })}
           </tbody>
