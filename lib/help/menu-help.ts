@@ -93,6 +93,14 @@ export const MENU_HELP: MenuHelp[] = [
     "Muat file XML bulk faktur pajak dari CoreTax lewat tombol Pilih XML.",
     "Faktur yang dihapus tidak ikut diekspor atau disimpan.",
   ] },
+  { href: "/billing/komisi", menu: "Billing › Komisi dan Cashback", text: [
+    "Tab Komisi adalah kalkulator PPh komisi; angka yang diisi tidak disimpan ke database dan hilang saat halaman ditutup.",
+    "Orang Pribadi (PPh 21, penerima bukan pegawai): DPP = 50% × jumlah komisi bruto, lalu dikenai tarif progresif Pasal 17: 0–60 juta 5%, 60–250 juta 15%, 250–500 juta 25%, 500 juta–5 miliar 30%, di atas 5 miliar 35%.",
+    "Untuk beberapa baris, tarif progresif dihitung dari akumulasi DPP semua baris; kolom Tarif menampilkan lapisan yang kena (mis. \"5% + 15%\").",
+    "Badan (PPh 23): PPh = 2% × jumlah komisi bruto.",
+    "Diterima = jumlah komisi − PPh. Tidak ada pilihan tanpa NPWP karena NIK berlaku sebagai NPWP. Pembulatan rupiah ke bawah.",
+    "Tab Cashback masih dalam pengembangan.",
+  ] },
   { href: "/billing/email-customer", menu: "Billing › Email Customer", text: [
     "Email penagihan per Business Partner, 4 tab: BP CBD, Group CBD, BP TOP, Group TOP. Payment Group, Collection & Marketing yang kosong diisi dari database (Aging terkini, cadangan invoice ERP) lewat Key BP; nilai abu-abu = diisi dari database.",
     "Value (Key BP) mis. 1000258-PKP dicocokkan ke database; Payment Group dikosongkan agar diambil dari database. Tab Group: PIC AR & email mengikuti Payment Group (berlaku untuk semua BP di grup); menghapus grup juga mengarsipkan BP anggotanya. Catatan Email contoh: \"Kirim ke Adm Sales Surabaya\".",
