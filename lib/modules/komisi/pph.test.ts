@@ -19,6 +19,15 @@ describe("PPh komisi", () => {
     expect(r.rows[0].lapisan).toEqual([{ komisi: 120_000_000, dpp: 60_000_000, tarif: 0.05, pph: 3_000_000 }, { komisi: 30_000_000, dpp: 15_000_000, tarif: 0.15, pph: 2_250_000 }]);
     expect(r.pph).toBe(5_250_000);
   });
+  it("transaksi 50/80/20 bersambung dalam satu kelompok", () => {
+    const r = hitungKomisi("orang", [50_000_000, 80_000_000, 20_000_000]);
+    expect(r.rows.map((h) => h.lapisan.map((l) => [l.komisi, l.dpp, l.tarif, l.pph]))).toEqual([
+      [[50_000_000, 25_000_000, 0.05, 1_250_000]],
+      [[70_000_000, 35_000_000, 0.05, 1_750_000], [10_000_000, 5_000_000, 0.15, 750_000]],
+      [[20_000_000, 10_000_000, 0.15, 1_500_000]],
+    ]);
+    expect(r.pph).toBe(5_250_000);
+  });
   it("badan: PPh 23 2%", () => {
     expect(hitungKomisi("badan", [10_000_000]).pph).toBe(200_000);
   });
