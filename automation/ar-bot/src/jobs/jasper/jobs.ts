@@ -1,4 +1,4 @@
-// Job Jaspersoft: unduh → baca & periksa isi → (opsional) arsip Drive + kirim ke AR Workspace.
+// Job Jaspersoft: unduh → baca & periksa isi → (opsional) kirim ke AR Workspace.
 // Gagal kirim = job gagal; laporan kosong = dilewati tanpa mengubah data lama.
 import fs from "node:fs";
 import { todayJakarta } from "@/lib/parsers/date";
@@ -7,7 +7,7 @@ import type { JobParams, JobResult } from "~/shared/types";
 import { jobDir } from "~/core/paths";
 import type { RunContext } from "~/runner/ctx";
 import {
-  archive, inspectAging, inspectErp, inspectSchedule, inspectSj, markPushed, num, pushAging, pushErp, pushSchedule, pushSj, readSheets, rp, sha256, unchanged,
+  inspectAging, inspectErp, inspectSchedule, inspectSj, markPushed, num, pushAging, pushErp, pushSchedule, pushSj, readSheets, rp, sha256, unchanged,
 } from "../arw";
 import { finalize, JasperSession } from "./session";
 
@@ -25,13 +25,12 @@ export const jasperOf = (ctx: RunContext) => {
 /** Buang sesi (setelah halaman ditutup karena galat) → percobaan / job berikutnya login ulang. */
 export const resetJasper = (ctx: RunContext) => { sessions.delete(sessionKey(ctx)); };
 
-/** Langkah kirim bersama: lewati bila uji coba / tidak dikirim / file kembar (tanpa arsip ulang); arsip Drive lalu kirim. */
+/** Langkah kirim bersama: lewati bila uji coba / tidak dikirim / file kembar ; selain itu kirim. */
 async function shouldPush(ctx: RunContext, job: Parameters<typeof unchanged>[1], p: JobParams, buf: Buffer, file: string, month: string) {
   if (ctx.opts.dryRun) { ctx.info("Uji coba: tidak diarsip & tidak dikirim."); return null; }
   if (!p.push) { ctx.info("Kirim ke AR Workspace nonaktif untuk job ini."); return null; }
   const sha = sha256(buf);
   if (unchanged(ctx, job, sha)) return null;
-  await archive(ctx, file, month);
   return sha;
 }
 

@@ -26,6 +26,10 @@ describe("routing per workspace", () => {
   it("finance & ap di-rewrite, login/statis tidak", () => {
     expect(routeFor("finance", "/")).toEqual({ kind: "rewrite", path: "/finance" });
     expect(routeFor("finance", "/akun")).toEqual({ kind: "rewrite", path: "/finance/akun" });
+    // Route handler /api dipakai bersama semua workspace (arsip Google Drive dari halaman Database finance).
+    expect(routeFor("finance", "/api/archive/status")).toEqual({ kind: "next" });
+    expect(routeFor("ap", "/api/backup/weekly")).toEqual({ kind: "next" });
+    expect(routeFor("finance", "/apiary")).toEqual({ kind: "rewrite", path: "/finance/apiary" });
     expect(routeFor("ap", "/")).toEqual({ kind: "rewrite", path: "/ap" });
     expect(routeFor("ap", "/login")).toEqual({ kind: "next" });
     expect(routeFor("finance", "/auth/signout")).toEqual({ kind: "next" });

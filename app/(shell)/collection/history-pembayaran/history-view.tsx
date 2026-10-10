@@ -97,11 +97,12 @@ export function HistoryView() {
           {h.cov.map((c) => (
             <span key={c.month} title={c.payments ? `${c.payments.toLocaleString("id-ID")} transaksi pembayaran` : "Belum ada data pembayaran bulan ini"}
               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs ${c.payments ? "bg-success/15 text-success" : "bg-danger/15 text-danger"}`}>
-              <Icon name={c.payments ? "check_circle" : "cancel"} size={14} />
-              {monthLabel(c.month)}{c.payments ? ` · ${c.payments.toLocaleString("id-ID")}` : ""}
+              <Icon name={h.fromArchive.includes(c.month) ? "cloud_done" : c.payments ? "check_circle" : "cancel"} size={14} />
+              {monthLabel(c.month)}{c.payments ? ` · ${c.payments.toLocaleString("id-ID")}` : ""}{h.fromArchive.includes(c.month) ? " · arsip" : ""}
             </span>
           ))}
         </span>
+        {h.archiveError && <span className="text-xs text-danger">Arsip Drive: {h.archiveError}</span>}
         <span className="ml-auto inline-flex overflow-hidden rounded-full border border-line" role="group" aria-label="Mode hitungan">
           {seg("bp", "BP tanpa group", "person")}
           {seg("group", "Payment Group", "groups")}

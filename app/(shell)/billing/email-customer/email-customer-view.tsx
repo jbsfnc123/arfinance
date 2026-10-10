@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useDataset } from "@/lib/local/store";
+import { useArchivedRows } from "@/lib/archive/client";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import { useViewState } from "@/lib/ui/view-state";
 import { todayJakarta } from "@/lib/parsers/date";
@@ -37,7 +38,16 @@ export function EmailCustomerView() {
   const t = TABS.find((x) => x.key === tab) ?? TABS[0];
   const weeks = useMemo(() => monthWeeks(month), [month]);
   const data: EmailData = useMemo(() => ds.data ?? { groups: [], customers: [], emails: [], lookup: [] }, [ds.data]);
-  const sales = useMemo(() => salesDatesById(data), [data]);
+  // Bulan yang invoice ERP-nya sudah dipindah ke arsip Google Drive (Fase 66): tanggal invoice TOP diambil dari arsip.
+  const archMonths = useMemo(() => [month], [month]);
+  const archInv = useArchivedRows<{ bp_key: string | null; invoice_date: string }>("erp_invoices", archMonths);
+  const salesData: EmailData = useMemo(() => {
+    if (!archInv.rows.length) return data;
+    const topBp = new Set(data.customers.filter((c) => c.term === "TOP" && c.bp_key).map((c) => c.bp_key as string));
+    const extra = archInv.rows.filter((r) => r.bp_key && topBp.has(r.bp_key)).map((r) => ({ bp_key: r.bp_key as string, invoice_date: r.invoice_date }));
+    return { ...data, topSales: [...(data.topSales ?? []), ...extra] };
+  }, [data, archInv.rows]);
+  const sales = useMemo(() => salesDatesById(salesData), [salesData]);
   const rows = useMemo(() => {
     const base = buildRows(data, t.term, t.level, weeks, sales);
     if (!Object.keys(pending).length) return base;

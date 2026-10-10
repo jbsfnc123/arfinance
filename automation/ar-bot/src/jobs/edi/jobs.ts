@@ -10,7 +10,7 @@ import { delay, type RunContext } from "~/runner/ctx";
 import type { JobOut } from "../jasper/jobs";
 import { ediLogin, ediLogout, ediPage, openEdiReport, pickAccounts, selectPartner, waitNewFile } from "./session";
 import { ediUploadFakturJob } from "./faktur";
-import { archive, inspectM10Gr, inspectM10Kw, markPushed, num, pushM10Gr, pushM10Kw, sha256, unchanged } from "../arw";
+import { inspectM10Gr, inspectM10Kw, markPushed, num, pushM10Gr, pushM10Kw, sha256, unchanged } from "../arw";
 import { todayJakarta } from "@/lib/parsers/date";
 
 export { ediUploadFakturJob };
@@ -22,14 +22,13 @@ type Acc = ReturnType<typeof pickAccounts>[number];
 
 /**
  * Kirim file satu akun ke AR Workspace (Mitra10). Lewati bila uji coba / kirim nonaktif / file identik dengan kiriman
- * sukses terakhir akun ini; arsip Drive lalu kirim. Mengembalikan ringkasan hasil kirim, atau null bila tidak dikirim.
+ * sukses terakhir akun ini; selain itu kirim. Mengembalikan ringkasan hasil kirim, atau null bila tidak dikirim.
  */
 async function pushFile(ctx: RunContext, p: JobParams, key: string, file: string, send: () => Promise<string>) {
   if (ctx.opts.dryRun) { ctx.info("Uji coba: tidak diarsip & tidak dikirim."); return null; }
   if (!p.push) { ctx.info("Kirim ke AR Workspace nonaktif untuk job ini."); return null; }
   const sha = sha256(fs.readFileSync(file));
   if (unchanged(ctx, key, sha)) return null;
-  await archive(ctx, file, todayJakarta().slice(0, 7));
   const msg = await send();
   markPushed(key, sha);
   ctx.log("ok", `AR Workspace: ${msg}`);

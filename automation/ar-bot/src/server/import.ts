@@ -53,8 +53,6 @@ export function runImport({ source, dir }: { source: "mando" | "erpbot"; dir: st
     if (env.BOT_EMAIL) cfg.arw.botEmail = env.BOT_EMAIL;
     if (env.SUPABASE_URL || env.BOT_EMAIL) done.push("koneksi AR Workspace");
     if (env.BOT_PASSWORD) { secrets.botPassword = env.BOT_PASSWORD; done.push("password Bot ERP"); }
-    if (env.ERP_DRIVE_URL) { cfg.drive.url = env.ERP_DRIVE_URL; done.push("URL Drive Inbox"); }
-    if (env.ERP_DRIVE_SECRET) { secrets.driveSecret = env.ERP_DRIVE_SECRET; done.push("rahasia Drive Inbox"); }
   } else {
     const list: { username: string; password: string }[] = [];
     const accFile = path.join(dir, "accounts.json");

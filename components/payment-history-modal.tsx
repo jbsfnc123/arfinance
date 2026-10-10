@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import { useDataset } from "@/lib/local/store";
+import { useArchivedRows } from "@/lib/archive/client";
+import { erpFromPaymentRows, mergeErp, paymentCounts } from "@/lib/archive/merge";
 import {
   agingByBp, groupHistory, historyPeriod, paymentHistory, coverage, type HistoryRow, type HistoryTx,
 } from "@/lib/modules/collection/payment-history";
@@ -24,13 +26,20 @@ export function usePaymentHistory() {
   const today = todayJakarta();
   const period = useMemo(() => historyPeriod(today), [today]);
   // Paket ERP khusus periode History (±4 bulan), bukan seluruh ERP — kunjungan pertama jauh lebih cepat.
-  const erp = useDataset("payhist");
+  const payhist = useDataset("payhist");
   const aging = useDataset("aging");
-  const bpRows = useMemo(() => (erp.data && aging.data ? paymentHistory(erp.data, aging.data.lines, period, today) : []),
-    [erp.data, aging.data, period, today]);
+  // Bulan periode yang sudah dipindah ke arsip Google Drive (Fase 66) digabung kembali ke dataset.
+  const arch = useArchivedRows("erp_payments", period.months);
+  const erp = useMemo(() => {
+    if (!payhist.data || !arch.rows.length) return payhist.data;
+    const merged = mergeErp(payhist.data, erpFromPaymentRows(arch.rows));
+    return { ...merged, counts: { ...payhist.data.counts, ...paymentCounts(arch.rows) } };
+  }, [payhist.data, arch.rows]);
+  const bpRows = useMemo(() => (erp && aging.data ? paymentHistory(erp, aging.data.lines, period, today) : []),
+    [erp, aging.data, period, today]);
   const groupRows = useMemo(() => (aging.data ? groupHistory(bpRows, aging.data.lines, period, today) : []), [bpRows, aging.data, period, today]);
-  const cov = useMemo(() => (erp.data ? coverage(erp.data, period) : []), [erp.data, period]);
-  return { today, period, bpRows, groupRows, cov, aging: aging.data, loading: !erp.data || !aging.data };
+  const cov = useMemo(() => (erp ? coverage(erp, period) : []), [erp, period]);
+  return { today, period, bpRows, groupRows, cov, aging: aging.data, loading: !erp || !aging.data || arch.loading, fromArchive: arch.archived, archiveError: arch.error };
 }
 
 // Ringkasan history pembayaran satu BP atau satu Payment Group (3 bulan terakhir, BP ber-tempo).

@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/database.types";
 import { authCookieOptions, isSharedHost, loginUrl, routeFor, WORKSPACE_HEADER, workspaceFromHost, workspaceUrl } from "@/lib/workspace";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+// /api/backup/weekly: dipanggil Vercel Cron tanpa sesi; route memeriksa CRON_SECRET sendiri.
+const PUBLIC_PATHS = ["/login", "/auth", "/api/backup/weekly"];
 
 // Refresh sesi Supabase di setiap request, arahkan user yang belum login ke /login, dan
 // arahkan host ke workspace-nya (tangki.space → app/finance, ap. → app/ap, ar. → apa adanya).

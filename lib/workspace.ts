@@ -42,7 +42,8 @@ export function workspaceUrl(ws: Workspace, currentHost: string | null | undefin
 }
 
 // Path publik/statis tidak di-rewrite (login & auth dipakai bersama semua workspace).
-const SHARED = /^\/(login|auth|_next|presentasi-app)(\/|$)/;
+// api: route handler (arsip Google Drive, cadangan) dipakai dari workspace mana pun — tidak di-rewrite per workspace.
+const SHARED = /^\/(login|auth|api|_next|presentasi-app)(\/|$)/;
 const hasExtension = (p: string) => /\.[a-z0-9]+$/i.test(p.split("/").pop() ?? "");
 
 export type Route = { kind: "next" } | { kind: "rewrite"; path: string } | { kind: "notfound" } | { kind: "moved"; ws: Workspace; path: string };

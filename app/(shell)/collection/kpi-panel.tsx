@@ -9,6 +9,7 @@ import {
 } from "@/lib/modules/collection/view-model";
 import { collectionAllocationOf } from "@/lib/local/derived";
 import { useDataset } from "@/lib/local/store";
+import { useArchiveMonths, useMonthArchive } from "@/lib/archive/hooks";
 import { todayJakarta } from "@/lib/parsers/date";
 import { Chart } from "@/components/chart";
 import { chartTheme, seriesColors } from "@/lib/ui/palette";
@@ -138,20 +139,26 @@ const juta = (n: number) => Math.round(n / 1e4) / 100;
 // Pengganti "Rekap Tukar Faktur per Bulan": total alokasi (pembayaran ERP) collection ini per hari.
 // Dataset erp/targets baru dimuat saat panel dibuka (komponen ini hanya dirender saat terbuka).
 function AllocationChart({ collection }: { collection: string }) {
-  const erp = useDataset("erp").data;
-  const targets = useDataset("targets").data;
+  const erpDs = useDataset("erp").data;
+  const targetsDs = useDataset("targets").data;
   const agingAll = useDataset("aging").data?.lines;
   const current = todayJakarta().slice(0, 7);
   const [month, setMonth] = useViewState("collection:allocMonth", current);
+  // Bulan yang sudah dipindah ke arsip Google Drive (Fase 66): pembayaran & target bulan itu dimuat dari arsip.
+  const arch = useMonthArchive(month, { erp: true, targets: true });
+  const { applyErp, applyTargets } = arch;
+  const archMonths = useArchiveMonths(["erp_payments", "ar_targets"]);
+  const erp = useMemo(() => applyErp(erpDs), [applyErp, erpDs]);
+  const targets = useMemo(() => (targetsDs ? { targets: applyTargets(targetsDs.targets)! } : targetsDs), [applyTargets, targetsDs]);
   const theme = useResolvedTheme();
   const a = useMemo(
-    () => (erp && targets && agingAll ? collectionAllocationOf(month, collection, erp, targets, agingAll) : null),
-    [month, collection, erp, targets, agingAll],
+    () => (erp && targets && agingAll && !arch.loading ? collectionAllocationOf(month, collection, erp, targets, agingAll) : null),
+    [month, collection, erp, targets, agingAll, arch.loading],
   );
   const months = useMemo(() => {
-    const set = new Set([current, month, ...(a?.months ?? []), ...(targets?.targets.map((t) => t.month) ?? [])]);
+    const set = new Set([current, month, ...(a?.months ?? []), ...(targets?.targets.map((t) => t.month) ?? []), ...archMonths]);
     return [...set].filter(Boolean).sort().reverse();
-  }, [current, month, a, targets]);
+  }, [current, month, a, targets, archMonths]);
 
   if (!a) return <div className="text-sm text-fg-2">Memuat data alokasi…</div>;
   const sc = seriesColors(theme), ct = chartTheme();

@@ -1,7 +1,7 @@
 # AR Bot — aplikasi desktop lokal (Fase 65)
 
 Versi baru *Assistent Mando* dengan tampilan AR Workspace. Portable dan tanpa instalasi: server Node lokal ditambah jendela Edge `--app`.
-Semua bot berjalan di PC ini. Kredensial dan file tidak meninggalkan PC, kecuali arsip Drive dan kiriman ke AR Workspace.
+Semua bot berjalan di PC ini. Kredensial dan file unduhan tidak meninggalkan PC; yang keluar hanya kiriman data ke AR Workspace (arsip historis dikelola AR Workspace sendiri — Fase 66).
 
 | Grup | Job | Hasil | Kirim ke AR Workspace |
 |---|---|---|---|
@@ -23,7 +23,7 @@ Akun Bot ERP butuh menu `set.update`, `tukar.upload`, `tukar.monitor_sj`, `rek.m
   folder unduhan terpisah). Galat satu task tidak menghentikan task lain; Hentikan menghentikan semuanya.
   Default tanggal (`defaultDates`, sama untuk runner & UI): Send Invoice Senin s/d hari ini · GR 30 hari terakhir ·
   Kwitansi bulan ini · Invoice by Date tanggal 1 s/d hari ini · SJ 7 hari.
-- **Uji Coba** hanya mengunduh dan membaca file, tanpa arsip Drive, tanpa kirim, dan tanpa unggah. Untuk Upload Faktur, Uji Coba hanya mencari dan memverifikasi di Draft.
+- **Uji Coba** hanya mengunduh dan membaca file, tanpa kirim dan tanpa unggah. Untuk Upload Faktur, Uji Coba hanya mencari dan memverifikasi di Draft.
 - **Rangkaian & Jadwal**: urutan job dan jadwal hari/jam didaftarkan ke Task Scheduler (`\ARBot\AR Bot - <id>`, tanpa admin). Jadwal tetap berjalan walau aplikasi tertutup dan mengejar jadwal yang terlewat. Upload Faktur tidak boleh masuk rangkaian.
 - **Pengaturan › Impor dari aplikasi lama**: membaca `.env` / `accounts.json` Assistent Mando dan `automation/erp-bot/.env` sekali, saat tombol diklik.
 
@@ -31,11 +31,11 @@ Akun Bot ERP butuh menu `set.update`, `tukar.upload`, `tukar.monitor_sj`, `rek.m
 
 - Program: `%LOCALAPPDATA%\ARBot\` (bin, app). Data: `%LOCALAPPDATA%\ARBot\data\`, di luar OneDrive.
   - `config.json`: pengaturan tanpa rahasia.
-  - `secrets.dat`: sandi Jaspersoft / Bot ERP / Drive / akun EDI, terenkripsi **DPAPI** (hanya akun Windows ini).
+  - `secrets.dat`: sandi Jaspersoft / Bot ERP / akun EDI, terenkripsi **DPAPI** (hanya akun Windows ini).
   - `history.jsonl`, `runs\<runId>.jsonl` (log), `downloads\<job>\`, `shots\` (screenshot + HTML saat galat), `work\faktur\`.
   - File unduhan, log, dan screenshot dihapus otomatis setelah N hari (Pengaturan, bawaan 30).
 - Server hanya `127.0.0.1`. Header Host dan Origin harus cocok, dan semua `/api` wajib token sesi acak (diberikan lewat `#t=` saat jendela dibuka). Rahasia tidak pernah dikirim ke UI dan disamarkan (●●●) di log.
-- Satu run sekaligus (`data\run.lock`). File identik dengan kiriman sukses terakhir tidak dikirim (dan tidak diarsip) ulang; centang **Paksa kirim ulang** untuk memaksa.
+- Satu run sekaligus (`data\run.lock`). File identik dengan kiriman sukses terakhir tidak dikirim ulang; centang **Paksa kirim ulang** untuk memaksa.
 - Galat diulang 2× (jeda 20 dtk), kecuali galat pengaturan/kredensial dan Upload Faktur (aksi tulis di situs luar).
 
 ## Pengembangan
