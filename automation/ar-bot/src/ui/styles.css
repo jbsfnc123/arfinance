@@ -1,0 +1,8 @@
+/* Token, tema gelap/terang, dan utilitas AR Workspace — sumber yang sama dengan aplikasi web. */
+@import "../../../../app/globals.css";
+@source "../../../../components";
+@source "./";
+
+html, body, #root { height: 100%; }
+body { overflow: hidden; }
+.log-line { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }

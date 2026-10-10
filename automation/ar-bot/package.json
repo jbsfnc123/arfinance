@@ -1,0 +1,35 @@
+{
+  "name": "ar-bot",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AR Bot: aplikasi desktop lokal (portable) untuk bot Jaspersoft & EDI Mitra 10 + kirim ke AR Workspace.",
+  "scripts": {
+    "dev:ui": "vite",
+    "build": "node scripts/build.mjs",
+    "deploy": "node scripts/build.mjs && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-local.ps1",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299",
+    "puppeteer-core": "^24.23.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "esbuild": "^0.25.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.0",
+    "vitest": "^3.2.0"
+  }
+}
