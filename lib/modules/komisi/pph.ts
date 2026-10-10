@@ -16,24 +16,36 @@ export function pphPasal17(dpp: number): number {
   return pajak;
 }
 
-export type BarisHasil = { bruto: number; dpp: number; tarif: string; pph: number; neto: number };
+export type Lapisan = { komisi: number; dpp: number; tarif: number; pph: number };
+export type BarisHasil = { bruto: number; dpp: number; pph: number; neto: number; lapisan: Lapisan[] };
+
+// Pecah DPP baris per lapisan Pasal 17 mulai dari DPP kumulatif baris sebelumnya.
+function pecahLapisan(bruto: number, dppAwal: number): Lapisan[] {
+  const out: Lapisan[] = [];
+  let sisa = Math.floor(bruto / 2), pos = dppAwal, bawah = 0;
+  for (const [atas, tarif] of LAPISAN_PASAL17) {
+    if (sisa <= 0) break;
+    if (pos < atas) {
+      const dpp = Math.min(sisa, atas - Math.max(pos, bawah));
+      out.push({ komisi: dpp * 2, dpp, tarif, pph: Math.floor(dpp * tarif) });
+      sisa -= dpp; pos += dpp;
+    }
+    bawah = atas;
+  }
+  if (out.length) out[out.length - 1].komisi += bruto - out.reduce((s, l) => s + l.komisi, 0);
+  return out;
+}
 
 export function hitungKomisi(penerima: Penerima, brutos: number[]): { rows: BarisHasil[]; bruto: number; pph: number; neto: number } {
   let dppKum = 0;
-  const rows = brutos.map((b) => {
+  const rows = brutos.map((b): BarisHasil => {
     const bruto = Math.max(0, Math.floor(b || 0));
-    if (penerima === "badan") {
-      const pph = Math.floor(bruto * 0.02);
-      return { bruto, dpp: bruto, tarif: "2%", pph, neto: bruto - pph };
-    }
-    const dpp = Math.floor(bruto / 2);
-    const pph = Math.floor(pphPasal17(dppKum + dpp)) - Math.floor(pphPasal17(dppKum));
-    const tarifs = LAPISAN_PASAL17.filter(([atas], i) => {
-      const bawah = i ? LAPISAN_PASAL17[i - 1][0] : 0;
-      return dpp > 0 && dppKum < atas && dppKum + dpp > bawah;
-    }).map(([, t]) => `${Math.round(t * 100)}%`);
-    dppKum += dpp;
-    return { bruto, dpp, tarif: tarifs.join(" + ") || "-", pph, neto: bruto - pph };
+    const lapisan = penerima === "badan"
+      ? (bruto ? [{ komisi: bruto, dpp: bruto, tarif: 0.02, pph: Math.floor(bruto * 0.02) }] : [])
+      : pecahLapisan(bruto, dppKum);
+    const dpp = lapisan.reduce((s, l) => s + l.dpp, 0), pph = lapisan.reduce((s, l) => s + l.pph, 0);
+    if (penerima === "orang") dppKum += dpp;
+    return { bruto, dpp, pph, neto: bruto - pph, lapisan };
   });
   const bruto = rows.reduce((s, r) => s + r.bruto, 0), pph = rows.reduce((s, r) => s + r.pph, 0);
   return { rows, bruto, pph, neto: bruto - pph };
