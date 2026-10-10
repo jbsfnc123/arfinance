@@ -1,5 +1,13 @@
 # Bot ERP — Aging, Jadwal Tukar Faktur & Serah Terima Surat Jalan otomatis (Fase 55–57)
 
+> **Digantikan oleh AR Bot (Fase 65, 2026-10-10)** — aplikasi desktop lokal `automation/ar-bot` (lihat README-nya):
+> - Alur yang sama (Jaspersoft → arsip Drive → AR Workspace), ditambah Invoice by Date, bot EDI Mitra 10, Upload Faktur, dan Invoice Checklist.
+> - Diatur dari jendela aplikasi; kredensial terenkripsi DPAPI di `%LOCALAPPDATA%\ARBot\data`.
+> - Jadwal "AR Bot - harian-ar" (Senin–Jumat 10:00) menggantikan tugas "AR Workspace - Bot ERP Aging". Tugas lama dinonaktifkan, tidak dihapus.
+>   Untuk kembali: `Enable-ScheduledTask -TaskName 'AR Workspace - Bot ERP Aging'` lalu matikan jadwal di AR Bot.
+>
+> Dokumen di bawah tetap berlaku untuk `automation/erp-bot` (CLI) dan GAS Drive Inbox yang juga dipakai AR Bot.
+
 Setiap hari kerja (Task Scheduler, default Senin–Jumat), PC lokal menjalankan bot dengan tiga tugas berurutan:
 
 1. **Aging Detail** — login Jaspersoft (report.tangki.id) → Library › *Aging Detail* → Organization *Penguin Trading*,
