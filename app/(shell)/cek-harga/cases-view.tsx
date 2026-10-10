@@ -62,7 +62,6 @@ export function CasesView({ status, version, onChange }: { status: "archived" | 
     <section className={`${card} overflow-hidden`}>
       <div className="flex items-center gap-2 border-b border-line px-4 py-3">
         <span className="text-sm">{shown.length} PO</span>
-        {status === "archived" && <span className="text-xs text-fg-2">· baris kuning = Tindakan Koreksi / Keterangan belum diisi</span>}
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari PO, SO, BP…" className={`${inputCls} ml-auto !w-60`} />
       </div>
       <div>

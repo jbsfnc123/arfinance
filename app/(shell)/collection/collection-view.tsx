@@ -141,7 +141,7 @@ export function CollectionView(props: {
     return (
       <div className="mx-auto max-w-5xl">
         <h1 className="text-[22px] font-semibold tracking-tight">Collection</h1>
-        <p className="mt-1 text-sm text-fg-2">Pilih collection. Data per: {fmtTimestamp(lastUpdate)}</p>
+        <p className="mt-1 text-sm text-fg-2">Data per: {fmtTimestamp(lastUpdate)}</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((c) => (
             <button key={c.name} type="button" onClick={() => pick(c.name)} className={`${card} p-4 text-left hover:border-accent`}>
@@ -152,7 +152,7 @@ export function CollectionView(props: {
             </button>
           ))}
           {collections.length === 0 && (
-            <p className="text-sm text-fg-2">{loading ? "Memuat data…" : "Belum ada data tagihan. Upload lewat Pengaturan → Pusat Upload Data."}</p>
+            <p className="text-sm text-fg-2">{loading ? "Memuat data…" : "Belum ada data tagihan."}</p>
           )}
         </div>
       </div>

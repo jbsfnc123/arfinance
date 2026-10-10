@@ -15,37 +15,37 @@ afterEach(()=>{act(()=>root.unmount());host.remove();});
 const click=async(label:string)=>act(async()=>host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click());
 it('starts collapsed with no external iframe request, opens and keeps the same frame when minimized',async()=>{
   expect(host.querySelector('iframe')).toBeNull();
-  await click('Buka konsultan chat');
+  await click('Buka AR Helpdesk');
   const frame=host.querySelector('iframe')!;
   expect(frame.getAttribute('src')).toBe(CONSULTANT_URL);
   expect(frame.getAttribute('referrerpolicy')).toBe('no-referrer');
   expect(host.querySelector('a[target="_blank"]')).toBeNull();
   expect(host.firstElementChild?.getAttribute('style')).not.toContain('--dock-reserve');
   await click('Tutup chat');expect(host.querySelector('section')?.hidden).toBe(true);
-  await click('Buka konsultan chat');expect(host.querySelector('iframe')).toBe(frame);
+  await click('Buka AR Helpdesk');expect(host.querySelector('iframe')).toBe(frame);
   expect(host.querySelector('section')?.hidden).toBe(false);
 });
 it('returns focus when closed by Escape',async()=>{
-  await click('Buka konsultan chat');
+  await click('Buka AR Helpdesk');
   await act(async()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
   expect(host.querySelector('section')?.hidden).toBe(true);
-  expect(document.activeElement?.getAttribute('aria-label')).toBe('Buka konsultan chat');
+  expect(document.activeElement?.getAttribute('aria-label')).toBe('Buka AR Helpdesk');
 });
 it('passes only the account display name for greeting lookup, safely encoded', async()=>{
   await act(async()=>root.render(<ConsultantChat key="account-a" accountName="Mando & Tim" />));
-  await click('Buka konsultan chat');
+  await click('Buka AR Helpdesk');
   const url=new URL(host.querySelector('iframe')!.getAttribute('src')!);
   expect(url.searchParams.get('account')).toBe('Mando & Tim');
   expect([...url.searchParams.keys()]).toEqual(['account']);
 });
 it('clears the embedded conversation when the account changes',async()=>{
-  await click('Buka konsultan chat');
+  await click('Buka AR Helpdesk');
   await act(async()=>root.render(<ConsultantChat key="account-b" />));
   expect(host.querySelector('iframe')).toBeNull();
 });
 
 it('does not close chat when Escape belongs to a newer modal',async()=>{
-  await click('Buka konsultan chat');
+  await click('Buka AR Helpdesk');
   const modal=layerStack.push('modal');
   try {
     await act(async()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
@@ -55,24 +55,24 @@ it('does not close chat when Escape belongs to a newer modal',async()=>{
 
 it('scopes browser memory by account ID even when display names match', async()=>{
   await act(async()=>root.render(<ConsultantChat key="a" accountName="Mando" accountId="11111111-1111-4111-8111-111111111111" />));
-  await click('Buka konsultan chat');
+  await click('Buka AR Helpdesk');
   const first=new URL(host.querySelector('iframe')!.getAttribute('src')!);
   expect(first.searchParams.get('accountId')).toBe('11111111-1111-4111-8111-111111111111');
   await act(async()=>root.render(<ConsultantChat key="b" accountName="Mando" accountId="22222222-2222-4222-8222-222222222222" />));
   expect(host.querySelector('iframe')).toBeNull();
-  await click('Buka konsultan chat');
+  await click('Buka AR Helpdesk');
   const second=new URL(host.querySelector('iframe')!.getAttribute('src')!);
   expect(second.searchParams.get('accountId')).not.toBe(first.searchParams.get('accountId'));
   expect([...second.searchParams.keys()].sort()).toEqual(['account','accountId']);
 });
-it('uses the new name QnA AR Workspace', async()=>{
-  await click('Buka konsultan chat');
-  expect(host.querySelector('section')?.getAttribute('aria-label')).toBe('QnA AR Workspace');
-  expect(host.textContent).toContain('QnA AR Workspace');
-  expect(host.querySelector('iframe')?.getAttribute('title')).toBe('Percakapan dengan QnA AR Workspace');
+it('uses the new name AR Helpdesk', async()=>{
+  await click('Buka AR Helpdesk');
+  expect(host.querySelector('section')?.getAttribute('aria-label')).toBe('AR Helpdesk');
+  expect(host.textContent).toContain('AR Helpdesk');
+  expect(host.querySelector('iframe')?.getAttribute('title')).toBe('Percakapan dengan AR Helpdesk');
 });
 it('answers page-context requests only from the Apps Script origin inside its own frame', async()=>{
-  await click('Buka konsultan chat');
+  await click('Buka AR Helpdesk');
   const frameWin = host.querySelector('iframe')!.contentWindow!;
   const sent: unknown[] = [];
   const source = { postMessage: (m: unknown) => sent.push(m) } as unknown as Window;

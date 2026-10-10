@@ -43,7 +43,6 @@ export function LtkpSearch() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
           <h1 className="text-[22px] font-semibold tracking-tight">LTKP</h1>
-          <p className="text-sm text-fg-2">Laporan Tindakan Koreksi &amp; Pencegahan dari pengajuan pembatalan/revisi faktur.</p>
         </div>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari No Invoice, No LTKP, BP…" className={`${inputCls} !w-72`} autoFocus />
       </div>

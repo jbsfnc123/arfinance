@@ -63,14 +63,10 @@ export function UploadJadwal() {
       <label className="block text-sm">
         <span className="font-medium">1. Data Master Kirim (.csv)</span>
         <input type="file" accept=".csv" onChange={(e) => pickMaster(e.target.files?.[0] ?? null)} className={`${inputCls} mt-1`} />
-        <span className="mt-1 block text-xs text-fg-2">Data mulai baris 6. Kolom B = Send Date, H = Business Partner, O = No Invoice, P = Date Invoice (dd/MM/yyyy atau dd-MM-yyyy). Delimiter koma, titik koma, atau tab terdeteksi otomatis.</span>
       </label>
       <label className="block text-sm">
         <span className="font-medium">2. Data Aging (.xls / .xlsx / .csv) — opsional</span>
         <input type="file" accept=".xls,.xlsx,.csv" onChange={(e) => pickAging(e.target.files?.[0] ?? null)} className={`${inputCls} mt-1`} />
-        <span className="mt-1 block text-xs text-fg-2">
-          Bila dikosongkan, Payment Group, Marketing, dan Open Amt diambil dari data tagihan terakhir (Update Tagihan).
-        </span>
       </label>
 
       {master && (

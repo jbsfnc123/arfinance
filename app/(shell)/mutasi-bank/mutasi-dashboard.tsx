@@ -67,7 +67,7 @@ export function MutasiDashboard() {
             <Kpi label="Target (Open Amt)" value={rupiah(v.target)} sub={`${v.targetCount.toLocaleString("id-ID")} invoice`} />
             <Kpi label="Realisasi / Target" value={`${(v.realisasi * 100).toFixed(1)}%`} />
             <Kpi label="Total Invoice Create" value={rupiah(v.inv)} />
-            <Kpi label="Dikecualikan manual" value={rupiah(v.excluded)} sub={`${v.excludedCount.toLocaleString("id-ID")} transaksi tidak dihitung sebagai uang masuk`} />
+            <Kpi label="Dikecualikan manual" value={rupiah(v.excluded)} sub={`${v.excludedCount.toLocaleString("id-ID")} transaksi`} />
             {raw.accounts.map((a) => <Kpi key={a} label={`Uang masuk ${a}`} value={rupiah(v.perAccount[a])} />)}
           </div>
 

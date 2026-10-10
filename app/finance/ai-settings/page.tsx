@@ -7,9 +7,8 @@ export default async function AiSettingsPage() {
   if (role.kind !== "sa") return <NoAccess label="Pengaturan AI" reason="Menu ini hanya untuk Super Admin." />;
   return <div className="mx-auto max-w-5xl">
     <h1 className="text-[22px] font-semibold tracking-tight">Pengaturan AI</h1>
-    <p className="mt-1 text-sm text-fg-2">Atur agent, API key, model, dan prioritas cadangan QnA AR Workspace.</p>
     <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
-      <iframe src={CONSULTANT_SETTINGS_URL} title="Pengaturan AI QnA AR Workspace"
+      <iframe src={CONSULTANT_SETTINGS_URL} title="Pengaturan AI AR Helpdesk"
         className="w-full border-0" style={{ height: "max(560px, calc(100dvh - 210px))" }} referrerPolicy="no-referrer"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" />
     </div>

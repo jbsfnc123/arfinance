@@ -40,10 +40,6 @@ export function WaTemplateForm({ initial }: { initial: Partial<WaTemplate> | nul
         <span className="text-fg-2">Footer</span>
         <textarea value={tpl.footer} onChange={(e) => setTpl({ ...tpl, footer: e.target.value })} rows={5} className={`${inputCls} mt-1`} />
       </label>
-      <p className="text-xs text-fg-2">
-        Placeholder: <code>{"{{collection}}"}</code> = nama collection, <code>{"{{total}}"}</code> = total tagihan.
-      </p>
-
       <div>
         <div className="text-xs text-fg-2">Pratinjau</div>
         <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-surface-2 p-3 text-sm">{buildWaMessage(SAMPLE, "Nama Collection", tpl)}</pre>

@@ -247,8 +247,7 @@ export function MarketplaceView({ initialList }: { initialList: ReportMeta[] }) 
       ))}
 
       {!R && !list.length && (
-        <EmptyState className={card} icon="storefront" title="Belum ada laporan marketplace"
-          hint="Upload Laporan Penghasilan Shopee (sheet Summary + Penghasilan), Riwayat Saldo Shopee (Transaction Report), atau Laporan TikTok (Laporan + Detail pesanan)." />
+        <EmptyState className={card} icon="storefront" title="Belum ada laporan marketplace" />
       )}
 
       <DataTableModal spec={table} onClose={() => setTable(null)} onLink={showOrder} onErpLink={(no) => R && setTable(erpDetail(R, no))} />

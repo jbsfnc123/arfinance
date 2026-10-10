@@ -193,7 +193,7 @@ export function ActionBar(props: {
             <button type="button" className={btnGhost} onClick={() => setModal("note")}>
               <Icon name="edit_note" size={20} />Catatan
             </button>
-            <button type="button" className={btnGhost} onClick={editKeterangan} title="Keterangan invoice (sama dengan Mitra10 & Hold Faktur Pajak)">
+            <button type="button" className={btnGhost} onClick={editKeterangan}>
               <Icon name="sticky_note_2" size={20} />Keterangan
             </button>
             <button type="button" className={btnGhost} onClick={() => setModal("tukar")}>

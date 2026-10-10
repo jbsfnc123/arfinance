@@ -28,7 +28,7 @@ function countBy(rows: Row[], f: (r: Row) => string) {
 }
 
 type Show = (spec: TableSpec) => void;
-type Kpi = { lbl: string; val: number; note: string; count?: boolean; alert?: boolean; go: () => void };
+type Kpi = { lbl: string; val: number; note?: string; count?: boolean; alert?: boolean; go: () => void };
 
 const CHIP = { bad: "border-danger/50 text-danger", warn: "border-warning/50 text-warning", ok: "border-success/50 text-success", "": "border-line" };
 
@@ -48,7 +48,7 @@ export function Dashboard(props: { R: Report; audit: AuditRow[]; auditLimit: num
     kpis.push(
       { lbl: "Total Pendapatan", val: pendapatan, note: `${P.labels.harga} ${fmtShort(sumOf(R, "harga", () => sumBy(O, "harga")))} · Refund ${fmtShort(sumOf(R, "refund", () => sumBy(O, "refund")))}`, go: () => drillOrders("Semua Pesanan", O) },
       { lbl: "Total Pengeluaran", val: pengeluaran, note: `${pendapatan ? ((Math.abs(pengeluaran) / pendapatan) * 100).toFixed(1) : 0}% dari pendapatan`, go: () => drillOrders("Semua Pesanan", O) },
-      { lbl: P.labels.dilepas, val: sumOf(R, "dilepas", () => sumBy(O, "penghasilan")), note: "Dana yang diterima penjual", go: () => drillOrders("Semua Pesanan", O) },
+      { lbl: P.labels.dilepas, val: sumOf(R, "dilepas", () => sumBy(O, "penghasilan")), go: () => drillOrders("Semua Pesanan", O) },
       { lbl: "Jumlah Pesanan", val: O.length, count: true, note: `${refundOrders.length} pesanan ada refund`, go: () => drillOrders("Pesanan dengan Refund", refundOrders) },
       { lbl: "Selisih Refund", val: -bad.reduce((a, r) => a + r.selisih, 0), alert: bad.length > 0,
         note: bad.length ? `${bad.length} pesanan ditarik melebihi dana diterima` : "Semua refund sesuai",
@@ -65,7 +65,7 @@ export function Dashboard(props: { R: Report; audit: AuditRow[]; auditLimit: num
     const last = R.Balance[0] ?? {};
     kpis.push(
       { lbl: "Saldo Masuk", val: bs["Total Saldo Masuk"] ?? sumBy(R.Balance.filter((b) => N(b.nilai) > 0), "nilai"), note: `${R.Balance.length.toLocaleString("id-ID")} transaksi saldo`, go: () => show({ title: "Mutasi Saldo", rows: R.Balance, cols: balanceCols }) },
-      { lbl: "Saldo Keluar", val: bs["Total Saldo Keluar"] ?? sumBy(R.Balance.filter((b) => N(b.nilai) < 0), "nilai"), note: "Penarikan + penyesuaian", go: () => show({ title: "Mutasi Saldo — Transaksi Keluar", rows: R.Balance.filter((b) => b.arah === "Transaksi Keluar"), cols: balanceCols }) },
+      { lbl: "Saldo Keluar", val: bs["Total Saldo Keluar"] ?? sumBy(R.Balance.filter((b) => N(b.nilai) < 0), "nilai"), go: () => show({ title: "Mutasi Saldo — Transaksi Keluar", rows: R.Balance.filter((b) => b.arah === "Transaksi Keluar"), cols: balanceCols }) },
       { lbl: "Saldo Akhir", val: N(last.saldoAkhir), note: String(last.waktu ?? ""), go: () => show({ title: "Mutasi Saldo", rows: R.Balance, cols: balanceCols }) },
     );
     if (O.length) {
@@ -190,11 +190,7 @@ export function Dashboard(props: { R: Report; audit: AuditRow[]; auditLimit: num
         </section>
       )}
 
-      {O.length === 0 ? (
-        hasBalance(R) && <p className={`${card} p-4 text-sm text-fg-2`}>Mode arus kas: upload Laporan Penghasilan periode ini untuk grafik dan rekonsiliasi.</p>
-      ) : (
-        <Charts R={R} show={show} drillOrders={drillOrders} />
-      )}
+      {O.length > 0 && <Charts R={R} show={show} drillOrders={drillOrders} />}
     </div>
   );
 }

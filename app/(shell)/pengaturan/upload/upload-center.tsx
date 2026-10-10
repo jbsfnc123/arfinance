@@ -74,10 +74,6 @@ export function UploadCenter() {
     <div className="mx-auto max-w-5xl space-y-4">
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight">Pusat Upload Data</h1>
-        <p className="mt-1 text-sm text-fg-2">
-          Upload laporan ERP sekali di sini — datanya tersimpan satu kali dan langsung dipakai semua menu yang terkait.
-          Upload ulang file yang sama tidak membuat data dobel.
-        </p>
       </div>
 
       <UploadChecklist version={version} />
@@ -89,7 +85,6 @@ export function UploadCenter() {
         className={`${card} flex cursor-pointer flex-col items-center gap-2 border-dashed p-8 text-center ${over ? "border-accent bg-surface-2" : ""}`}>
         <Icon name="upload_file" size={36} className="text-accent" />
         <span className="font-medium">Seret file ke sini atau klik untuk memilih (boleh banyak sekaligus)</span>
-        <span className="text-xs text-fg-2">Aging (Blank_A4) · Invoice & Payment Date Comparison · Target bulanan · Mutasi rekening</span>
         <input type="file" multiple accept=".xls,.xlsx,.xlsm,.csv" className="hidden" disabled={busy}
           onChange={(e) => { add([...(e.target.files ?? [])]); e.target.value = ""; }} />
       </label>

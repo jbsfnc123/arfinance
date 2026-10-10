@@ -22,7 +22,6 @@ export function SiapTfButton({ stateKey }: { stateKey: string }) {
   }
   return (
     <button type="button" onClick={toggle} aria-pressed={active}
-      title="GR sudah Done, Tukar Faktur masih Pending"
       className={`${btnGhost} ${active ? "border-accent bg-accent/15 text-accent" : ""}`}>
       <Icon name="task_alt" size={16} />Siap Tukar Faktur
     </button>

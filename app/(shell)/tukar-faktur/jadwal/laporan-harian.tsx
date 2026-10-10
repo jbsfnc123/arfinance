@@ -51,7 +51,7 @@ export function LaporanHarian() {
 
       <section className={`${card} overflow-hidden`}>
         <h2 className="px-4 pt-4 text-sm font-medium">Tukar Faktur per Hari · {monthLabel(month)}</h2>
-        <p className="px-4 pt-1 text-xs text-fg-2">Kolom merah: hari Minggu · {report?.activeDays ?? 0} hari aktif. Total merupakan penjumlahan nilai harian.</p>
+        <p className="px-4 pt-1 text-xs text-fg-2">{report?.activeDays ?? 0} hari aktif</p>
         <TableBox bare fill={false} className="mt-2">
           <table className="w-full text-sm">
             <caption className="sr-only">Laporan harian {monthLabel(month)} · {kurir || "Semua Kolektor"}</caption>

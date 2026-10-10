@@ -76,9 +76,7 @@ function RoleSelect({ roles, defaultValue, onChange }: { roles: Role[]; defaultV
 function ChatbotCheck({ defaultChecked = false, superAdmin = false }: { defaultChecked?: boolean; superAdmin?: boolean }) {
   return <label className="flex items-start gap-2 text-sm sm:col-span-6">
     <input key={superAdmin ? "sa" : "account"} type="checkbox" name="chatbot_enabled" defaultChecked={superAdmin || defaultChecked} disabled={superAdmin} className="mt-1" />
-    <span>Akses chatbot QnA AR Workspace
-      <span className="block text-xs text-fg-2">Bantuan penggunaan aplikasi. Super Admin otomatis memiliki akses; akun lain harus diizinkan.</span>
-    </span>
+    <span>Akses chatbot AR Helpdesk</span>
   </label>;
 }
 
@@ -108,7 +106,7 @@ function CreateForm({ roles }: { roles: Role[] }) {
       <input name="display_name" required placeholder="Nama" className={inputCls} />
       <RoleSelect roles={roles} onChange={setRoleId} />
       <DivisionSelect />
-      <input name="collection_name" placeholder="Collection awal Daftar Tagihan (opsional)" title="Collection yang terbuka pertama kali di Daftar Tagihan" className={inputCls} />
+      <input name="collection_name" placeholder="Collection awal Daftar Tagihan (opsional)" className={inputCls} />
       <PinInput required={!(kurir && noPin)} />
       <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Menyimpan…" : "Tambah"}
@@ -154,10 +152,10 @@ function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: 
           </div>
         </div>
         {custom && (
-          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent" title="Akses menu berbeda dari default role">Menu disesuaikan</span>
+          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">Menu disesuaikan</span>
         )}
         {account.system_account && (
-          <span className="rounded-full bg-fg/10 px-2 py-0.5 text-xs text-fg-2" title="Dipakai otomasi (mis. Bot ERP); tidak bisa login dari halaman login">Akun sistem</span>
+          <span className="rounded-full bg-fg/10 px-2 py-0.5 text-xs text-fg-2">Akun sistem</span>
         )}
         {account.pin_optional && (
           <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs text-warning" title="Login cukup nama">Tanpa PIN</span>
@@ -208,7 +206,6 @@ function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: 
               <input type="checkbox" name="reset_menus" defaultChecked className="mt-1" />
               <span>
                 Ganti akses menu dengan default role baru ({picked?.name})
-                <span className="block text-xs text-fg-2">Tidak dicentang = akses menu akun tetap seperti sekarang.</span>
               </span>
             </label>
           )}
@@ -221,10 +218,6 @@ function AccountRow({ account, roles, isMe, menus }: { account: Account; roles: 
       {mode === "menu" && !isSa && (
         <form action={menuAction} key={menuState?.ok ? menuState.at : "menu"} className="mt-3 space-y-3 rounded-xl border border-line p-3">
           <input type="hidden" name="id" value={account.id} />
-          <p className="text-xs text-fg-2">
-            Centang menu yang boleh dibuka akun ini. Tanda <span className="text-success">+</span> / <span className="text-warning">−</span> = berbeda
-            dari default role {role?.name}.
-          </p>
           <MenuChecklist groups={menus.groups} kind={role?.kind ?? ""} selected={mine} defaults={def} />
           <div className="flex flex-wrap items-center gap-3">
             <button type="submit" disabled={menuPending} className={btnPrimary}>

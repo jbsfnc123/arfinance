@@ -25,11 +25,6 @@ export default async function AclPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="text-[22px] font-semibold tracking-tight">Role &amp; Akses Menu</h1>
-      <p className="mt-1 text-sm text-fg-2">
-        Menu yang dicentang di sini adalah <b>default</b> untuk akun baru dengan role tersebut. Mengubahnya tidak
-        mengubah akun yang sudah ada — akses menu tiap akun diatur di Akun &amp; PIN. Role jenis Super Admin otomatis
-        melihat semua menu.
-      </p>
       <RolesView
         myRoleId={myRole.id}
         roles={roles ?? []}

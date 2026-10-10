@@ -47,7 +47,6 @@ export default async function DatabasePage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight">Database</h1>
-        <p className="mt-1 text-sm text-fg-2">Supabase project arfinance · isi tabel utama dan riwayat import.</p>
       </div>
 
       {usage ? <UsageSection u={usage as unknown as UsageReport} /> : null}
@@ -56,12 +55,11 @@ export default async function DatabasePage() {
 
       <section className={`${card} overflow-hidden`}>
         <table className="w-full text-sm">
-          <thead><tr><th className={th}>Tabel</th><th className={th}>Isi</th><th className={`${th} text-right`}>Baris</th></tr></thead>
+          <thead><tr><th className={th}>Tabel</th><th className={`${th} text-right`}>Baris</th></tr></thead>
           <tbody>
             {TABLES.map((t, i) => (
               <tr key={t.table} className="border-t border-line">
                 <td className={`${td} font-mono text-xs`}>{t.table}</td>
-                <td className={`${td} text-fg-2`}>{t.desc}</td>
                 <td className={`${td} text-right`}>{counts[i].toLocaleString("id-ID")}</td>
               </tr>
             ))}
@@ -152,9 +150,8 @@ function UsageSection({ u }: { u: UsageReport }) {
         </table>
       </div>
       <p className="text-xs text-fg-2">
-        Egress/bandwidth (kuota {fmtBytes(QUOTA.egressBytes)}/bulan) tidak bisa dibaca lewat database. Lihat angkanya di{" "}
-        <a href={SUPABASE_USAGE_URL} target="_blank" rel="noreferrer" className="text-accent underline">dashboard Supabase → Usage</a>.
-        Batas ukuran satu file upload {fmtBytes(QUOTA.uploadBytes)}.
+        Kuota egress {fmtBytes(QUOTA.egressBytes)}/bulan · batas upload {fmtBytes(QUOTA.uploadBytes)} ·{" "}
+        <a href={SUPABASE_USAGE_URL} target="_blank" rel="noreferrer" className="text-accent underline">Supabase Usage</a>
       </p>
     </section>
   );

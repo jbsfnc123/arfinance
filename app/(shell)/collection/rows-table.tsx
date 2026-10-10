@@ -176,7 +176,7 @@ export function RowsTable(props: {
           </tbody>
         </table>
         {!props.loading && rows.length === 0 && (
-          <EmptyState icon="filter_alt_off" title="Tidak ada invoice yang cocok" hint="Ubah atau hapus filter/kata cari untuk melihat invoice lain." />
+          <EmptyState icon="filter_alt_off" title="Tidak ada invoice yang cocok" />
         )}
         {props.loading && <p className="px-4 py-8 text-center text-sm text-fg-2">Memuat data…</p>}
       </div>

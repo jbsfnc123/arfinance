@@ -56,12 +56,11 @@ export function TabMoveLast({ d, setSave }: { d: Docs; setSave: (fn: (() => void
 
   useEffect(() => { setSave(a ? () => void downloadActive() : null); });
 
-  if (!a) return <Hint>Tambahkan PDF di panel Dokumen. Alat ini memindahkan <b>halaman terakhir menjadi halaman pertama</b>, untuk satu atau semua dokumen sekaligus.</Hint>;
+  if (!a) return <Hint>Belum ada dokumen.</Hint>;
   const order = lastToFirstOrder(a.pageCount).slice(0, PREVIEW_LIMIT);
 
   return (
     <div className="space-y-4">
-      <Hint>Halaman terakhir dipindah menjadi halaman pertama; nama file tetap sama. Pratinjau di bawah menunjukkan urutan hasil untuk <b>{a.name}</b>.</Hint>
       <Actions>
         <button type="button" className={btnPrimary} onClick={applyActive}><Icon name="check" size={16} />Terapkan ke dokumen</button>
         <button type="button" className={btnGhost} onClick={applyAll} disabled={d.docs.length < 2}>Terapkan ke semua dokumen</button>

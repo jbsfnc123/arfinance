@@ -90,7 +90,6 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
     <div className="grid gap-4 md:grid-cols-2">
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">1. Update Master Aging</h2>
-        <p className="text-xs text-fg-2">File MASTER AGING / Blank_A4 — laporan yang sama dengan Update Tagihan, cukup di-upload sekali (di sini atau di Pusat Upload). Mitra10 membaca baris dengan Tax Name di bawah; Aging terbaru menggantikan data aktif sebelumnya. Invoice yang tidak ada di Aging terbaru otomatis keluar dari dashboard dan Kertas Kerja; keterangan, tanggal tukar faktur, warna, dan data pendukung tetap tersimpan.</p>
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
           <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={inputCls} placeholder="Filter Tax Name" />
           <button type="button" className={btnGhost} onClick={saveTax}>Simpan</button>
@@ -101,20 +100,17 @@ export function M10Upload({ onDone }: { version: number; onDone: () => void }) {
 
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">2. Upload CSV GR</h2>
-        <p className="text-xs text-fg-2">GR_Report_Detail.csv (pemisah &quot;;&quot;). SJ NO dibentuk dari Vendor Ship No (SJ/00000/tahun romawi/TRA), lalu baris baru (GR No + Item Code belum ada) ditambahkan ke Receiving.</p>
         {fileInput("gr", ".csv")}
       </div>
 
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">3. Import Kwitansi</h2>
-        <p className="text-xs text-fg-2">Invoice_Summary.csv (pemisah &quot;;&quot;). Invoice No yang sudah ada dilewati.</p>
         <input value={kwUser} onChange={(e) => setKwUser(e.target.value)} className={inputCls} placeholder="Username portal (mis. PENGU338)" />
         {fileInput("kw", ".csv")}
       </div>
 
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">4. Jadwal Bayar</h2>
-        <p className="text-xs text-fg-2">Excel dengan header NO KW, SPP, NILAI KW, TGL TUKAR FAKTUR, JADWAL TRANSFER, Notes. No KW yang sudah ada diperbarui.</p>
         {fileInput("jadwal", ".xlsx,.xls,.csv")}
       </div>
 

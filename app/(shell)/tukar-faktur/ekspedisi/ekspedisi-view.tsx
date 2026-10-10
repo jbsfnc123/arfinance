@@ -108,7 +108,7 @@ export function EkspedisiView() {
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h1 className="text-[22px] font-semibold tracking-tight">Tukar Faktur Ekspedisi</h1>
         <span className="text-sm text-fg-2">
-          Catat No Resi invoice yang dikirim lewat ekspedisi · data aging {aging.data?.month ? `per ${aging.data.month}` : ""}
+          {aging.data?.month ? `Data aging per ${aging.data.month}` : ""}
         </span>
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
@@ -174,7 +174,7 @@ function ResiPanel(props: { selected: EkspedisiRow[]; onClear: () => void; onSav
     <form onSubmit={submit} className={`${card} h-fit space-y-3 p-4 xl:sticky xl:top-4 xl:order-2`}>
       <h2 className="font-medium">2. Masukkan No Resi</h2>
       {selected.length === 0 ? (
-        <p className="text-sm text-fg-2">Centang invoice di tabel Pilih Invoice terlebih dahulu.</p>
+        <p className="text-sm text-fg-2">Belum ada invoice dipilih.</p>
       ) : (
         <div className="space-y-1 rounded-lg bg-surface-2 p-3 text-sm">
           <div className="flex items-baseline gap-2">

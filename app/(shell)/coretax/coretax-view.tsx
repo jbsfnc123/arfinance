@@ -146,7 +146,7 @@ export function CoretaxView() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
           <h1 className="text-[22px] font-semibold tracking-tight">XML CoreTax</h1>
-          <p className="text-sm text-fg-2">{loaded ? `${file} · NPWP penjual ${tin || "—"}` : "Muat file XML bulk faktur pajak dari CoreTax."}</p>
+          <p className="text-sm text-fg-2">{loaded ? `${file} · NPWP penjual ${tin || "—"}` : ""}</p>
         </div>
         <label className={`${btnPrimary} cursor-pointer`}>
           <Icon name="upload_file" size={20} />Pilih XML
@@ -279,7 +279,7 @@ export function CoretaxView() {
       )}
 
       {(tab === "data" || tab === "xml") && !loaded && (
-        <EmptyState className={card} icon="code" title="Belum ada file" hint={<>Klik &quot;Pilih XML&quot; untuk memuat file CoreTax.</>} />
+        <EmptyState className={card} icon="code" title="Belum ada file" />
       )}
 
       {tab === "riwayat" && <HistoryView key={historyKey} />}
@@ -310,7 +310,6 @@ export function CoretaxView() {
             <dt className="text-fg-2">Item</dt><dd>{pendingDel.goods.length} barang/jasa</dd>
           </dl>
         )}
-        <p className="mt-3 text-xs text-fg-2">Faktur yang dihapus tidak ikut diekspor atau disimpan.</p>
       </Modal>
 
       <DeleteListModal

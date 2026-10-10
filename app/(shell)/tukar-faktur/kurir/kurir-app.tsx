@@ -178,7 +178,7 @@ export function KurirApp({ ownName }: { ownName: string | null }) {
           <div className="space-y-4">
             {pgs.length > 1 && (
               <div>
-                <div className="mb-2 text-sm text-fg-2">Payment Group <span className="text-xs">(opsional, untuk menyaring toko)</span></div>
+                <div className="mb-2 text-sm text-fg-2">Payment Group</div>
                 {pgs.length > 8 && <input value={qPg} onChange={(e) => setQPg(e.target.value)} placeholder="Cari Payment Group…" aria-label="Cari Payment Group" className={`${inputCls} mb-2`} />}
                 <div className="flex flex-wrap gap-2">
                   {pgs.filter((p) => p.toLowerCase().includes(qPg.toLowerCase())).map((p) => (

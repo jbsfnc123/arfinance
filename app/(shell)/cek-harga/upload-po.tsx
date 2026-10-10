@@ -108,7 +108,7 @@ export function UploadPo({ casesVersion, onArchived }: { casesVersion: number; o
           </select>
         </label>
         <label className="min-w-64 flex-1 text-sm">
-          <span className="text-fg-2">{category ? PO_CATEGORIES[category].hint : "Kategori menentukan tipe file dan kolom yang dibaca."}</span>
+          <span className="text-fg-2">File</span>
           <input type="file" multiple disabled={!category} accept={category ? PO_CATEGORIES[category].accept : undefined}
             key={category} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} className={`${inputCls} mt-1`} />
         </label>

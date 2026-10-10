@@ -70,7 +70,6 @@ export function TukarDashboard() {
     <div className="mx-auto max-w-[1800px] space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-[22px] font-semibold tracking-tight">Dashboard Tukar Faktur</h1>
-        <span className="text-sm text-fg-2">Periode bulan invoice date · rata-rata hari = tanggal tukar faktur − invoice date</span>
         <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} ml-auto !w-auto`} aria-label="Bulan">
           {(months.includes(month) ? months : [month, ...months]).map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
@@ -126,7 +125,6 @@ export function TukarDashboard() {
         </table>
       </section>
       {err && <p className="text-sm text-danger">Sebagian data gagal dimuat: {err.message}</p>}
-      {!sel && !loading && <p className="text-sm text-fg-2">Klik salah satu baris untuk melihat rincian invoice.</p>}
 
       {sel && (
         <section className="space-y-2">
