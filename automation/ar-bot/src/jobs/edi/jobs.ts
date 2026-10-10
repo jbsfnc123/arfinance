@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Page } from "puppeteer-core";
+import { defaultDates } from "~/shared/catalog";
 import type { JobParams } from "~/shared/types";
 import { jobDir } from "~/core/paths";
 import { delay, type RunContext } from "~/runner/ctx";
@@ -15,7 +16,6 @@ import { todayJakarta } from "@/lib/parsers/date";
 export { ediUploadFakturJob };
 
 const stamp = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta", dateStyle: "short", timeStyle: "medium" }).format(new Date()).replace(/:/g, "");
-const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
 
 type Acc = ReturnType<typeof pickAccounts>[number];
@@ -67,8 +67,8 @@ async function perAccount(ctx: RunContext, accounts: Acc[], dir: string, fn: (pa
 export async function ediGrJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const accounts = pickAccounts(ctx, p.accounts);
   const dir = jobDir("edi.gr");
-  const today = new Date();
-  const start = p.start || iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30)), end = p.end || iso(today);
+  const def = defaultDates("edi.gr", todayJakarta())!;
+  const start = p.start || def.start, end = p.end || def.end;
   ctx.info(`Periode ${start} s/d ${end} · ${accounts.length} akun`);
   let newRows = 0, pushed = false;
   const r = await perAccount(ctx, accounts, dir, async (page, acc) => {
@@ -114,8 +114,7 @@ export async function ediGrJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
 export async function ediKwitansiJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const accounts = pickAccounts(ctx, p.accounts);
   const dir = jobDir("edi.kwitansi");
-  const now = new Date();
-  const month = p.start?.slice(0, 7) || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const month = (p.start || defaultDates("edi.kwitansi", todayJakarta())!.start).slice(0, 7);
   ctx.info(`Bulan ${month} · ${accounts.length} akun`);
   let newRows = 0, pushed = false;
   const r = await perAccount(ctx, accounts, dir, async (page, acc) => {

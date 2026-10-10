@@ -57,6 +57,7 @@ export function defaultConfig(): Config {
     jobs: {},
     chains: [DEFAULT_CHAIN],
     theme: "system",
+    multi: { jobs: ["edi.gr", "edi.kwitansi"], parallel: true },
   };
 }
 
@@ -73,6 +74,7 @@ export function mergeConfig(saved: Partial<Config> | null | undefined): Config {
     edi: { accounts: saved.edi?.accounts ?? [] },
     jobs: { ...saved.jobs },
     chains: saved.chains?.length ? saved.chains : d.chains,
+    multi: { ...d.multi, ...saved.multi },
   };
 }
 
@@ -116,4 +118,26 @@ export function weekToDate(today: string): { start: string; end: string } {
   const dow = (d.getUTCDay() + 6) % 7; // 0 = Senin … 6 = Minggu
   const shift = (n: number) => { const x = new Date(d); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
   return { start: shift(-dow), end: dow > 4 ? shift(4 - dow) : today };
+}
+
+/** Tanggal `iso` digeser `days` hari (kalender). */
+export function addDays(iso: string, days: number) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Tanggal bawaan per job (satu sumber untuk runner & tampilan). `today` = YYYY-MM-DD (WIB).
+ * Kwitansi memakai bulan: `start` = tanggal 1 bulan ini.
+ */
+export function defaultDates(id: JobId, today: string, days = 7): { start: string; end: string } | null {
+  switch (id) {
+    case "jasper.send-invoice": return weekToDate(today);
+    case "jasper.invoice-by-date": return { start: `${today.slice(0, 7)}-01`, end: today };
+    case "jasper.sj": return { start: addDays(today, -(Math.min(31, Math.max(1, days)) - 1)), end: today };
+    case "edi.gr": return { start: addDays(today, -30), end: today };
+    case "edi.kwitansi": return { start: `${today.slice(0, 7)}-01`, end: today };
+    default: return null;
+  }
 }

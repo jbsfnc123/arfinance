@@ -44,3 +44,17 @@ describe("rentang Send Invoice", () => {
     expect(weekToDate("2026-10-01")).toEqual({ start: "2026-09-28", end: "2026-10-01" }); // Kamis lintas bulan
   });
 });
+
+describe("tanggal bawaan per job", () => {
+  it("GR 30 hari, Kwitansi bulan ini, Invoice by Date awal bulan, SJ n hari", async () => {
+    const { defaultDates } = await import("./catalog");
+    expect(defaultDates("edi.gr", "2026-10-10")).toEqual({ start: "2026-09-10", end: "2026-10-10" });
+    expect(defaultDates("edi.gr", "2026-03-01")).toEqual({ start: "2026-01-30", end: "2026-03-01" });
+    expect(defaultDates("edi.gr", "2027-01-15")).toEqual({ start: "2026-12-16", end: "2027-01-15" });
+    expect(defaultDates("edi.kwitansi", "2026-10-10")?.start.slice(0, 7)).toBe("2026-10");
+    expect(defaultDates("jasper.invoice-by-date", "2026-10-10")).toEqual({ start: "2026-10-01", end: "2026-10-10" });
+    expect(defaultDates("jasper.sj", "2026-10-10", 7)).toEqual({ start: "2026-10-04", end: "2026-10-10" });
+    expect(defaultDates("jasper.send-invoice", "2026-10-14")).toEqual({ start: "2026-10-12", end: "2026-10-14" });
+    expect(defaultDates("jasper.aging", "2026-10-10")).toBeNull();
+  });
+});

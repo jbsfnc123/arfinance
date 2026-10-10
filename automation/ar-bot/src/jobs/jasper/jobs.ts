@@ -2,25 +2,28 @@
 // Gagal kirim = job gagal; laporan kosong = dilewati tanpa mengubah data lama.
 import fs from "node:fs";
 import { todayJakarta } from "@/lib/parsers/date";
-import { weekToDate } from "~/shared/catalog";
+import { defaultDates, weekToDate } from "~/shared/catalog";
 import type { JobParams, JobResult } from "~/shared/types";
 import { jobDir } from "~/core/paths";
 import type { RunContext } from "~/runner/ctx";
 import {
   archive, inspectAging, inspectErp, inspectSchedule, inspectSj, markPushed, num, pushAging, pushErp, pushSchedule, pushSj, readSheets, rp, sha256, unchanged,
 } from "../arw";
-import { finalize, JasperSession, shiftDate } from "./session";
+import { finalize, JasperSession } from "./session";
 
 export type JobOut = Partial<JobResult>;
 
 const sessions = new WeakMap<RunContext, JasperSession>();
+/** Run berurutan: satu sesi untuk seluruh run (login sekali). Run paralel: sesi per job (browser context sendiri). */
+const sessionKey = (ctx: RunContext) => (ctx.isolated ? ctx : ctx.root);
 export const jasperOf = (ctx: RunContext) => {
-  let s = sessions.get(ctx);
-  if (!s) { s = new JasperSession(ctx); sessions.set(ctx, s); }
+  let s = sessions.get(sessionKey(ctx));
+  if (!s) { s = new JasperSession(ctx); sessions.set(sessionKey(ctx), s); }
+  s.ctx = ctx; // log & pembatalan mengikuti job yang sedang memakai sesi
   return s;
 };
-/** Buang sesi (setelah browser ditutup karena galat) → job berikutnya login ulang. */
-export const resetJasper = (ctx: RunContext) => { sessions.delete(ctx); };
+/** Buang sesi (setelah halaman ditutup karena galat) → percobaan / job berikutnya login ulang. */
+export const resetJasper = (ctx: RunContext) => { sessions.delete(sessionKey(ctx)); };
 
 /** Langkah kirim bersama: lewati bila uji coba / tidak dikirim / file kembar (tanpa arsip ulang); arsip Drive lalu kirim. */
 async function shouldPush(ctx: RunContext, job: Parameters<typeof unchanged>[1], p: JobParams, buf: Buffer, file: string, month: string) {
@@ -90,7 +93,8 @@ export async function sjJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const js = jasperOf(ctx);
   const today = todayJakarta();
   const days = Math.min(31, Math.max(1, p.days ?? 7));
-  const from = p.start || shiftDate(today, -(days - 1)), to = p.end || today;
+  const def = defaultDates("jasper.sj", today, days)!;
+  const from = p.start || def.start, to = p.end || def.end;
   await js.openReport("Laporan Serah Terima Surat Jalan By Send Date");
   await js.setDate("StartDate", from, "Start Date");
   await js.setDate("EndDate", to, "End Date");
@@ -121,7 +125,8 @@ export async function sjJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
 export async function invoiceByDateJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const js = jasperOf(ctx);
   const today = todayJakarta();
-  const start = p.start || `${today.slice(0, 7)}-01`, end = p.end || today;
+  const def = defaultDates("jasper.invoice-by-date", today)!;
+  const start = p.start || def.start, end = p.end || def.end;
   await js.openReport("Invoice and Payment Date Comparison ( Based On Invoice Date)", "Invoice and Payment Date Comparison");
   await js.pickOrganization(["AD_Org_ID", "Organization"]);
   await js.setDate("whenStart", start, "Start Date");
