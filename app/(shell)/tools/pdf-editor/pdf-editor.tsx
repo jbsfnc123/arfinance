@@ -109,9 +109,6 @@ function Editor() {
     <div className="mx-auto max-w-[1600px]">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-[22px] font-semibold tracking-tight">PDF Editor</h1>
-        <span className="flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">
-          <Icon name="lock" size={14} />Diproses di browser — file tidak dikirim ke server
-        </span>
         <button type="button" onClick={() => setHelp(true)} title="Bantuan & pintasan keyboard"
           className="ml-auto flex h-9 w-9 items-center justify-center rounded-full text-fg-2 hover:bg-surface-2 hover:text-fg">
           <Icon name="help" size={20} />
@@ -145,7 +142,6 @@ function Editor() {
             ))}
           </tbody>
         </table>
-        <p className="mt-3 text-xs text-fg-2">Format gambar: JPG, PNG, WebP, GIF, BMP (dikonversi otomatis). HEIC/HEIF dari iPhone belum bisa dibaca browser — ubah dulu ke JPG. Dokumen hanya tersimpan di memori tab ini; tutup/refresh halaman = daftar kosong lagi.</p>
       </Modal>
     </div>
   );

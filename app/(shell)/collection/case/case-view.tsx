@@ -15,7 +15,6 @@ export function CaseView() {
   return (
     <div className="w-full">
       <h1 className="text-[22px] font-semibold tracking-tight">Case</h1>
-      <p className="mt-1 text-sm text-fg-2">Log catatan Case (collection) dan Administratif dari seluruh Collection.</p>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4"><NoteLog key={tab} kategori={tab} /></div>
     </div>

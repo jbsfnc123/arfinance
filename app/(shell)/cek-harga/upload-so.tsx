@@ -47,17 +47,13 @@ export function UploadSo() {
 
   return (
     <div className={`${card} max-w-2xl space-y-3 p-5`} key={resetKey}>
-      <p className="text-sm text-fg-2">
-        File Excel SO dari ERP (tab <b>Sheet0</b>). Kolom yang dibaca: Document No, Date PO, No PO Customer (atau no_po),
-        Business Partner, Price List, Document Status, Grand Total. Data MASTER lama diganti seluruhnya.
-      </p>
       <input type="file" accept=".xlsx,.xls" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={inputCls} />
       <label className="block text-sm">
-        <span className="text-fg-2">Filter awalan Business Partner (pisahkan koma, kosongkan = semua)</span>
+        <span className="text-fg-2">Filter awalan Business Partner</span>
         <input value={partners} onChange={(e) => setPartners(e.target.value)} placeholder="mis. Catur Mitra, RKM" className={`${inputCls} mt-1`} />
       </label>
       <label className="block text-sm">
-        <span className="text-fg-2">Filter Document Status (persis, kosongkan = semua)</span>
+        <span className="text-fg-2">Filter Document Status</span>
         <input value={status} onChange={(e) => setStatus(e.target.value)} placeholder="mis. Completed" className={`${inputCls} mt-1`} />
       </label>
       <button type="button" className={btnPrimary} disabled={!file || !!busy} onClick={upload}>

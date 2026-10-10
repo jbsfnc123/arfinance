@@ -40,7 +40,6 @@ export function DashboardView() {
       <header className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <div className="mr-auto">
           <h1 className="text-[22px] font-semibold leading-tight tracking-tight">Dashboard Collection</h1>
-          <p className="text-xs text-fg-2">Pantau kinerja collection &amp; piutang outstanding per bulan target</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} !w-auto !rounded-[10px] !py-1.5`} aria-label="Bulan target">
@@ -61,14 +60,14 @@ export function DashboardView() {
       {period.error && <p role="alert" className="mt-4 text-sm text-danger">Gagal memuat periode: {period.error}</p>}
 
       {noData ? (
-        <EmptyState icon="monitoring" title="Tidak ada data" hint="Belum ada data aging/target untuk ditampilkan. Upload lewat Pengaturan → Pusat Upload Data." />
+        <EmptyState icon="monitoring" title="Tidak ada data" />
       ) : !data ? (
         <DashboardSkeleton />
       ) : (
         <div className={`mt-4 space-y-4 ${loading ? "opacity-60 transition-opacity" : ""}`}>
           {data.invTotal === 0 && (
             <p className={`${card} p-4 text-sm text-warning`}>
-              Belum ada target untuk {monthLabel(month)}. Upload lewat Pengaturan → Upload Target Bulanan.
+              Belum ada target untuk {monthLabel(month)}.
             </p>
           )}
           <KpiStrip d={data} />
@@ -255,7 +254,7 @@ function TopOverdue({ d, className }: { d: SpvSummary; className?: string }) {
   return (
     <section className={`${card} flex flex-col overflow-hidden ${className ?? ""}`}>
       <div className="px-4 pt-4">
-        <CardHead title="10 BP · Jatuh Tempo Terlama" sub="Invoice target yang belum lunas"
+        <CardHead title="10 BP · Jatuh Tempo Terlama"
           right={
             <select value={market} onChange={(e) => setMarket(e.target.value)} className={`${inputCls} !w-auto !py-1 text-xs`} aria-label="Marketing">
               <option value="">Global (Semua)</option>
@@ -300,7 +299,7 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
   return (
     <section className={`${card} overflow-hidden ${className ?? ""}`}>
       <div className="px-4 pt-4">
-        <CardHead title="Rincian Pencapaian" sub="Target, terkumpul, sisa & jadwal bayar per kelompok"
+        <CardHead title="Rincian Pencapaian"
           right={
             <div className="flex gap-0.5 rounded-[10px] bg-fill-3 p-[3px]">
               {TABS.map((t) => (
@@ -389,7 +388,7 @@ function ReconCard({ r, className }: { r: ReturnType<typeof reconcileCollected>;
   return (
     <section className={`${card} overflow-hidden ${className ?? ""}`}>
       <div className="px-4 pt-4">
-        <CardHead title="Rekonsiliasi Terkumpul vs Allocated in Target" sub="Terkumpul = target − sisa aging · Allocated in Target = pembayaran ERP bulan ini · klik baris untuk rincian invoice" />
+        <CardHead title="Rekonsiliasi Terkumpul vs Allocated in Target" />
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           {stat("Terkumpul", rupiah(r.terkumpul))}
           {stat("Allocated in Target", rupiah(r.allocT))}

@@ -6,7 +6,7 @@ import { useDataset } from "@/lib/local/store";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import { useViewState } from "@/lib/ui/view-state";
 import { todayJakarta } from "@/lib/parsers/date";
-import { fmtTimestamp, monthLabel } from "@/lib/format";
+import { fmtTimestamp } from "@/lib/format";
 import { readAllSheets } from "@/lib/xlsx-client";
 import {
   buildRows, CELL, monthWeeks, parseCbdSales, salesDatesById, splitEmails, TABS, weekKpi, type EmailCustomer, type EmailData, type EmailGroup, type EmailRow, type Level, type TabKey, type Term,
@@ -68,7 +68,7 @@ export function EmailCustomerView() {
 
   const cols = useMemo<LCol<EmailRow>[]>(() => [
     { k: "payment_group", l: "Payment Group", w: 200,
-      render: (r) => r.pg_from_db ? <span className="text-fg-2" title="Diisi dari database (Aging/ERP)">{r.payment_group}</span> : r.payment_group },
+      render: (r) => r.pg_from_db ? <span className="text-fg-2">{r.payment_group}</span> : r.payment_group },
     { k: "business_partner", l: "Business Partner", w: 230 },
     { k: "bp_value", l: "Value", w: 150 },
     { k: "bp_key", l: "Key BP (database)", w: 150 },
@@ -155,7 +155,6 @@ export function EmailCustomerView() {
     <div className="w-full space-y-4">
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h1 className="text-[22px] font-semibold tracking-tight">Email Customer</h1>
-        <span className="text-sm text-fg-2">Email penagihan per Business Partner · Payment Group, Collection & Marketing kosong diisi dari database</span>
       </div>
       <Tabs tabs={TABS.map((x) => ({ key: x.key, label: `${x.label} (${counts[x.key] ?? 0})`, icon: x.level === "BP" ? "person" : "groups" }))}
         value={tab} onChange={setTab} />
@@ -181,8 +180,7 @@ export function EmailCustomerView() {
               <Icon name="add" size={16} />Tambah BP
             </button>
             {t.term === "CBD" && (
-              <button type="button" className={btnGhost} disabled={uploading} onClick={() => fileRef.current?.click()}
-                title="File ERP Payment/Receipt; dipakai: AR Receipt (Prepaid) & (Prepaid-ESPAY), Transaction Date, bukan Reversed">
+              <button type="button" className={btnGhost} disabled={uploading} onClick={() => fileRef.current?.click()}>
                 <Icon name="upload" size={16} />{uploading ? "Membaca…" : "Upload CBD Sales"}
               </button>
             )}
@@ -196,10 +194,9 @@ export function EmailCustomerView() {
         emptyText={ds.data ? "Belum ada data di tab ini." : "Memuat…"} />
       <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden aria-label="Pilih file CBD sales" onChange={(e) => void uploadCbd(e.target.files?.[0])} />
       <p className="text-xs text-fg-2">
-        Kolom minggu ({monthLabel(month)}, dipotong setiap Sabtu): ✓ kuning = ada penjualan, email belum dikirim · klik → ✓ hijau = sudah dikirim · ✗ tidak ada penjualan. KPI mengikuti bulan, tab & filter tabel.{" "}
         {t.term === "TOP"
-          ? <>Sumber: invoice ERP &ldquo;Invoice and Payment Date Comparison&rdquo; (Pusat Upload){lastErp ? `, upload terakhir ${fmtTimestamp(lastErp.at)}` : ""} — dicocokkan lewat Key BP.</>
-          : <>Sumber: upload CBD Sales (AR Receipt Prepaid &amp; Prepaid-ESPAY){lastCbd ? `, terakhir ${lastCbd.file_name} · ${fmtTimestamp(lastCbd.at)} oleh ${lastCbd.uploader}` : " — belum ada upload"}. Hanya tanda yang disimpan, tanpa nominal.</>}
+          ? (lastErp ? `Upload ERP terakhir: ${fmtTimestamp(lastErp.at)}` : "")
+          : (lastCbd ? `Upload CBD terakhir: ${lastCbd.file_name} · ${fmtTimestamp(lastCbd.at)} oleh ${lastCbd.uploader}` : "")}
       </p>
 
       {editBp && (
@@ -275,7 +272,7 @@ function BpModal(props: {
       </>}>
       <div className="grid gap-3 sm:grid-cols-2">
         {level === "Group" && (
-          <Field label="Payment Group *" wide hint="PIC AR & email mengikuti Payment Group (berlaku untuk semua BP di grup).">
+          <Field label="Payment Group *" wide>
             <span className="flex gap-2">
               <select value={f.group_id} onChange={set("group_id")} className={inputCls}>
                 <option value="">Pilih Payment Group…</option>
@@ -286,15 +283,15 @@ function BpModal(props: {
           </Field>
         )}
         <Field label="Business Partner *"><input value={f.business_partner} onChange={set("business_partner")} maxLength={200} className={inputCls} /></Field>
-        <Field label="Value (Key BP)" hint="Mis. 1000258-PKP. Dicocokkan ke database untuk mengisi Payment Group, Collection & Marketing.">
+        <Field label="Value (Key BP)">
           <input value={f.bp_value} onChange={set("bp_value")} maxLength={120} className={inputCls} />
         </Field>
         {level === "BP" && <>
-          <Field label="Payment Group" hint="Kosongkan agar diambil dari database."><input value={f.payment_group} onChange={set("payment_group")} maxLength={200} className={inputCls} /></Field>
+          <Field label="Payment Group"><input value={f.payment_group} onChange={set("payment_group")} maxLength={200} className={inputCls} /></Field>
           <Field label="PIC AR"><input value={f.pic_ar} onChange={set("pic_ar")} maxLength={120} className={inputCls} /></Field>
           <Field label="Email" wide><EmailInput value={f.emails} onChange={(x) => setF({ ...f, emails: x })} /></Field>
         </>}
-        <Field label="Catatan Email" wide hint="Mis. Kirim ke Adm Sales Surabaya."><input value={f.email_note} onChange={set("email_note")} maxLength={1000} className={inputCls} /></Field>
+        <Field label="Catatan Email" wide><input value={f.email_note} onChange={set("email_note")} maxLength={1000} className={inputCls} /></Field>
         <Field label="Keterangan" wide><textarea value={f.keterangan} onChange={set("keterangan")} rows={2} maxLength={1000} className={inputCls} /></Field>
       </div>
     </Modal>
@@ -333,7 +330,7 @@ function GroupModal(props: {
         <Field label="Catatan Email" wide><input value={f.email_note} onChange={set("email_note")} maxLength={1000} className={inputCls} /></Field>
         <Field label="Keterangan" wide><textarea value={f.keterangan} onChange={set("keterangan")} rows={2} maxLength={1000} className={inputCls} /></Field>
       </div>
-      {v.id ? <p className="mt-3 text-xs text-fg-2">{props.members} Business Partner di grup ini. Menghapus grup juga mengarsipkan BP anggotanya.</p> : null}
+      {v.id ? <p className="mt-3 text-xs text-fg-2">{props.members} Business Partner di grup ini.</p> : null}
     </Modal>
   );
 }

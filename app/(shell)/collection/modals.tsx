@@ -148,12 +148,6 @@ export function TukarModal(props: {
           </label>
         )}
       </div>
-      {kolektor && (
-        <p className="mt-3 rounded-lg bg-accent/10 px-3 py-2 text-xs text-fg-2">
-          Untuk kolektor yang lupa update di Aplikasi Kolektor. Tanpa foto; dicatat sebagai <b>input manual</b> atas nama Anda
-          dan ikut Jadwal Kolektor &amp; Laporan Harian Kolektor. Invoice yang sudah diupdate kolektor dilewati.
-        </p>
-      )}
     </Modal>
   );
 }
@@ -322,11 +316,7 @@ export function WaEditModal(props: {
         </>
       }
     >
-      <p className="text-xs text-fg-2">
-        Placeholder: <code>{"{{collection}}"}</code> = nama collection, <code>{"{{total}}"}</code> = total tagihan. Pesan ini
-        hanya tersimpan di perangkat ini.
-      </p>
-      <textarea value={tpl.header} onChange={(e) => setTpl({ ...tpl, header: e.target.value })} rows={3} className={`${inputCls} mt-3`} />
+      <textarea value={tpl.header} onChange={(e) => setTpl({ ...tpl, header: e.target.value })} rows={3} className={inputCls} />
       <div className="my-2 rounded-lg bg-surface-2 px-3 py-2 text-xs text-fg-2">[Daftar invoice otomatis + Total Tagihan]</div>
       <textarea value={tpl.footer} onChange={(e) => setTpl({ ...tpl, footer: e.target.value })} rows={5} className={inputCls} />
     </Modal>

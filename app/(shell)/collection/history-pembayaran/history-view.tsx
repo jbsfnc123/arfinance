@@ -91,7 +91,7 @@ export function HistoryView() {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <h1 className="text-[22px] font-semibold tracking-tight">History Pembayaran BP</h1>
         <span className="text-sm text-fg-2">
-          Periode payment date <b className="text-fg">{periodTxt}</b> · hanya invoice ber-tempo (Net N Days) · tanpa TikTok/Shopee
+          Periode payment date <b className="text-fg">{periodTxt}</b>
         </span>
         <span className="flex flex-wrap gap-1.5">
           {h.cov.map((c) => (

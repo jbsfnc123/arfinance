@@ -51,7 +51,7 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
       <p className="text-sm text-fg-2">{periodText(s)}</p>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Kpi label="SJ di Aging" value={n(sum.total)} sub="No SJ unik (gabungan dipecah)" />
+        <Kpi label="SJ di Aging" value={n(sum.total)} />
         <Kpi label={STATUS_DONE} value={n(sum.done)} sub={pct1(sum.pct)} />
         <Kpi label={STATUS_OPEN} value={n(sum.open)} sub={sum.total ? pct1(100 - (sum.pct ?? 0)) : "—"}
           onClick={sum.open ? () => openKk({ quick: "open" }) : undefined} />
@@ -60,10 +60,6 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
         <Kpi label="Belum diterima terlama" value={oldest ? `${n(oldest.umur!)} hari` : "—"} sub={oldest ? `${oldest.sj_no} · ${fmtDate(oldest.invoice_date)}` : "Tidak ada"}
           onClick={oldest ? () => openKk({ focus: oldest.sj_key }) : undefined} />
       </div>
-      <p className="text-xs text-fg-2">
-        Rata-rata waktu penerimaan = Receive Date tersimpan (Receiver yang diakui) − Invoice Date di Aging (hari kalender), satu
-        nilai per SJ. Durasi negatif dan tanggal masa depan tidak dihitung. Umur belum diterima = hari ini − Invoice Date.
-      </p>
 
       <section className={`${card} p-4`}>
         <div className="flex flex-wrap items-center gap-2">

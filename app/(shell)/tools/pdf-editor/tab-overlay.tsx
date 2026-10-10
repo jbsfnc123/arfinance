@@ -35,7 +35,7 @@ function restore(d: Doc): { overlays: Record<number, Ov[]>; selectedPage: number
 
 export function TabOverlay({ d, setSave, onPdfFiles }: { d: Docs; setSave: (fn: (() => void) | null) => void; onPdfFiles: (f: File[]) => void }) {
   const a = d.active;
-  if (!a) return <Hint>Tambahkan PDF di panel Dokumen, klik halaman, lalu tempel gambar dengan <b>Ctrl+V</b>, tombol <b>Pilih foto</b>, atau seret foto ke halaman.</Hint>;
+  if (!a) return <Hint>Belum ada dokumen.</Hint>;
   return <OverlayEditor key={`${a.id}@${a.rev}`} doc={a} d={d} setSave={setSave} onPdfFiles={onPdfFiles} />;
 }
 
@@ -165,7 +165,6 @@ function OverlayEditor({ doc, d, setSave, onPdfFiles }: { doc: Doc; d: Docs; set
 
   return (
     <div className="space-y-4">
-      <Hint>Klik halaman tujuan, lalu tempel gambar dengan <b>Ctrl+V</b>, <b>Pilih foto</b>, atau seret foto langsung ke titik di halaman. Geser untuk memindah, tarik sudut kanan bawah untuk ubah ukuran (rasio terkunci, tahan <b>Shift</b> untuk bebas).</Hint>
       <Actions>
         <button type="button" className={btnPrimary} onClick={apply} disabled={!total}><Icon name="check" size={16} />Terapkan ke dokumen</button>
         <button type="button" className={btnGhost} onClick={download}><Icon name="download" size={16} />Unduh hasil</button>

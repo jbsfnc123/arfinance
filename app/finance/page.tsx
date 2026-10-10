@@ -23,7 +23,6 @@ export default async function FinancePortal() {
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="text-[22px] font-semibold tracking-tight">{isSa ? "Portal" : `Halo, ${profile.display_name.split(" ")[0]}`}</h1>
-      <p className="mt-1 text-sm text-fg-2">Pilih workspace. Login berlaku di semua workspace tangki.space.</p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {targets.map((w) => (
@@ -34,7 +33,6 @@ export default async function FinancePortal() {
                 {WORKSPACES[w].label}
                 <Icon name="open_in_new" size={15} className="text-fg-2 group-hover:text-accent" />
               </div>
-              <div className="mt-1 text-sm text-fg-2">{WORKSPACES[w].desc}</div>
               <div className="mt-2 text-xs text-fg-2">{workspaceUrl(w, host).replace(/^https?:\/\//, "").replace(/\/$/, "")}</div>
             </div>
           </a>
@@ -44,9 +42,9 @@ export default async function FinancePortal() {
       {isSa && <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Akun", value: accounts ?? 0, sub: `${active ?? 0} aktif`, href: "/akun" },
-          { label: "Role", value: roles ?? 0, sub: "atur akses menu & workspace", href: "/acl" },
-          { label: "Database", value: "Kuota", sub: "pemakaian Supabase", href: "/database" },
-          { label: "Pengaturan AI", value: "QnA AR Workspace", sub: "agent, API key & model", href: "/ai-settings" },
+          { label: "Role", value: roles ?? 0, sub: "", href: "/acl" },
+          { label: "Database", value: "Kuota", sub: "", href: "/database" },
+          { label: "Pengaturan AI", value: "AR Helpdesk", sub: "", href: "/ai-settings" },
         ].map((s) => (
           <a key={s.label} href={s.href} className="rounded-xl border border-hairline bg-surface p-3 shadow-sm transition-shadow hover:shadow-md">
             <div className="text-xs text-fg-2">{s.label}</div>

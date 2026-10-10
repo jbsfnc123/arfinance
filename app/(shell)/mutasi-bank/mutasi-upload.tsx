@@ -54,7 +54,6 @@ export function MutasiUpload({ version, onDone }: { version: number; onDone: () 
           <Icon name="download" size={16} />Template
         </button>
       </div>
-      <p className="text-xs text-fg-2">{note}</p>
       {extra}
       <input type="file" accept=".xlsx,.xls,.xlsm" multiple={multi} disabled={busy !== null}
         key={busy === b ? "busy" : "idle"}
@@ -66,12 +65,9 @@ export function MutasiUpload({ version, onDone }: { version: number; onDone: () 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-3">
-        {box("mutasi", "Mutasi Rekening",
-          "Boleh beberapa file & beberapa sheet. Rekening dikenali dari 4 digit terakhir (nama sheet atau baris \"No. rekening :\"). Hanya baris CR yang disimpan; \"SWITCHING PENGUIN\" diabaikan. Tanggal yang tercakup file/Periode diganti.", true)}
-        {box("erp", "Invoice & Payment",
-          "Laporan ERP \"Invoice and Payment Date Comparison\" (per tanggal invoice atau per tanggal payment), atau file berheader Invoice No., Invoice Amount, Invoice Date / Payment Document, Payment Amount, Payment Date. Data yang sama juga dipakai Presentasi & Marketplace — upload sekali saja.", true)}
-        {box("target", "Target",
-          "Header: Invoice No, Open Amt. Mengganti seluruh target bulan terpilih (tabel target yang sama dengan Dashboard Controller).", false,
+        {box("mutasi", "Mutasi Rekening", "", true)}
+        {box("erp", "Invoice & Payment", "", true)}
+        {box("target", "Target", "", false,
           <label className="block text-sm">
             <span className="text-fg-2">Bulan target</span>
             <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} mt-1`} />

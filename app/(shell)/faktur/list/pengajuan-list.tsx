@@ -162,7 +162,7 @@ export function PengajuanList({ myName }: { myName: string }) {
                           <div><span className="text-fg-2">Reason:</span> {r.reason}</div>
                           <div><span className="text-fg-2">Diproses:</span> {r.processed_at ? `${r.processed_by_name ?? ""} · ${fmtTimestamp(r.processed_at)}` : "Belum"}</div>
                           <div className="sm:col-span-2"><span className="text-fg-2">Keterangan pengajuan:</span> {r.keterangan}</div>
-                          <div className="sm:col-span-2"><span className="text-fg-2">Keterangan invoice:</span> {remarks.get(r.no_sj, r.invoice_no) || "—"} <span className="text-xs text-fg-2">(sama dengan Collection, Mitra10 & Hold)</span></div>
+                          <div className="sm:col-span-2"><span className="text-fg-2">Keterangan invoice:</span> {remarks.get(r.no_sj, r.invoice_no) || "—"}</div>
                         </div>
                       </td>
                     </tr>
@@ -191,7 +191,6 @@ export function PengajuanList({ myName }: { myName: string }) {
         <p className="text-sm text-fg-2">Dokumen akan ditautkan ke {selected.size} pengajuan terpilih.</p>
         <input value={noLtkp} onChange={(e) => setNoLtkp(e.target.value)} placeholder="No LTKP *" className={`${inputCls} mt-3`} />
         <input type="file" accept="application/pdf" onChange={(e) => setPdf(e.target.files?.[0] ?? null)} className={`${inputCls} mt-3`} />
-        <p className="mt-1 text-xs text-fg-2">PDF, maksimal 10 MB. Disimpan privat — hanya bisa dibuka pengguna yang login.</p>
       </Modal>
 
       <LtkpPreview path={preview?.path ?? null} title={preview?.title ?? ""} onClose={() => setPreview(null)} />

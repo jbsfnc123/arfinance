@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isChatOrigin, isWithin, menuLabel } from "./chat-context";
 
-describe("halaman aktif untuk chat QnA", () => {
+describe("halaman aktif untuk chat AR Helpdesk", () => {
   it("label menu dari path (paling spesifik)", () => {
     expect(menuLabel("/collection")).toBe("Collection › Daftar Tagihan");
     expect(menuLabel("/collection/history-pembayaran")).toBe("Collection › History Pembayaran BP");

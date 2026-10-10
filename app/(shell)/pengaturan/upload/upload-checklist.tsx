@@ -49,7 +49,6 @@ export function UploadChecklist({ version }: { version: number }) {
           {stats ? <><b className={done === status.size ? "text-success" : "text-fg"}>{done}</b> dari {status.size} file sudah di-upload</> : error ? <span className="text-danger">Gagal memuat: {error}</span> : "Memuat…"}
         </span>
       </div>
-      <p className="mt-1 text-xs text-fg-2">Status kembali silang setiap ganti hari (WIB). Target cukup sekali per bulan. File yang sama cukup di-upload sekali untuk semua menu.</p>
 
       <ul className="mt-3 space-y-3">
         {CHECKLIST.map((g) => (

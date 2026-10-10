@@ -5,7 +5,7 @@ import { downloadBytes, isImage, isPdf, loadImageAsset, pageThumb, rotateAsset }
 import { mergePages, type ImageAsset, type MergeEntry, type Paper } from "@/lib/modules/pdf/ops";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { Actions, Dropzone, Hint, ThumbGrid, previewOf, reorder, thumbKey, uid, useBusy, type Doc, type Docs } from "./shared";
+import { Actions, Dropzone, ThumbGrid, previewOf, reorder, thumbKey, uid, useBusy, type Doc, type Docs } from "./shared";
 import { Icon } from "@/components/icons";
 
 // 3. Gabung PDF & foto: semua halaman tampil sebagai thumbnail; seret untuk mengurutkan,
@@ -97,7 +97,6 @@ export function TabMerge({ d, m, setM, setSave, onPdfFiles }: {
 
   return (
     <div className="space-y-4">
-      <Hint>Semua halaman dari dokumen (dan foto tambahan) tampil di bawah. <b>Seret</b> untuk mengatur urutan, putar atau hapus per halaman, lalu terapkan. Foto menjadi satu halaman.</Hint>
       <Actions>
         <button type="button" className={btnPrimary} onClick={apply} disabled={!m.items.length}><Icon name="check" size={16} />Terapkan (buat gabungan.pdf)</button>
         <button type="button" className={btnGhost} onClick={download} disabled={!m.items.length}><Icon name="download" size={16} />Unduh hasil</button>

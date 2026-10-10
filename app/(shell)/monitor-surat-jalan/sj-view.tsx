@@ -50,8 +50,7 @@ export function SjView() {
           </section>
         ) : noAging && tab !== "upload" ? (
           <section className={card}>
-            <EmptyState icon="fact_check" title="Aging belum ada"
-              hint="Daftar SJ diambil dari No SJ di Aging terbaru. Upload laporan Aging (MASTER AGING) di Pusat Upload terlebih dahulu." />
+            <EmptyState icon="fact_check" title="Aging belum ada" />
           </section>
         ) : (
           <>

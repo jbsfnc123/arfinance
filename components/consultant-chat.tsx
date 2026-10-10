@@ -7,7 +7,7 @@ import { useDialog } from "@/components/use-dialog";
 import { CONSULTANT_URL } from "@/lib/consultant-config";
 import { isChatOrigin, isWithin, menuLabel } from "@/lib/chat-context";
 
-export const CHAT_NAME = "QnA AR Workspace";
+export const CHAT_NAME = "AR Helpdesk";
 export { CONSULTANT_URL } from "@/lib/consultant-config";
 
 // Load the remote bot only after the first click. Keep its conversation when minimized.
@@ -59,7 +59,7 @@ export function ConsultantChat({ accountName = "", accountId = "" }: { accountNa
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" />
       </div>
     </section>}
-    <button ref={trigger} type="button" aria-label={open ? "Tutup konsultan chat" : "Buka konsultan chat"} aria-expanded={open}
+    <button ref={trigger} type="button" aria-label={open ? `Tutup ${CHAT_NAME}` : `Buka ${CHAT_NAME}`} aria-expanded={open}
       aria-controls={started ? "consultant-chat-panel" : undefined} title={CHAT_NAME}
       onClick={() => { if (open) close(); else { setStarted(true); setOpen(true); } }}
       className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#25d366] text-white shadow-lg transition hover:bg-[#1fba59] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">

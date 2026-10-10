@@ -38,10 +38,10 @@ export function TabCompress({ d, setSave }: { d: Docs; setSave: (fn: (() => void
 
   useEffect(() => { setSave(a ? () => void download() : null); });
 
-  if (!a) return <Hint>Tambahkan PDF di panel Dokumen untuk memperkecil ukurannya.</Hint>;
+  if (!a) return <Hint>Belum ada dokumen.</Hint>;
   return (
     <div className="space-y-4">
-      <Hint>Memperkecil ukuran <b>{a.name}</b> ({formatBytes(a.size)}, {a.pageCount} halaman).</Hint>
+      <Hint><b>{a.name}</b> ({formatBytes(a.size)}, {a.pageCount} halaman)</Hint>
       <div className="flex flex-wrap items-end gap-3 text-sm">
         <label className="flex flex-col">
           <span className="text-fg-2">Metode</span>
@@ -58,11 +58,6 @@ export function TabCompress({ d, setSave }: { d: Docs; setSave: (fn: (() => void
           </label>
         )}
       </div>
-      <p className="text-xs text-fg-2">
-        {method === "lossless"
-          ? "Aman: struktur PDF disimpan ulang lebih ringkas. Biasanya 0–25% lebih kecil; teks tetap bisa dipilih & dicari."
-          : <span className="text-warning">Kuat: setiap halaman diubah menjadi gambar — ukuran jauh lebih kecil, tetapi teks tidak bisa dipilih/dicari lagi.</span>}
-      </p>
       <Actions>
         <button type="button" className={btnPrimary} onClick={apply}><Icon name="check" size={16} />Terapkan ke dokumen</button>
         <button type="button" className={btnGhost} onClick={download}><Icon name="download" size={16} />Unduh hasil kompresi</button>

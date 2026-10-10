@@ -121,7 +121,7 @@ export function PaymentHistoryModal({ target, onClose }: { target: PayHistTarget
                   <tbody>
                     {row.months.map((m) => (
                       <tr key={m.month} className="border-t border-line/60">
-                        <td className={td}>{monthLabel(m.month)}{!covMap.get(m.month) && <span className="ml-2 text-xs text-danger" title="Data pembayaran bulan ini belum di-upload">belum ada data</span>}</td>
+                        <td className={td}>{monthLabel(m.month)}{!covMap.get(m.month) && <span className="ml-2 text-xs text-danger">belum ada data</span>}</td>
                         <td className={`${td} text-right tabular-nums`}>{m.count}</td>
                         <td className={`${td} text-right tabular-nums`}>{Math.round(m.paid).toLocaleString("id-ID")}</td>
                         <td className={`${td} text-right tabular-nums ${lamaCls(m.avgLama)}`}>{lamaTxt(m.avgLama)}</td>

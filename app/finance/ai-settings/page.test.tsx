@@ -9,7 +9,7 @@ it("embeds the separate settings URL for Super Admin", async () => {
   vi.mocked(getSession).mockResolvedValue(session("sa"));
   const html = renderToStaticMarkup(await AiSettingsPage());
   expect(html).toContain(CONSULTANT_SETTINGS_URL);
-  expect(html).toContain('title="Pengaturan AI QnA AR Workspace"');
+  expect(html).toContain('title="Pengaturan AI AR Helpdesk"');
 });
 it("denies non-admin accounts without loading an external frame", async () => {
   vi.mocked(getSession).mockResolvedValue(session("controller"));

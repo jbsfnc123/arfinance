@@ -32,9 +32,9 @@ export function AllocationFlow({ a }: { a: Allocation }) {
   return (
     <div className="space-y-4" aria-label={`Alokasi uang masuk ${monthLabel(a.month)}`}>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon="monitoring" color="--color-accent" label={`Penjualan ${M}`} value={a.sales} sub="Total penjualan periode (Invoice Create)" />
-        <Kpi icon="account_balance" color="--color-success" label={`Uang masuk ${M}`} value={a.inflow} sub={`Dana diterima selama ${M}`} />
-        <Kpi icon="target" color="--color-accent-strong" label={`Target tagihan ${M}`} value={a.target} sub={`Tagihan periode sebelum ${M}`} />
+        <Kpi icon="monitoring" color="--color-accent" label={`Penjualan ${M}`} value={a.sales} />
+        <Kpi icon="account_balance" color="--color-success" label={`Uang masuk ${M}`} value={a.inflow} />
+        <Kpi icon="target" color="--color-accent-strong" label={`Target tagihan ${M}`} value={a.target} />
         <Kpi icon="history" color="--color-danger" label={`Outstanding ${N}`} value={a.outstanding} danger
           sub={`${rpShort(a.sales)} penjualan − ${rpShort(a.allocSales)} alokasi`} />
       </div>
@@ -81,14 +81,7 @@ export function AllocationFlow({ a }: { a: Allocation }) {
             </ul>
           </div>
         )}
-        <p className="mt-4 flex items-start gap-1.5 text-xs text-fg-2">
-          <Icon name="help" size={14} className="mt-px" />
-          <span>
-            Target {M} tidak mencakup penjualan {M}. Keempat pos tidak tumpang tindih; pembayaran dicocokkan ke target dulu, lalu
-            penjualan {M}, sisanya tagihan lain.
-            {a.over > 0 && <b className="text-warning"> Pembayaran ERP melebihi uang masuk sebesar {rpShort(a.over)} — persen dihitung dari total pembayaran.</b>}
-          </span>
-        </p>
+        {a.over > 0 && <p className="mt-4 text-xs"><b className="text-warning">Pembayaran ERP melebihi uang masuk sebesar {rpShort(a.over)} — persen dihitung dari total pembayaran.</b></p>}
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -101,7 +94,7 @@ export function AllocationFlow({ a }: { a: Allocation }) {
   );
 }
 
-function Kpi({ icon, color, label, value, sub, danger }: { icon: string; color: string; label: string; value: number; sub: string; danger?: boolean }) {
+function Kpi({ icon, color, label, value, sub, danger }: { icon: string; color: string; label: string; value: number; sub?: string; danger?: boolean }) {
   return (
     <div className={`${card} flex gap-3 p-4`} style={danger ? { background: tint("--color-danger", 7), borderColor: tint("--color-danger", 25) } : undefined}>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: tint(color, 14), color: `var(${color})` }}>

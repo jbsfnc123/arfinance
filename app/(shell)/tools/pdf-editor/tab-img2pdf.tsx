@@ -5,7 +5,7 @@ import { downloadBytes, rotateAsset } from "@/lib/modules/pdf/browser";
 import { imagesToPdf, type ImageAsset, type Margin, type Orientation, type Paper } from "@/lib/modules/pdf/ops";
 import { btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { Actions, Dropzone, Hint, ThumbGrid, reorder, useBusy, type Docs } from "./shared";
+import { Actions, Dropzone, ThumbGrid, reorder, useBusy, type Docs } from "./shared";
 import { Icon } from "@/components/icons";
 
 // 4. Gambar ke PDF: setiap foto satu halaman, selalu proporsional & di tengah.
@@ -28,7 +28,6 @@ export function TabImg2Pdf({ d, s, setS, onImages, setSave }: {
 
   return (
     <div className="space-y-4">
-      <Hint>Pilih atau seret beberapa foto — setiap foto menjadi satu halaman PDF. Seret untuk mengurutkan, putar bila perlu. Foto tidak akan gepeng atau terpotong.</Hint>
       <Actions>
         <button type="button" className={btnPrimary} onClick={apply} disabled={!s.items.length}><Icon name="check" size={16} />Terapkan (buat foto-ke-pdf.pdf)</button>
         <button type="button" className={btnGhost} onClick={download} disabled={!s.items.length}><Icon name="download" size={16} />Unduh hasil</button>
@@ -58,7 +57,7 @@ export function TabImg2Pdf({ d, s, setS, onImages, setSave }: {
         </label>
         <span className="text-xs text-fg-2">{s.items.length} foto</span>
       </div>
-      <Dropzone compact={s.items.length > 0} onFiles={onImages} accept="image/*" title="Seret foto ke sini atau klik untuk memilih" hint="JPG, PNG, WebP, GIF, BMP (HEIC dari iPhone belum didukung browser)" />
+      <Dropzone compact={s.items.length > 0} onFiles={onImages} accept="image/*" title="Seret foto ke sini atau klik untuk memilih" />
       {s.items.length > 0 && (
         <ThumbGrid
           items={s.items.map((x) => ({ uid: x.uid, src: async () => x.asset.dataUrl!, srcKey: `${x.uid}:${x.asset.width}x${x.asset.height}:${x.asset.dataUrl!.length}`, label: x.asset.name, note: `${x.asset.width}×${x.asset.height}` }))}

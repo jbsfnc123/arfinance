@@ -87,12 +87,6 @@ export function UploadTarget() {
         </label>
       </div>
 
-      <p className="text-xs text-fg-2">
-        Kolom wajib: <b>Invoice No</b> dan <b>Target</b> (atau Open Amt). Opsional: Marketing, Collection Name,
-        Business Partner, Due Date, Branch — bila kosong diambil dari data tagihan. File dengan tata letak sheet
-        &quot;Tagihan&quot; lama (A = Target, F = Invoice, J = Branch) juga diterima.
-      </p>
-
       {parsed && (
         <div className="rounded-lg bg-surface-2 p-3 text-sm">
           <div>

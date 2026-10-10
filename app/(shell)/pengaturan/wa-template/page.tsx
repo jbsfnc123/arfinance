@@ -14,10 +14,6 @@ export default async function WaTemplatePage() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-[22px] font-semibold tracking-tight">Template WA</h1>
-      <p className="mt-1 text-sm text-fg-2">
-        Template bawaan untuk semua collection. Collection tetap bisa mengubah pesan di perangkatnya sendiri lewat
-        &quot;Edit Pesan WA&quot;.
-      </p>
       <WaTemplateForm initial={(data?.value as Partial<WaTemplate> | undefined) ?? null} />
     </div>
   );

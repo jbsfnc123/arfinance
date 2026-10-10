@@ -1,6 +1,6 @@
 import { MENU_REGISTRY } from "@/lib/menu";
 
-// Chat QnA AR Workspace hanya perlu tahu HALAMAN yang sedang dibuka user (nama menu), bukan isi datanya.
+// Chat AR Helpdesk hanya perlu tahu HALAMAN yang sedang dibuka user (nama menu), bukan isi datanya.
 // Frame Apps Script memintanya lewat postMessage saat user mengirim pesan; ConsultantChat membalas {menu, path}.
 
 export function menuLabel(path: string) {

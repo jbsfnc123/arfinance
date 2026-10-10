@@ -116,11 +116,6 @@ export function DataCenter({ open, onClose, onSaved, canDelete }: { open: boolea
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
           {busy && <span className="text-accent">Memproses…</span>}
         </div>
-        <p className="text-xs text-fg-2">
-          Template berisi 1 sheet per slide ({SHEET_TOTAL} sheet) dan sudah terisi data yang tersimpan untuk bulan itu. Data presentasi
-          berdiri sendiri — tidak mengambil data dari menu lain. Bulan tercentang bila semua sheet wajib terisi.
-        </p>
-
         <div className="overflow-hidden rounded-xl border border-line">
           <table className="w-full">
             <tbody>

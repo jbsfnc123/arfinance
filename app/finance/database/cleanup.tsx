@@ -86,11 +86,6 @@ export function CleanupSection() {
           <input type="date" value={cutoff} onChange={(e) => e.target.value && setCutoff(e.target.value)} className={`${inputCls} !w-auto`} />
         </label>
       </div>
-      <p className="text-xs text-fg-2">
-        Data yang invoice/SJ-nya sudah tidak ada di Aging terbaru (lunas) — Keterangan, Tukar Faktur, Ekspedisi, laporan &amp;
-        jadwal kolektor, penerimaan SJ, dll. — otomatis masuk daftar di bawah, tetapi TIDAK dihapus otomatis. Pilih kategori,
-        periksa baris, centang, lalu hapus. Kontak tidak pernah masuk daftar ini.
-      </p>
       {ovErr && <p className="text-sm text-danger" role="alert">Gagal memuat: {ovErr}</p>}
 
 
@@ -105,7 +100,6 @@ export function CleanupSection() {
                   className={`rounded-xl border p-3 text-left transition-colors ${cat?.key === c.key ? "border-accent bg-selection" : "border-line bg-surface-2 hover:bg-fg/[0.04]"}`}>
                   <div className="text-[13px] font-medium">{c.label}</div>
                   <div className={`mt-1 text-lg tabular-nums ${k > 0 ? "" : "text-fg-2"}`}>{ov ? n(k) : "…"} <span className="text-xs text-fg-2">baris</span></div>
-                  {c.usesCutoff && <div className="text-[11px] text-fg-2">sebelum tanggal batas</div>}
                 </button>
               );
             })}
@@ -117,7 +111,6 @@ export function CleanupSection() {
         <div className="space-y-2 border-t border-line pt-4">
           <div>
             <h3 className="font-medium">{cat.label}</h3>
-            <p className="text-xs text-fg-2">{cat.desc}</p>
             {cat.risk && <p className="mt-1 text-xs text-warning">Perhatian: {cat.risk}</p>}
           </div>
           <LocalTable title={`Pembersihan ${cat.label}`} stateKey={`cleanup-${cat.key}`} rows={rows ?? []} cols={COLS} rowKey={(r) => r.key}
@@ -126,7 +119,6 @@ export function CleanupSection() {
             actions={(sel) => (
               <button type="button" className={btnPrimary} onClick={() => setPending({ keys: sel.map((r) => r.key) })}>Hapus {n(sel.length)} terpilih…</button>
             )} />
-          <p className="text-xs text-fg-2">Tip: unduh Excel dari tombol tabel sebagai cadangan sebelum menghapus.</p>
         </div>
       )}
 
@@ -156,7 +148,6 @@ export function CleanupSection() {
         <div className="space-y-2 text-sm">
           <p>{n(pending?.keys.length ?? 0)} baris <b>{cat?.label}</b> akan dihapus permanen dari database dan tidak bisa dikembalikan.</p>
           {cat?.risk && <p className="text-warning">Perhatian: {cat.risk}</p>}
-          <p className="text-xs text-fg-2">Server hanya menghapus baris yang masih memenuhi syarat kategori ini. Penghapusan dicatat di riwayat.</p>
         </div>
       </Modal>
     </section>

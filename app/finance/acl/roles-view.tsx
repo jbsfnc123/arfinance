@@ -87,7 +87,7 @@ function RoleCard(props: {
       )}
 
       {role.kind === "sa" ? (
-        <p className="mt-3 text-sm text-fg-2">Role Super Admin melihat semua menu.</p>
+        <p className="mt-3 text-sm text-fg-2">Super Admin: semua menu.</p>
       ) : (
         <form action={menuAction} className="mt-4">
           <input type="hidden" name="role_id" value={role.id} />

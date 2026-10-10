@@ -94,24 +94,13 @@ export function SjUpload({ s }: { s: SjState }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className={`${card} space-y-3 p-4`}>
           <h2 className="font-medium">Upload Laporan Serah Terima Surat Jalan</h2>
-          <p className="text-xs text-fg-2">
-            File CSV <i>LaporanSerahTerimaSuratJalan</i> (pemisah koma, maks. 60.000 baris). Yang disimpan per SJ hanya
-            <b> Receive Date</b> dan <b>Receiver</b>.
-          </p>
           <label className="block text-sm">
             <span className="sr-only">Pilih file CSV</span>
             <input key={inputKey} type="file" accept=".csv,text/csv" disabled={!can || busy !== null}
-              onChange={(e) => void pick(e.target.files?.[0])} className={inputCls} aria-describedby="sj-upload-policy" />
+              onChange={(e) => void pick(e.target.files?.[0])} className={inputCls} />
           </label>
           {busy === "parse" && <p className="text-sm text-accent" role="status">Membaca & memvalidasi file…</p>}
           {parseErr && <p className="text-sm text-danger" role="alert">{parseErr}</p>}
-          <ul id="sj-upload-policy" className="list-disc space-y-0.5 pl-5 text-xs text-fg-2">
-            <li>Hanya SJ No. yang ada di No SJ <b>Aging terbaru</b> yang disimpan (No SJ gabungan di aging dipecah). SJ lain dilewati.</li>
-            <li>Per SJ dipakai baris <b>pertama</b> di file dengan Receiver yang diakui dan Receive Date yang valid.</li>
-            <li>Setiap upload hanya mengisi SJ yang <b>belum punya Receive Date</b>; data yang sudah tersimpan tidak ditimpa.</li>
-            <li>SJ yang tidak ada lagi di Aging terbaru (mis. lunas) masuk daftar Pembersihan Data (Finance › Database) untuk dihapus Super Admin.</li>
-            <li>Upload bersifat utuh: gagal = tidak ada yang tersimpan, aman diulang.</li>
-          </ul>
         </section>
 
         <ReceiverSettings s={s} />
@@ -297,11 +286,6 @@ function ReceiverSettings({ s }: { s: SjState }) {
   return (
     <section className={`${card} space-y-3 p-4`}>
       <h2 className="font-medium">Receiver yang diakui</h2>
-      <p className="text-xs text-fg-2">
-        Saat upload, hanya baris dengan Receiver aktif di daftar ini yang disimpan (tanpa beda huruf besar/kecil dan spasi
-        berlebih; tanpa pencocokan mirip). Menonaktifkan Receiver membuat SJ yang diterimanya kembali &ldquo;Belum diterima&rdquo;; menambah
-        Receiver berlaku untuk upload berikutnya.
-      </p>
       {!s.ds.data && <p className="text-sm text-fg-2">Memuat daftar Receiver…</p>}
       <ul className="divide-y divide-line/50 text-sm">
         {receivers.map((r) => (
@@ -376,8 +360,6 @@ function ReceiverSettings({ s }: { s: SjState }) {
             <ul className="list-disc pl-5">
               <li>{n(impact?.statusChanged ?? 0)} SJ berubah status (Sudah ↔ Belum diterima) pada data tersimpan</li>
             </ul>
-            <p className="text-xs text-fg-2">Data penerimaan tersimpan tidak diubah atau dihapus; Receiver baru berlaku untuk upload
-              berikutnya. Perubahan dicatat di jejak perubahan.</p>
           </div>
         )}
       </Modal>

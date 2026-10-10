@@ -17,10 +17,10 @@ export function DocPanel({ d, onFiles }: { d: Docs; onFiles: (files: File[]) => 
         <h2 className="flex-1 font-medium">Dokumen</h2>
         <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs text-fg-2">{d.docs.length} dokumen</span>
       </div>
-      <Dropzone compact onFiles={onFiles} accept="application/pdf,.pdf,image/*" title="Seret PDF / foto ke sini" hint="atau klik untuk memilih beberapa file" />
+      <Dropzone compact onFiles={onFiles} accept="application/pdf,.pdf,image/*" title="Seret PDF / foto ke sini" />
 
       {d.docs.length === 0 ? (
-        <p className="text-sm text-fg-2">Belum ada dokumen. File hanya diproses di browser ini — tidak dikirim ke server.</p>
+        <p className="text-sm text-fg-2">Belum ada dokumen.</p>
       ) : (
         <ul className="space-y-1">
           {d.docs.map((x) => (

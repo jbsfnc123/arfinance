@@ -65,7 +65,6 @@ export function RkmUpload({ taxName: initialTax }: { taxName: string }) {
     <div className="grid gap-4 md:grid-cols-3">
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">1. Update Master Aging</h2>
-        <p className="text-xs text-fg-2">File MASTER AGING / Blank_A4 — laporan yang sama dengan Update Tagihan (cukup sekali, di sini atau di Pusat Upload). RKM membaca baris dengan Tax Name di bawah; No SJ baru otomatis masuk Kertas Kerja dan invoice yang hilang dari aging berstatus Lunas.</p>
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
           <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={inputCls} placeholder="Filter Tax Name" />
           <button type="button" className={btnGhost} onClick={saveTax}>Simpan</button>
@@ -76,13 +75,13 @@ export function RkmUpload({ taxName: initialTax }: { taxName: string }) {
 
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">2. Upload GR RKM (Receiving)</h2>
-        <p className="text-xs text-fg-2">Excel dari portal RKM dengan kolom No. GRPO, No. Pengiriman, Tanggal GRPO, Jumlah GRPO/GRN, No. Faktur Pajak, Cabang, dst. No. Pengiriman dicocokkan dengan No SJ aging. <b className="text-warning">Mengganti seluruh isi Receiving.</b></p>
+        <p className="text-xs"><b className="text-warning">Mengganti seluruh isi Receiving.</b></p>
         {fileInput("gr", ".xlsx,.xls")}
       </div>
 
       <div className={`${card} space-y-3 p-4`}>
         <h2 className="font-medium">3. Upload Kwitansi RKM</h2>
-        <p className="text-xs text-fg-2">Excel dari portal RKM dengan kolom No. GRPO, No. Pengiriman, No. Faktur Pajak, Jumlah Faktur Pajak, Pembuat, Tanggal Input, dst. SJ yang ada di sini = Tukar Faktur Done. <b className="text-warning">Mengganti seluruh isi Kwitansi.</b></p>
+        <p className="text-xs"><b className="text-warning">Mengganti seluruh isi Kwitansi.</b></p>
         {fileInput("kw", ".xlsx,.xls")}
       </div>
     </div>
