@@ -12,14 +12,27 @@ export function archiveConfigured() {
 async function call<T extends GasResult>(action: string, payload: Record<string, unknown>): Promise<T> {
   const url = process.env.ARCHIVE_GAS_URL, secret = process.env.ARCHIVE_GAS_SECRET;
   if (!url || !secret) throw new Error("Arsip Google Drive belum dikonfigurasi (ARCHIVE_GAS_URL / ARCHIVE_GAS_SECRET).");
-  // Web App menjawab POST dengan 302 ke googleusercontent; fetch mengikutinya dan membaca JSON.
+  // Web App menjawab POST dengan 302 ke googleusercontent (aksi sudah berjalan SEKALI di server). Hasilnya dibaca lewat
+  // GET ke alamat itu; Google kadang menjawab 404/HTML palsu pada bacaan acak, jadi bacaan diulang (alamat hasil boleh
+  // dibaca berulang). POST TIDAK diulang — aksi seperti `put` tidak boleh terduplikasi.
   const res = await fetch(url, {
-    method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, redirect: "follow", cache: "no-store",
+    method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, redirect: "manual", cache: "no-store",
     body: JSON.stringify({ ...payload, secret, action }),
   });
-  const text = await res.text();
+  const loc = res.headers.get("location");
+  let text = loc ? "" : await res.text();
+  let status = res.status;
+  if (loc) {
+    for (let i = 0; i < 8; i++) {
+      const r = await fetch(loc, { cache: "no-store" });
+      status = r.status;
+      text = await r.text();
+      if (text.trimStart().startsWith("{")) break;
+      await new Promise((ok) => setTimeout(ok, 400 * (i + 1)));
+    }
+  }
   let out: T;
-  try { out = JSON.parse(text) as T; } catch { throw new Error(`Drive: jawaban bukan JSON (HTTP ${res.status}). Periksa deploy Web App AR Archive.`); }
+  try { out = JSON.parse(text) as T; } catch { throw new Error(`Drive: jawaban bukan JSON (HTTP ${status}). Periksa deploy Web App AR Archive (akses "Anyone").`); }
   if (!out.ok) throw new Error(`Drive: ${out.error ?? "gagal"}`);
   return out;
 }
@@ -43,7 +56,10 @@ export async function drivePut(path: string[], name: string, data: Buffer) {
 
 export async function driveGet(fileId: string) {
   const out = await call<GasResult & { base64: string; size: number; name: string }>("get", { fileId });
-  return Buffer.from(out.base64, "base64");
+  if (typeof out.base64 !== "string") throw new Error("Drive: jawaban baca file tidak lengkap — coba lagi.");
+  const buf = Buffer.from(out.base64, "base64");
+  if (buf.length !== out.size) throw new Error("Drive: ukuran file terbaca tidak cocok — coba lagi.");
+  return buf;
 }
 
 export const driveTrash = (fileId: string) => call("trash", { fileId });
