@@ -1,9 +1,10 @@
-// Baca satu file arsip dari Google Drive. Hak baca dicek oleh RPC archive_file (sama dengan hak baca data aslinya).
+// Baca satu file arsip. Hak baca dicek oleh RPC archive_file (sama dengan hak baca data aslinya). Isi diambil dari
+// salinan baca di Supabase Storage (cepat); bila belum ada, dari Google Drive lalu disalin (lib/archive/store.ts).
 // File dikirim apa adanya (gzip) dengan Content-Encoding: gzip — browser yang membuka; file arsip tidak pernah berubah
 // (versi baru = id baru), jadi boleh di-cache browser selamanya.
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { driveGet, sha256 } from "@/lib/archive/gas";
+import { readArchiveFile } from "@/lib/archive/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,10 +15,8 @@ export async function GET(req: Request) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("archive_file" as never, { p_id: id } as never);
   if (error) return NextResponse.json({ error: error.message }, { status: error.code === "42501" ? 403 : 400 });
-  const meta = data as unknown as { fileId: string; sha256: string };
   try {
-    const buf = await driveGet(meta.fileId);
-    if (sha256(buf) !== meta.sha256) return NextResponse.json({ error: "Isi arsip di Drive tidak cocok dengan catatan." }, { status: 502 });
+    const buf = await readArchiveFile(data as unknown as { dataset: string; fileName: string; fileId: string; sha256: string });
     return new Response(new Uint8Array(buf), {
       headers: {
         "Content-Type": "application/json; charset=utf-8",

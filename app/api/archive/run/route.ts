@@ -3,7 +3,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { archiveFileName, isArchiveDataset, mergeArchiveRows, type ArchiveEntry, type ArchiveFile } from "@/lib/archive/datasets";
-import { driveGet, drivePut, driveTrash, gunzipJson, gzipJson, sha256 } from "@/lib/archive/gas";
+import { drivePut, driveTrash, gunzipJson, gzipJson } from "@/lib/archive/gas";
+import { readArchiveFile, storagePut, storageRemove } from "@/lib/archive/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -42,27 +43,30 @@ export async function POST(req: Request) {
     const list = await rpc<ArchiveEntry[]>(supabase, "archive_list", { p_dataset: dataset });
     const prev = list.find((e) => e.period === period) ?? null;
     let rows = fresh;
-    let prevFileId: string | null = null;
+    let prevFile: { fileId: string; fileName: string } | null = null;
     if (prev) {
-      const meta = await rpc<{ fileId: string; sha256: string }>(supabase, "archive_file", { p_id: prev.id });
-      const buf = await driveGet(meta.fileId);
-      if (sha256(buf) !== meta.sha256) throw new Error("Arsip lama di Drive tidak cocok dengan catatan (sha256) — dibatalkan.");
+      const meta = await rpc<{ fileId: string; fileName: string; sha256: string; dataset: string }>(supabase, "archive_file", { p_id: prev.id });
+      const buf = await readArchiveFile(meta); // Storage dulu (cepat), Drive bila salinan tidak ada; sha256 diverifikasi
       rows = mergeArchiveRows(dataset, gunzipJson<ArchiveFile>(buf).rows, fresh);
-      prevFileId = meta.fileId;
+      prevFile = { fileId: meta.fileId, fileName: meta.fileName };
     }
 
-    // 3. Simpan & verifikasi di Drive.
+    // 3. Simpan & verifikasi di Drive (arsip utama), lalu salinan baca di Supabase Storage.
     const file: ArchiveFile = { v: 1, dataset, period, label, exportedAt: new Date().toISOString(), rows };
     const gz = gzipJson(file);
     const name = archiveFileName(period);
     const put = await drivePut([dataset], name, gz);
+    await storagePut(dataset, name, gz);
 
     // 4. Catat; 5. hapus dari Supabase (RPC menolak bila data berubah sejak ekspor).
     const id = await rpc<number>(supabase, "archive_record", {
       p_dataset: dataset, p_period: period, p_label: label, p_file_id: put.fileId, p_file_name: name,
       p_rows: rows.length, p_db_rows: total, p_db_amount: amount, p_bytes: put.size, p_sha256: put.sha256,
     });
-    if (prevFileId) await driveTrash(prevFileId).catch(() => {}); // isi lama sudah tergabung di file baru
+    if (prevFile) { // isi lama sudah tergabung di file baru
+      await driveTrash(prevFile.fileId).catch(() => {});
+      await storageRemove(dataset, prevFile.fileName).catch(() => {});
+    }
     let deleted: number | null = null;
     if (body.purge === true) deleted = await rpc<number>(supabase, "archive_purge", { p_id: id });
 

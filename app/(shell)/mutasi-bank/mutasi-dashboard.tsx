@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
 import { useDataset } from "@/lib/local/store";
 import { useArchiveMonths, useMonthArchive } from "@/lib/archive/hooks";
@@ -37,7 +37,10 @@ export function MutasiDashboard() {
   const raw: MutasiRaw | null = useMemo(() => (mutasi.data && erp.data && targets.data && !arch.loading
     ? mutasiRaw({ month, today, mutasi: mutasi.data, erp: erp.data, targets: targets.data.targets }) : null),
   [month, today, mutasi.data, erp.data, targets.data, arch.loading]);
-  const months = useMemo(() => [...new Set([...(raw?.months ?? []), ...archMonths, month])].sort().reverse(), [raw, archMonths, month]);
+  // Daftar bulan terakhir diingat agar pilihan tidak menyusut selama data arsip bulan terpilih dimuat.
+  const [knownMonths, setKnownMonths] = useState<string[]>([]);
+  if (raw?.months?.length && raw.months.join() !== knownMonths.join()) setKnownMonths(raw.months);
+  const months = useMemo(() => [...new Set([...knownMonths, ...archMonths, month])].sort().reverse(), [knownMonths, archMonths, month]);
 
   const v = raw ? buildMutasi(raw, today) : null;
   const alloc = useMemo(() => (mutasi.data && erp.data && targets.data && !arch.loading
