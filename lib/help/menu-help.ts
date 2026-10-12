@@ -16,7 +16,9 @@ export const MENU_HELP: MenuHelp[] = [
     "Closing Bulan mengunci angka bulan itu (snapshot); bulan yang sudah closing tidak berubah walau data baru di-upload. Riwayat Closing menampilkan revisi.",
   ] },
   { href: "/dashboard/tukar-faktur", menu: "Dashboard › Tukar Faktur", text: [
+    "Memantau progres tukar faktur (TF) per bulan invoice: Jumlah Invoice, Sudah TF, Belum TF & Rata-rata Hari, dikelompokkan per Kelompok (mis. Collection).",
     "Periode = bulan invoice date. Rata-rata hari = tanggal tukar faktur − invoice date.",
+    "Sumber tanggal TF: Aplikasi Kolektor, Ekspedisi, Tukar Faktur Via Kolektor (Daftar Tagihan), Mitra10 & RKM.",
     "Klik salah satu baris untuk melihat rincian invoice.",
   ] },
   { href: "/mutasi-bank", menu: "Dashboard › Mutasi Bank vs Realisasi", text: [
@@ -37,17 +39,24 @@ export const MENU_HELP: MenuHelp[] = [
     "Edit Pesan WA: placeholder {{collection}} = nama collection, {{total}} = total tagihan. Pesan ini hanya tersimpan di perangkat tersebut.",
   ] },
   { href: "/collection/case", menu: "Collection › Case", text: [
-    "Log catatan Case (collection) dan Administratif dari seluruh Collection.",
+    "Log catatan Case (collection) dan Administratif dari seluruh Collection, terbaru di atas.",
+    "Catatan ditulis dari Daftar Tagihan (Catatan per invoice/BP); halaman ini hanya rekap untuk Controller/Super Admin.",
   ] },
   { href: "/collection/history-pembayaran", menu: "Collection › History Pembayaran BP", text: [
     "Periode = payment date. Hanya invoice ber-tempo (Net N Days) dan tanpa TikTok/Shopee.",
     "\"belum ada data\" pada bulan = data pembayaran bulan itu belum di-upload (Invoice & Payment).",
   ] },
   { href: "/tukar-faktur/jadwal", menu: "Tukar Faktur › Laporan & Jadwal Kolektor", text: [
+    "Jadwal Kolektor: pilih tanggal (panah ‹ › atau Hari ini) untuk melihat toko & invoice yang dijadwalkan per kolektor, status Sudah / In Progress, dan Titik Lokasi kunjungan.",
+    "Tukar Faktur · 5 Hari Terakhir: rekap jumlah invoice yang ditukar per kolektor.",
     "Laporan Harian: kolom merah = hari Minggu. Total = penjumlahan nilai harian.",
+    "Jadwal berasal dari Upload Jadwal (otomatis oleh Bot ERP tiap hari kerja).",
   ] },
   { href: "/tukar-faktur/kurir", menu: "Tukar Faktur › Aplikasi Kolektor", text: [
+    "Langkah kolektor: pilih Nama Kurir & Tanggal Jadwal Pengiriman → pilih toko yang dikunjungi → centang invoice → isi Tanggal Diterima & Foto Tanda Terima → simpan.",
     "Payment Group bersifat opsional, untuk menyaring toko.",
+    "Invoice yang sudah diproses tidak muncul lagi. \"Tidak ada jadwal yang belum dikunjungi\" = semua jadwal tanggal itu selesai atau jadwal belum di-upload.",
+    "Versi HP ada di kolektor.tangki.space (role Kurir bisa masuk tanpa PIN).",
   ] },
   { href: "/tukar-faktur/ekspedisi", menu: "Tukar Faktur › Ekspedisi", text: [
     "Catat No Resi invoice yang dikirim lewat ekspedisi; data diambil dari Aging terbaru.",
@@ -80,14 +89,25 @@ export const MENU_HELP: MenuHelp[] = [
     "Bot ERP meng-upload laporan serah terima 7 hari terakhir setiap hari kerja.",
   ] },
   { href: "/faktur/pengajuan", menu: "Faktur Pajak › Pengajuan Pembatalan & Revisi", text: [
+    "Request: Revisi Faktur atau Pembatalan Faktur. Wajib isi Invoice, Tax No (No Faktur Pajak), Reason Category & Keterangan.",
+    "Reason Category: Human Eror (Delivery/Invoicing/Marketing/Fulfillment/IT/Warehouse/OR/Mkt Analis), Miss Information, Factor External, Request Customer.",
     "Satu pengajuan bisa berisi beberapa invoice. Request, alasan, dan keterangan terbawa ke invoice berikutnya.",
+    "Setelah dikirim, pengajuan muncul di Daftar Pengajuan dengan status Belum diproses.",
   ] },
   { href: "/faktur/list", menu: "Faktur Pajak › Daftar Pengajuan", text: [
+    "Daftar semua pengajuan pembatalan & revisi; filter Status (Belum diproses / Sudah diproses) dan cari invoice, BP, Tax No, LTKP.",
+    "Tandai Diproses setelah faktur direvisi/dibatalkan; isi No LTKP dan upload dokumen LTKP.",
     "Keterangan invoice sama dengan Collection, Mitra10 & Hold.",
     "Dokumen LTKP: PDF maksimal 10 MB, disimpan privat — hanya bisa dibuka pengguna yang login.",
   ] },
   { href: "/faktur/ltkp", menu: "Faktur Pajak › LTKP", text: [
     "LTKP = Laporan Tindakan Koreksi & Pencegahan dari pengajuan pembatalan/revisi faktur.",
+    "Cari dokumen berdasarkan No Invoice, No LTKP, atau BP lalu buka PDF-nya. Dokumen di-upload dari Daftar Pengajuan.",
+  ] },
+  { href: "/faktur/hold", menu: "Faktur Pajak › Hold Faktur Pajak", text: [
+    "Daftar invoice yang faktur pajaknya ditahan (hold) beserta alasannya.",
+    "Tambah hold faktur: cari No Invoice (BP, Invoice Date, No SJ terisi otomatis) atau isi manual, lalu isi Keterangan (wajib).",
+    "Keterangan di sini = keterangan invoice bersama, sama dengan Daftar Tagihan & Mitra10. Ubah/hapus lewat ikon di baris.",
   ] },
   { href: "/coretax", menu: "Faktur Pajak › XML CoreTax", text: [
     "Muat file XML bulk faktur pajak dari CoreTax lewat tombol Pilih XML.",
@@ -115,9 +135,11 @@ export const MENU_HELP: MenuHelp[] = [
   ] },
   { href: "/marketplace", menu: "Rekonsiliasi › Marketplace", text: [
     "Laporan yang didukung: Laporan Penghasilan Shopee (sheet Summary + Penghasilan), Riwayat Saldo Shopee (Transaction Report), Laporan TikTok (Laporan + Detail pesanan).",
+    "Dashboard Penghasilan Marketplace (Shopee & TikTok), Rekonsiliasi Laporan vs Mutasi Saldo, dan Analisis Selisih Refund (kelebihan potong).",
     "Mode arus kas: upload Laporan Penghasilan periode ini untuk grafik & rekonsiliasi. Dana dilepas = dana yang diterima penjual; Saldo Keluar = penarikan + penyesuaian.",
   ] },
   { href: "/presentasi", menu: "Dashboard › Presentasi AR", text: [
+    "Presentasi AR bulanan: pilih bulan, isi data lewat Download template → upload Excel, atau upload file mentah ERP (Aging, Invoice, Invoice payment date, Business Partner). Hasil bisa Cetak / PDF dan Download Excel.",
     "Template berisi 1 sheet per slide dan terisi data yang tersimpan untuk bulan itu. Data presentasi berdiri sendiri — tidak mengambil data dari menu lain. Bulan tercentang bila semua sheet wajib terisi.",
   ] },
   { href: "/tools/pdf-editor", menu: "Tools Support › PDF Editor", text: [

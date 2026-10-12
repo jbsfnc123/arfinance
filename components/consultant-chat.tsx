@@ -6,10 +6,13 @@ import { useDialog } from "@/components/use-dialog";
 
 import { CONSULTANT_URL } from "@/lib/consultant-config";
 import { isChatOrigin, isWithin, menuLabel } from "@/lib/chat-context";
+import { GuidedChat } from "@/components/guided-chat";
 
 export const CHAT_NAME = "AR Helpdesk";
 export { CONSULTANT_URL } from "@/lib/consultant-config";
 
+// Default: chat terarah (template tanya-jawab per menu, tanpa Agent AI) — lib/help/guided-chat.ts.
+// Asisten AI (Apps Script) hanya cadangan bila jawaban tidak ditemukan; iframe dimuat saat pertama dipilih.
 // Load the remote bot only after the first click. Keep its conversation when minimized.
 // Display name and account ID scope greeting/memory. When the chat frame asks, it receives only the NAME of the page
 // the user has open ({menu, path}) — never page data — and only the Apps Script frame inside this panel is answered.
@@ -17,6 +20,8 @@ export function ConsultantChat({ accountName = "", accountId = "" }: { accountNa
   const [open, setOpen] = useState(false);
   const [started, setStarted] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [mode, setMode] = useState<"guide" | "ai">("guide");
+  const [aiStarted, setAiStarted] = useState(false);
   const panel = useRef<HTMLElement>(null);
   const layer = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -48,15 +53,26 @@ export function ConsultantChat({ accountName = "", accountId = "" }: { accountNa
       style={{ height: "min(640px, calc(100dvh - env(safe-area-inset-bottom, 0px) - 80px))" }}>
       <div className="flex h-full min-h-0 flex-col">
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-2">
-          <span className="text-sm font-semibold">{CHAT_NAME}</span>
+          <div className="flex min-w-0 items-center gap-1">
+            {mode === "ai" && <button type="button" onClick={() => setMode("guide")} aria-label="Kembali ke panduan" className="flex h-8 w-8 items-center justify-center rounded-lg text-fg-2 hover:bg-fg/5 focus-visible:outline-2 focus-visible:outline-accent">
+              <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 6-6 6 6 6" /></svg>
+            </button>}
+            <span className="truncate text-sm font-semibold">{CHAT_NAME}{mode === "ai" ? " · Asisten AI" : ""}</span>
+          </div>
           <button ref={closeButton} type="button" onClick={close} aria-label="Tutup chat" className="flex h-8 w-8 items-center justify-center rounded-lg text-fg-2 hover:bg-fg/5 focus-visible:outline-2 focus-visible:outline-accent">
             <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18" /></svg>
           </button>
         </header>
-        {!loaded && <p role="status" className="px-3 py-2 text-xs text-fg-2">Memuat chatbot…</p>}
-        <iframe src={chatUrl.href} ref={iframe} title={`Percakapan dengan ${CHAT_NAME}`} onLoad={() => setLoaded(true)}
-          className="min-h-0 w-full flex-1 border-0 bg-white" referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" />
+        <div hidden={mode !== "guide"} className="flex min-h-0 flex-1 flex-col">
+          <GuidedChat path={path} accountName={accountName} accountId={accountId}
+            onAskAi={() => { setAiStarted(true); setMode("ai"); }} />
+        </div>
+        {aiStarted && <div hidden={mode !== "ai"} className="flex min-h-0 flex-1 flex-col">
+          {!loaded && <p role="status" className="px-3 py-2 text-xs text-fg-2">Memuat asisten AI…</p>}
+          <iframe src={chatUrl.href} ref={iframe} title={`Percakapan dengan ${CHAT_NAME}`} onLoad={() => setLoaded(true)}
+            className="min-h-0 w-full flex-1 border-0 bg-white" referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" />
+        </div>}
       </div>
     </section>}
     <button ref={trigger} type="button" aria-label={open ? `Tutup ${CHAT_NAME}` : `Buka ${CHAT_NAME}`} aria-expanded={open}

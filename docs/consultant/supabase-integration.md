@@ -80,3 +80,25 @@ The embed is independent and can run with the existing chatbot. Supabase retriev
   jejak. Kini `appsscript.json` mendeklarasikan scope drive/documents, error dicatat, memori disimpan meski AI sibuk.
   Pemilik script WAJIB menjalankan `qnaDiagnose` sekali dari editor (memberi izin & membuat folder memori + 4 dokumen),
   lalu Deploy → Manage deployments → New version.
+
+## Fase 67 — Chat terarah tanpa Agent AI (2026-10-12)
+
+- **Default AR Helpdesk = chat terarah** (`components/guided-chat.tsx`): diproses di browser dari template tanya-jawab,
+  tanpa memanggil Apps Script/AI. Iframe Asisten AI hanya dimuat bila user memilih **Tanya Asisten AI** (muncul saat
+  pertanyaan tidak ditemukan / "Masih bingung"); tombol ‹ kembali ke panduan.
+- **Skema sesi**: (1) Sapaan "Hai Kak {nama} 👋 — Ada yang bisa aku bantu di menu **{menu aktif}**?" + pilihan
+  pertanyaan menu itu, **Topik umum**, **Hal lainnya…** → (2) Jawaban singkat (≤5 poin) + tombol **Buka menu** bila
+  relevan → (3) "Sudah terjawab, Kak?" dengan **Sudah jelas, makasih 🙏** / pertanyaan lanjutan / **Masih bingung** →
+  (4) Penutup & kembali ke daftar pertanyaan. Pindah halaman saat chat terbuka = garis "sesi baru" + pertanyaan menu baru.
+  "Hal lainnya" menerima ketikan bebas dan mencocokkan kata kunci (`searchTopics`).
+- **Basis pengetahuan**: `lib/help/guided-topics.ts` (79 tanya-jawab: 6 topik umum + topik per menu untuk semua menu
+  AR) dan `lib/help/menu-help.ts` (penjelasan per halaman, diperbarui: Hold Faktur Pajak, Pengajuan/Daftar Pengajuan,
+  LTKP, Aplikasi Kolektor, Jadwal Kolektor, Dashboard Tukar Faktur, Presentasi, Marketplace). Tes menjamin setiap menu
+  internal punya pertanyaan & penjelasan, rujukan valid, dan jawaban singkat tanpa pantun.
+- **Riwayat**: sessionStorage per akun (`ar-helpdesk:guided:<accountId>`), maks. 60 pesan, hilang saat tab ditutup;
+  tombol ↻ Mulai ulang. Tidak ada data halaman/keuangan yang dikirim ke mana pun.
+- **Asisten AI (GAS) ikut gaya singkat**: `node scripts/export-menu-help.mjs <folder-gas>` kini juga menghasilkan
+  `QNA_FAQ_` (tanya-jawab template yang sama) dan `QNA_STYLE_` (aturan: singkat-jelas-padat, ramah "Kak", DILARANG
+  pantun/puisi/basa-basi). Pemilik script perlu: `clasp push` MenuHelp.js, menempelkan `QNA_STYLE_` di awal system
+  prompt (menggantikan aturan humor/pantun), mengosongkan/menghapus dokumen Drive **QnA - 02 Pantun** dan menyunting
+  **QnA - 01 Persona** agar tidak meminta humor/pantun, lalu Deploy → Manage deployments → New version.

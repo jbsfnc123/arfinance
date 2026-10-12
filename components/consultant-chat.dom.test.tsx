@@ -13,9 +13,36 @@ beforeEach(async()=>{
 });
 afterEach(()=>{act(()=>root.unmount());host.remove();});
 const click=async(label:string)=>act(async()=>host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click());
+const clickText=async(text:string)=>act(async()=>[...host.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent===text)!.click());
+const type=async(value:string)=>{
+  const input=host.querySelector<HTMLInputElement>('input[aria-label="Ketik kendala"]')!;
+  await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
+  await act(async()=>input.form!.requestSubmit());
+};
+// Asisten AI hanya cadangan: buka lewat pertanyaan yang tidak ada jawabannya.
+const openAi=async()=>{await click('Buka AR Helpdesk');await type('xyzzy qwerty');await clickText('Tanya Asisten AI');};
+beforeEach(()=>sessionStorage.clear());
+it('opens the guided chat first without any external request',async()=>{
+  await click('Buka AR Helpdesk');
+  expect(host.querySelector('iframe')).toBeNull();
+  expect(host.textContent).toContain('Hai Kak');
+  expect(host.querySelector('[aria-label="Pilihan pertanyaan"]')?.textContent).toContain('Hal lainnya');
+});
+it('answers a template question and offers follow-ups without AI',async()=>{
+  await click('Buka AR Helpdesk');
+  await clickText('Topik umum');
+  await clickText('Cara upload data terbaru');
+  expect(host.textContent).toContain('Pusat Upload Data');
+  expect(host.textContent).toContain('Sudah terjawab, Kak?');
+  await clickText('Sudah jelas, makasih 🙏');
+  expect(host.textContent).toContain('Sama-sama, Kak');
+  await type('lupa pin');
+  expect(host.textContent).toContain('Reset PIN');
+  expect(host.querySelector('iframe')).toBeNull();
+});
 it('starts collapsed with no external iframe request, opens and keeps the same frame when minimized',async()=>{
   expect(host.querySelector('iframe')).toBeNull();
-  await click('Buka AR Helpdesk');
+  await openAi();
   const frame=host.querySelector('iframe')!;
   expect(frame.getAttribute('src')).toBe(CONSULTANT_URL);
   expect(frame.getAttribute('referrerpolicy')).toBe('no-referrer');
@@ -23,6 +50,7 @@ it('starts collapsed with no external iframe request, opens and keeps the same f
   expect(host.firstElementChild?.getAttribute('style')).not.toContain('--dock-reserve');
   await click('Tutup chat');expect(host.querySelector('section')?.hidden).toBe(true);
   await click('Buka AR Helpdesk');expect(host.querySelector('iframe')).toBe(frame);
+  await click('Kembali ke panduan');expect(host.querySelector('iframe')).toBe(frame);
   expect(host.querySelector('section')?.hidden).toBe(false);
 });
 it('returns focus when closed by Escape',async()=>{
@@ -33,13 +61,13 @@ it('returns focus when closed by Escape',async()=>{
 });
 it('passes only the account display name for greeting lookup, safely encoded', async()=>{
   await act(async()=>root.render(<ConsultantChat key="account-a" accountName="Mando & Tim" />));
-  await click('Buka AR Helpdesk');
+  await openAi();
   const url=new URL(host.querySelector('iframe')!.getAttribute('src')!);
   expect(url.searchParams.get('account')).toBe('Mando & Tim');
   expect([...url.searchParams.keys()]).toEqual(['account']);
 });
 it('clears the embedded conversation when the account changes',async()=>{
-  await click('Buka AR Helpdesk');
+  await openAi();
   await act(async()=>root.render(<ConsultantChat key="account-b" />));
   expect(host.querySelector('iframe')).toBeNull();
 });
@@ -55,24 +83,24 @@ it('does not close chat when Escape belongs to a newer modal',async()=>{
 
 it('scopes browser memory by account ID even when display names match', async()=>{
   await act(async()=>root.render(<ConsultantChat key="a" accountName="Mando" accountId="11111111-1111-4111-8111-111111111111" />));
-  await click('Buka AR Helpdesk');
+  await openAi();
   const first=new URL(host.querySelector('iframe')!.getAttribute('src')!);
   expect(first.searchParams.get('accountId')).toBe('11111111-1111-4111-8111-111111111111');
   await act(async()=>root.render(<ConsultantChat key="b" accountName="Mando" accountId="22222222-2222-4222-8222-222222222222" />));
   expect(host.querySelector('iframe')).toBeNull();
-  await click('Buka AR Helpdesk');
+  await openAi();
   const second=new URL(host.querySelector('iframe')!.getAttribute('src')!);
   expect(second.searchParams.get('accountId')).not.toBe(first.searchParams.get('accountId'));
   expect([...second.searchParams.keys()].sort()).toEqual(['account','accountId']);
 });
 it('uses the new name AR Helpdesk', async()=>{
-  await click('Buka AR Helpdesk');
+  await openAi();
   expect(host.querySelector('section')?.getAttribute('aria-label')).toBe('AR Helpdesk');
   expect(host.textContent).toContain('AR Helpdesk');
   expect(host.querySelector('iframe')?.getAttribute('title')).toBe('Percakapan dengan AR Helpdesk');
 });
 it('answers page-context requests only from the Apps Script origin inside its own frame', async()=>{
-  await click('Buka AR Helpdesk');
+  await openAi();
   const frameWin = host.querySelector('iframe')!.contentWindow!;
   const sent: unknown[] = [];
   const source = { postMessage: (m: unknown) => sent.push(m) } as unknown as Window;
@@ -81,4 +109,17 @@ it('answers page-context requests only from the Apps Script origin inside its ow
   // Origin Google tetapi bukan frame chat → diabaikan
   window.dispatchEvent(new MessageEvent('message', { data: { type: 'qna:context:request', id: 'x2' }, origin: 'https://n-x-script.googleusercontent.com', source }));
   expect(sent).toEqual([]);
+});
+it('keeps the guided conversation per account for the tab session only', async()=>{
+  await act(async()=>root.render(<ConsultantChat key="a" accountId="11111111-1111-4111-8111-111111111111" />));
+  await click('Buka AR Helpdesk');
+  await type('lupa pin');
+  await act(async()=>root.render(<ConsultantChat key="a2" accountId="11111111-1111-4111-8111-111111111111" />));
+  await click('Buka AR Helpdesk');
+  expect(host.textContent).toContain('Reset PIN');
+  await act(async()=>root.render(<ConsultantChat key="b" accountId="22222222-2222-4222-8222-222222222222" />));
+  await click('Buka AR Helpdesk');
+  expect(host.textContent).not.toContain('Reset PIN');
+  await click('Mulai ulang percakapan');
+  expect(host.textContent).toContain('Hai Kak');
 });
