@@ -151,6 +151,8 @@ export const MENU_HELP: MenuHelp[] = [
   ] },
   { href: "/", menu: "Beranda", text: [
     "Portal (Finance): pilih workspace; login berlaku di semua workspace tangki.space. AR Workspace = piutang (collection, tukar faktur, faktur pajak, rekonsiliasi); AP Workspace = hutang usaha (menyusul); Aplikasi Kolektor = tukar faktur kolektor di HP.",
+    "Navigasi: komputer memakai Dock di bawah layar & Ctrl+K untuk mencari; HP memakai tombol ^ di tengah bawah — ketuk atau geser ke atas untuk memunculkan deretan menu, lalu pilih grup atau Cari aplikasi.",
+    "Chat AR Helpdesk (tombol hijau, bisa digeser ke posisi lain; klik ganda = kembali ke pojok kanan bawah): pilih topik yang ditawarkan untuk jawaban langsung, atau Lainnya untuk mengetik pertanyaan sendiri.",
   ] },
   { href: "/akun", menu: "/akun", text: [
     "Akun & PIN: setiap akun masuk dengan nama & PIN 6 digit; PIN tidak pernah ditampilkan ulang — gunakan Reset PIN bila lupa. Akun tanpa PIN wajib membuat PIN saat pertama masuk; setiap akun bisa mengganti PIN & foto profil dari menu akun.",

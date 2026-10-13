@@ -82,3 +82,19 @@ it('answers page-context requests only from the Apps Script origin inside its ow
   window.dispatchEvent(new MessageEvent('message', { data: { type: 'qna:context:request', id: 'x2' }, origin: 'https://n-x-script.googleusercontent.com', source }));
   expect(sent).toEqual([]);
 });
+it('can be dragged to the other edge without opening, remembers the spot, and still opens on a plain click', async()=>{
+  localStorage.removeItem('prefs:chatPos');
+  const btn=()=>host.querySelector<HTMLButtonElement>('button[aria-label="Buka AR Helpdesk"]')!;
+  const fire=(type:string,x:number,y:number)=>act(async()=>{btn().dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:7,button:0,clientX:x,clientY:y}));});
+  btn().getBoundingClientRect=()=>({left:innerWidth-52,top:innerHeight-52,right:innerWidth-8,bottom:innerHeight-8,width:44,height:44,x:0,y:0,toJSON(){}}) as DOMRect;
+  await fire('pointerdown',innerWidth-30,innerHeight-30);
+  await fire('pointermove',40,innerHeight-300);
+  await fire('pointerup',40,innerHeight-300);
+  await act(async()=>btn().click()); // klik setelah geser diabaikan
+  expect(host.querySelector('iframe')).toBeNull();
+  expect(JSON.parse(localStorage.getItem('prefs:chatPos')!).side).toBe('left');
+  expect(btn().style.left).not.toBe('');
+  await act(async()=>btn().click());
+  expect(host.querySelector('section')?.hidden).toBe(false);
+  localStorage.removeItem('prefs:chatPos');
+});

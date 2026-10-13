@@ -80,3 +80,19 @@ The embed is independent and can run with the existing chatbot. Supabase retriev
   jejak. Kini `appsscript.json` mendeklarasikan scope drive/documents, error dicatat, memori disimpan meski AI sibuk.
   Pemilik script WAJIB menjalankan `qnaDiagnose` sekali dari editor (memberi izin & membuat folder memori + 4 dokumen),
   lalu Deploy → Manage deployments → New version.
+
+## Fase 67 — mode terpandu tanpa AI & navigasi HP (2026-10-13)
+
+- **Sumber tunggal topik**:
+  - `lib/help/helpdesk-topics.ts` berisi topik tulisan tangan (umum, istilah, khusus halaman) + `pageTopics(MENU_HELP)` (otomatis "Halaman ini untuk apa?" / "Penjelasan lengkap" per halaman). Topik digabung di `lib/help/topics.ts`.
+  - `lib/help/helpdesk-engine.ts` = satu fungsi mandiri `helpdeskEngine(topics)`: `forPage(path)`, `search(text, path)`, `confident(hits, text)`, `get(id)`.
+- **Ekspor**: `node scripts/export-menu-help.mjs <folder-gas>` menulis `MenuHelp.js` + `Topics.js` (data + kode mesin hasil `toString()`; diuji di sandbox `vm` agar hasil identik). Lalu `clasp push` + buat versi baru pada deployment yang sama.
+- **Chat (Apps Script)**:
+  - `doGet` menyisipkan Topics.js ke halaman (`helpdeskJs_`).
+  - Sapaan menyebut halaman aktif (postMessage `{menu, path}`) lalu menampilkan tombol pilihan: topik halaman, cara update data, 📚 istilah, 🧭 topik lain, ✍️ Lainnya.
+  - Tombol dijawab langsung tanpa AI, diikuti topik lanjutan (`related`) + Menu utama.
+  - Pertanyaan ketik yang jelas cocok dengan satu topik (mis. "apa itu GR") juga dijawab langsung.
+  - Pertanyaan lain dikirim ke AI; prompt mendapat `TOPIK_TERKAIT`.
+- **AI gagal / sibuk / 45 detik tanpa jawaban**: `processChat` mengembalikan `busy: true`, lalu halaman mengalihkan ke topik terdekat (hingga 8 tombol) — tidak ada lagi jawaban "sedang sibuk" yang buntu.
+- **Tombol chat bisa digeser**: tarik untuk memindah, dilepas menempel ke tepi kiri/kanan, posisi disimpan per perangkat (`prefs:chatPos`); klik ganda = kembali ke posisi bawaan. Panel terbuka di atas tombol, atau di bawahnya bila tombol di separuh atas layar.
+- **HP (< md)**: bar 5 ikon diganti pegangan ^ di tengah bawah (`app/(shell)/shell/mobile-menu.tsx`). Ketuk/geser ke atas → deretan menu mendatar (Beranda, semua grup, Cari aplikasi). Grup dengan satu submenu langsung dibuka; grup lain membuka Semua aplikasi tepat di grup itu.

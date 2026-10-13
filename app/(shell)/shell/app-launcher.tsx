@@ -11,8 +11,10 @@ import { itemIcon } from "@/lib/ui/app-icons";
 // App Launcher: SEMUA modul sebagai grid ubin per grup + pencarian di atas. Ubin tanpa akses (ACL existing) bertitik
 // merah; klik/Enter → onDenied (pesan), Launcher tetap terbuka & tidak ada navigasi.
 // Keyboard: panah menggeser fokus antar-ubin (mengikuti jumlah kolom grid), Enter membuka, Esc menutup.
-export function AppLauncher({ open, onClose, menu, homeLocked, onDenied }: {
-  open: boolean; onClose: () => void; menu: NavGroup[]; homeLocked: boolean; onDenied: (label: string) => void;
+// focusGroup (dari menu HP): fokus awal di ubin pertama grup itu (otomatis tergulir ke sana) alih-alih kotak cari, agar
+// keyboard HP tidak muncul.
+export function AppLauncher({ open, onClose, menu, homeLocked, onDenied, focusGroup = null }: {
+  open: boolean; onClose: () => void; menu: NavGroup[]; homeLocked: boolean; onDenied: (label: string) => void; focusGroup?: string | null;
 }) {
   const [q, setQ] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
@@ -54,7 +56,7 @@ export function AppLauncher({ open, onClose, menu, homeLocked, onDenied }: {
         <div className="flex items-center gap-2 px-5 pb-3 pt-4 pointer-coarse:pr-14">
           <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-[10px] border border-hairline bg-fg/6 px-3 py-1.5 focus-within:border-accent/60">
             <Icon name="search" size={18} className="text-fg-2" />
-            <input data-autofocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="Cari aplikasi" aria-label="Cari aplikasi"
+            <input data-autofocus={focusGroup ? undefined : ""} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="Cari aplikasi" aria-label="Cari aplikasi"
               className="w-full bg-transparent text-[13px] outline-none placeholder:text-fg-2 no-ring" />
           </div>
           <button type="button" onClick={close} aria-label="Tutup" className="absolute right-4 top-4 flex h-7 w-7 pointer-coarse:right-2 pointer-coarse:top-2 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full text-fg-2 hover:bg-fg/8 hover:text-fg">
@@ -63,10 +65,11 @@ export function AppLauncher({ open, onClose, menu, homeLocked, onDenied }: {
         </div>
         <div ref={gridRef} onKeyDown={onGridKey} className="min-h-0 overflow-y-auto px-5 pb-5">
           {groups.map((g) => (
-            <section key={g.id} className="mb-5 last:mb-0">
+            <section key={g.id} data-group={g.id} className="mb-5 scroll-mt-2 last:mb-0">
               <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-fg-2">{g.label}</h2>
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
-                {g.children.map((c) => {
+                {g.children.map((c, i) => {
+                  const auto = !q && g.id === focusGroup && i === 0 ? { "data-autofocus": "" } : {};
                   const inner = (
                     <>
                       <span className="relative flex motion-safe:transition-transform motion-safe:duration-150 motion-safe:group-hover:-translate-y-0.5">
@@ -80,12 +83,12 @@ export function AppLauncher({ open, onClose, menu, homeLocked, onDenied }: {
                   );
                   const cls = "group relative flex flex-col items-center gap-2 rounded-[14px] px-2 py-3 outline-none transition-colors hover:bg-fg/6 focus-visible:bg-fg/8";
                   if (c.locked) return (
-                    <button key={c.id} data-tile type="button" className={cls} aria-label={c.label + LOCKED_SUFFIX} title="Tidak ada akses"
+                    <button key={c.id} data-tile {...auto} type="button" className={cls} aria-label={c.label + LOCKED_SUFFIX} title="Tidak ada akses"
                       onClick={() => onDenied(g.id === "home" ? c.label : `${g.label} › ${c.label}`)}>{inner}</button>
                   );
                   return c.external
-                    ? <a key={c.id} data-tile href={c.href} target="_blank" rel="noreferrer" className={cls} onClick={close}>{inner}</a>
-                    : <Link key={c.id} data-tile href={c.href} className={cls} onClick={close}>{inner}</Link>;
+                    ? <a key={c.id} data-tile {...auto} href={c.href} target="_blank" rel="noreferrer" className={cls} onClick={close}>{inner}</a>
+                    : <Link key={c.id} data-tile {...auto} href={c.href} className={cls} onClick={close}>{inner}</Link>;
                 })}
               </div>
             </section>
