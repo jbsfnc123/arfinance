@@ -11,13 +11,14 @@ import { deniedMessage } from "@/components/lock-dot";
 import { ConsultantChat } from "@/components/consultant-chat";
 import { AccountToolsProvider } from "@/components/account/account-tools";
 import { TopBar } from "./shell/top-bar";
-import { Dock, MobileNav } from "./shell/dock";
+import { Dock } from "./shell/dock";
+import { MobileMenu } from "./shell/mobile-menu";
 import { AppLauncher } from "./shell/app-launcher";
 import { Spotlight } from "./shell/spotlight";
 import { useCommandK } from "./shell/use-command-k";
 
-// Kerangka halaman AR Workspace (Fase 39, macOS-inspired): Top bar kaca + Dock mengambang (desktop) / bottom nav
-// (HP) + App Launcher + Spotlight (Ctrl/Cmd+K). Konten memakai hampir seluruh lebar; ruang bawah dicadangkan
+// Kerangka halaman AR Workspace (Fase 39, macOS-inspired): Top bar kaca + Dock mengambang (desktop) / pegangan menu ^
+// (HP, Fase 67) + App Launcher + Spotlight (Ctrl/Cmd+K). Konten memakai hampir seluruh lebar; ruang bawah dicadangkan
 // (--dock-reserve) agar tabel yang tingginya mengikuti layar tidak tertutup Dock. Client component karena menyimpan
 // status overlay dan membersihkan cache browser saat logout.
 type ShellProps = {
@@ -40,6 +41,7 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabl
   // Overlay diikat ke path saat dibuka → pindah halaman otomatis menutupnya tanpa setState di effect.
   const [ov, setOv] = useState<{ path: string; v: "launcher" | "spotlight" | null }>({ path: "", v: null });
   const [refreshing, setRefreshing] = useState(false);
+  const [launcherGroup, setLauncherGroup] = useState<string | null>(null); // grup yang dituju dari menu HP
   const router = useRouter();
   const pathname = usePathname();
   const overlay = ov.path === pathname ? ov.v : null;
@@ -70,6 +72,7 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabl
   useCommandK(toggleSpotlight);
 
   const closeOverlay = useCallback(() => setOverlay(null), [setOverlay]);
+  const openLauncher = useCallback((group?: string) => { setLauncherGroup(group ?? null); setOverlay("launcher"); }, [setOverlay]);
   // Refresh: muat ulang dataset yang sedang dipakai + render ulang komponen server.
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -92,9 +95,9 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabl
         <div key={pathname} className="page-in">{children}</div>
       </main>
       {consultantEnabled ? <ConsultantChat key={user.id} accountName={user.name} accountId={user.id} /> : null}
-      <Dock menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
-      <MobileNav menu={menu} homeLocked={homeLocked} onLauncher={() => setOverlay("launcher")} onDenied={denyAccess} />
-      <AppLauncher open={overlay === "launcher"} onClose={closeOverlay} menu={menu} homeLocked={homeLocked} onDenied={denyAccess} />
+      <Dock menu={menu} homeLocked={homeLocked} onLauncher={() => openLauncher()} onDenied={denyAccess} />
+      <MobileMenu menu={menu} homeLocked={homeLocked} onLauncher={openLauncher} onDenied={denyAccess} />
+      <AppLauncher open={overlay === "launcher"} onClose={closeOverlay} menu={menu} homeLocked={homeLocked} onDenied={denyAccess} focusGroup={launcherGroup} />
       <Spotlight open={overlay === "spotlight"} onClose={closeOverlay} menu={menu} homeLocked={homeLocked} canTagihan={canTagihan} onDenied={denyAccess} />
     </div>
   );

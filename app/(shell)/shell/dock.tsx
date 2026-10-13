@@ -159,31 +159,3 @@ function DockButton({ ref, id, label, size, active, pressed, separator, locked, 
     </>
   );
 }
-
-// HP: navigasi bawah ringkas (Beranda + 3 grup + Semua aplikasi). Slot terbatas → grup yang bisa diakses didahulukan;
-// semua menu (termasuk yang bertitik merah) tetap lengkap di "Semua".
-export function MobileNav({ menu, homeLocked, onLauncher, onDenied }: { menu: NavGroup[]; homeLocked: boolean; onLauncher: () => void; onDenied: (label: string) => void }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const groups = [...menu.filter((g) => !g.locked), ...menu.filter((g) => g.locked)].slice(0, 3);
-  const items: DockItem[] = [
-    { id: "home", label: "Beranda", icon: "home", href: "/", locked: homeLocked },
-    ...groups.map((g) => ({ id: g.id, label: g.label, icon: g.icon, group: g, locked: g.locked })),
-  ];
-  const activeId = pathname === "/" ? "home" : menu.find((g) => g.children.some((c) => c.href === pathname))?.id;
-  return (
-    <nav aria-label="Menu utama" className="glass-strong fixed inset-x-0 bottom-0 z-(--z-dock) flex justify-around rounded-t-[20px] border-b-0 px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
-      {[...items, { id: "launcher", label: "Semua", icon: "apps" }].map((it) => (
-        <button key={it.id} type="button" aria-label={"locked" in it && it.locked ? it.label + LOCKED_SUFFIX : it.label} aria-current={activeId === it.id ? "page" : undefined}
-          onClick={() => it.id === "launcher" ? onLauncher() : "locked" in it && it.locked ? onDenied(it.label) : it.href ? router.push(it.href) : it.group ? (it.group.children.length === 1 && !it.group.children[0].locked ? router.push(it.group.children[0].href) : onLauncher()) : undefined}
-          className={`flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 text-[10px] font-medium ${activeId === it.id ? "text-accent" : "text-fg-2"}`}>
-          <span className="relative flex">
-            <Icon name={groupIcon(it.id).glyph} size={22} strokeWidth={activeId === it.id ? 2.1 : 1.75} />
-            {"locked" in it && it.locked && <LockDot className="!-right-1 !-top-0.5" />}
-          </span>
-          {it.label}
-        </button>
-      ))}
-    </nav>
-  );
-}
