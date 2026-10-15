@@ -96,3 +96,12 @@ The embed is independent and can run with the existing chatbot. Supabase retriev
 - **AI gagal / sibuk / 45 detik tanpa jawaban**: `processChat` mengembalikan `busy: true`, lalu halaman mengalihkan ke topik terdekat (hingga 8 tombol) — tidak ada lagi jawaban "sedang sibuk" yang buntu.
 - **Tombol chat bisa digeser**: tarik untuk memindah, dilepas menempel ke tepi kiri/kanan, posisi disimpan per perangkat (`prefs:chatPos`); klik ganda = kembali ke posisi bawaan. Panel terbuka di atas tombol, atau di bawahnya bila tombol di separuh atas layar.
 - **HP (< md)**: bar 5 ikon diganti pegangan ^ di tengah bawah (`app/(shell)/shell/mobile-menu.tsx`). Ketuk/geser ke atas → deretan menu mendatar (Beranda, semua grup, Cari aplikasi). Grup dengan satu submenu langsung dibuka; grup lain membuka Semua aplikasi tepat di grup itu.
+
+## Fase 68 — tab seperti browser & header chat (2026-10-15)
+
+- **Tab shell**:
+  - `lib/ui/tabs.ts` (logika murni: buka/tutup/batas 10) dan `app/(shell)/shell/shell-tabs.tsx` (`useShellTabs`, `TabPages`). Bilah tab ada di `app/(shell)/shell/tab-bar.tsx`.
+  - Daftar tab disimpan di view-state `shell:tabs`.
+  - Halaman di `app/(shell)/tab-views.tsx` dirender shell di dalam React `<Activity>`: tab tersembunyi menyimpan state & DOM, dan scroll `<main>` dipulihkan per tab. Halaman lain (yang membaca data di server) memakai `children`.
+  - **Wajib**: bila props `page.tsx` berpola guard+view berubah, sesuaikan juga `tab-views.tsx` (dijaga `tab-views.test.ts`: route ada, `menuGuard` sama, tanpa `createClient`).
+- **Header panel chat**: tautan "Powered by otomatisasi.store" + logo OS (salinan `public/brand/os-mark.svg` repo otomatisasi.store) ke https://otomatisasi.store. Header di dalam Apps Script tetap "AR Helpdesk".

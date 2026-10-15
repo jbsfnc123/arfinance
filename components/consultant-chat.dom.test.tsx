@@ -19,7 +19,9 @@ it('starts collapsed with no external iframe request, opens and keeps the same f
   const frame=host.querySelector('iframe')!;
   expect(frame.getAttribute('src')).toBe(CONSULTANT_URL);
   expect(frame.getAttribute('referrerpolicy')).toBe('no-referrer');
-  expect(host.querySelector('a[target="_blank"]')).toBeNull();
+  // Satu-satunya tautan keluar: "Powered by otomatisasi.store" di header panel.
+  expect([...host.querySelectorAll('a[target="_blank"]')].map((a)=>a.getAttribute('href'))).toEqual(['https://otomatisasi.store']);
+  expect(host.querySelector('a[target="_blank"]')?.getAttribute('rel')).toContain('noopener');
   expect(host.firstElementChild?.getAttribute('style')).not.toContain('--dock-reserve');
   await click('Tutup chat');expect(host.querySelector('section')?.hidden).toBe(true);
   await click('Buka AR Helpdesk');expect(host.querySelector('iframe')).toBe(frame);
@@ -68,7 +70,8 @@ it('scopes browser memory by account ID even when display names match', async()=
 it('uses the new name AR Helpdesk', async()=>{
   await click('Buka AR Helpdesk');
   expect(host.querySelector('section')?.getAttribute('aria-label')).toBe('AR Helpdesk');
-  expect(host.textContent).toContain('AR Helpdesk');
+  expect(host.textContent).toContain('Powered by otomatisasi.store');
+  expect(host.querySelector('button[title="AR Helpdesk"]')).not.toBeNull();
   expect(host.querySelector('iframe')?.getAttribute('title')).toBe('Percakapan dengan AR Helpdesk');
 });
 it('answers page-context requests only from the Apps Script origin inside its own frame', async()=>{

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { NavGroup } from "@/lib/menu";
 import { idbClear } from "@/lib/cache/idb";
@@ -16,9 +16,11 @@ import { MobileMenu } from "./shell/mobile-menu";
 import { AppLauncher } from "./shell/app-launcher";
 import { Spotlight } from "./shell/spotlight";
 import { useCommandK } from "./shell/use-command-k";
+import { TabBar } from "./shell/tab-bar";
+import { TabPages, useShellTabs } from "./shell/shell-tabs";
 
 // Kerangka halaman AR Workspace (Fase 39, macOS-inspired): Top bar kaca + Dock mengambang (desktop) / pegangan menu ^
-// (HP, Fase 67) + App Launcher + Spotlight (Ctrl/Cmd+K). Konten memakai hampir seluruh lebar; ruang bawah dicadangkan
+// (HP, Fase 67) + bilah tab seperti browser (Fase 68, shell/shell-tabs.tsx) + App Launcher + Spotlight (Ctrl/Cmd+K). Konten memakai hampir seluruh lebar; ruang bawah dicadangkan
 // (--dock-reserve) agar tabel yang tingginya mengikuti layar tidak tertutup Dock. Client component karena menyimpan
 // status overlay dan membersihkan cache browser saat logout.
 type ShellProps = {
@@ -29,6 +31,7 @@ type ShellProps = {
   homeLocked: boolean;
   consultantEnabled: boolean; // ditentukan server dari role.kind, bukan label role
   user: { id: string; name: string; role: string; collection: string | null; avatar: string | null };
+  roleKind?: string;          // jenis role (sa/ctrl/kurir/…) untuk props view di tab (tab-views.tsx)
   children: React.ReactNode;
 };
 
@@ -37,7 +40,7 @@ export function ShellChrome(props: ShellProps) {
   return <ToastProvider><AccountToolsProvider userId={props.user.id} hasPhoto={!!props.user.avatar}><ShellFrame {...props} /></AccountToolsProvider></ToastProvider>;
 }
 
-function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabled, user, children }: ShellProps) {
+function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabled, user, roleKind = "", children }: ShellProps) {
   // Overlay diikat ke path saat dibuka → pindah halaman otomatis menutupnya tanpa setState di effect.
   const [ov, setOv] = useState<{ path: string; v: "launcher" | "spotlight" | null }>({ path: "", v: null });
   const [refreshing, setRefreshing] = useState(false);
@@ -53,6 +56,10 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabl
   const toast = useToast();
   // Menu tanpa akses: tetap di halaman sekarang, tampilkan pesan.
   const denyAccess = useCallback((label: string) => toast(deniedMessage(label), "danger", 6000), [toast]);
+  const onEvicted = useCallback((label: string) => toast(`Tab "${label}" ditutup otomatis (maksimal 10 tab).`, "info", 4000), [toast]);
+  const tabs = useShellTabs(pathname, onEvicted);
+  const mainRef = useRef<HTMLElement>(null);
+  const tabCtx = useMemo(() => ({ menu, roleKind, userName: user.name, collection: user.collection }), [menu, roleKind, user.name, user.collection]);
 
   // Prefetch semua menu yang boleh diakses saat browser sedang senggang, supaya klik menu tidak menunggu server.
   useEffect(() => {
@@ -91,8 +98,9 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabl
     <div className="flex h-screen flex-col">
       <TopBar title={title} icon={icon} menu={menu} portalHref={portalHref} user={user}
         onSearch={() => setOverlay("spotlight")} onRefresh={refresh} refreshing={refreshing} signOut={signOut} />
-      <main className="min-w-0 flex-1 overflow-auto px-4 pt-4 md:px-6 md:pt-5" style={{ paddingBottom: "var(--dock-reserve)" }}>
-        <div key={pathname} className="page-in">{children}</div>
+      <TabBar tabs={tabs.tabs} active={pathname} onSelect={tabs.select} onClose={tabs.close} onCloseOthers={tabs.others} onReload={tabs.reload} />
+      <main ref={mainRef} className="min-w-0 flex-1 overflow-auto px-4 pt-4 md:px-6 md:pt-5" style={{ paddingBottom: "var(--dock-reserve)" }}>
+        <TabPages tabs={tabs.tabs} reloads={tabs.reloads} pathname={pathname} ctx={tabCtx} main={mainRef}>{children}</TabPages>
       </main>
       {consultantEnabled ? <ConsultantChat key={user.id} accountName={user.name} accountId={user.id} /> : null}
       <Dock menu={menu} homeLocked={homeLocked} onLauncher={() => openLauncher()} onDenied={denyAccess} />
