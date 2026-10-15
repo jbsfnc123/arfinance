@@ -152,6 +152,7 @@ export const MENU_HELP: MenuHelp[] = [
   { href: "/", menu: "Beranda", text: [
     "Portal (Finance): pilih workspace; login berlaku di semua workspace tangki.space. AR Workspace = piutang (collection, tukar faktur, faktur pajak, rekonsiliasi); AP Workspace = hutang usaha (menyusul); Aplikasi Kolektor = tukar faktur kolektor di HP.",
     "Navigasi: komputer memakai Dock di bawah layar & Ctrl+K untuk mencari; HP memakai tombol ^ di tengah bawah — ketuk atau geser ke atas untuk memunculkan deretan menu, lalu pilih grup atau Cari aplikasi.",
+    "Tab: setiap menu yang dibuka menjadi tab di bawah bar atas (maks. 10; tab paling lama tidak dipakai ditutup otomatis). Pindah tab tidak memuat ulang halaman — filter, isian & posisi gulir tetap. × atau klik tengah = tutup tab; klik kanan = Muat ulang tab / Tutup tab lain. Daftar tab tetap ada setelah refresh browser, tetapi isian yang belum disimpan hilang. Beranda, Marketplace, Upload Target & Template WA dimuat ulang saat tabnya dibuka kembali.",
     "Chat AR Helpdesk (tombol hijau, bisa digeser ke posisi lain; klik ganda = kembali ke pojok kanan bawah): pilih topik yang ditawarkan untuk jawaban langsung, atau Lainnya untuk mengetik pertanyaan sendiri.",
   ] },
   { href: "/akun", menu: "/akun", text: [

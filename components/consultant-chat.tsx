@@ -9,6 +9,19 @@ import { isChatOrigin, isWithin, menuLabel } from "@/lib/chat-context";
 import { CHAT_BTN, chatPanelBox, clampB, saveChatPos, snapChatPos, useChatPos, useViewportH } from "@/lib/ui/chat-position";
 
 export const CHAT_NAME = "AR Helpdesk";
+export const POWERED_BY_URL = "https://otomatisasi.store";
+
+// Logo OS otomatisasi.store (salinan public/brand/os-mark.svg di repo otomatisasi.store).
+function OsMark({ size = 20 }: { size?: number }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 64 64" width={size} height={size} fill="none" className="shrink-0">
+      <rect width="64" height="64" rx="16" fill="#172743" />
+      <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="15.25" stroke="#91BFFF" strokeOpacity="0.35" strokeWidth="1.5" />
+      <rect x="11.5" y="19" width="18" height="26" rx="9" stroke="#F7FBFF" strokeWidth="5" />
+      <path d="M52 20H43a6 6 0 0 0 0 12h3a6 6 0 0 1 0 12H37" stroke="#91BFFF" strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  );
+}
 export { CONSULTANT_URL } from "@/lib/consultant-config";
 
 // Load the remote bot only after the first click. Keep its conversation when minimized.
@@ -91,7 +104,11 @@ export function ConsultantChat({ accountName = "", accountId = "" }: { accountNa
       style={panelStyle}>
       <div className="flex h-full min-h-0 flex-col">
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-2">
-          <span className="text-sm font-semibold">{CHAT_NAME}</span>
+          <a href={POWERED_BY_URL} target="_blank" rel="noopener noreferrer" aria-label="Powered by otomatisasi.store (buka situs)"
+            className="flex min-w-0 items-center gap-2 rounded-lg px-1 py-0.5 text-xs text-fg-2 hover:bg-fg/5 hover:text-fg focus-visible:outline-2 focus-visible:outline-accent">
+            <OsMark />
+            <span className="truncate">Powered by <b className="font-semibold text-fg">otomatisasi<span className="text-[#5b8fd6]">.store</span></b></span>
+          </a>
           <button ref={closeButton} type="button" onClick={close} aria-label="Tutup chat" className="flex h-8 w-8 items-center justify-center rounded-lg text-fg-2 hover:bg-fg/5 focus-visible:outline-2 focus-visible:outline-accent">
             <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18" /></svg>
           </button>
