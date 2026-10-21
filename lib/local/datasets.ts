@@ -50,7 +50,7 @@ export type Datasets = {
   rkm: { worksheet: RkmWorksheet[]; gr: RkmGr[]; kwitansi: RkmKw[] };
   mutasi: { accounts: Account[]; mutations: Mutation[] };
   erp: { invoices: ErpInvoice[]; payments: { invoice_no: string; payment_date: string; amount: number }[] };
-  tukar: { done: { tanggal_tukar: string | null; kurir: string | null; business_partner: string | null; kode: string | null }[] };
+  tukar: { done: { tanggal_tukar: string | null; kurir: string | null; business_partner: string | null; invoice_no?: string | null; kode: string | null }[] };
   settings: Record<string, unknown>;
   remarks: { remarks: Remark[] };
   // ERP khusus History Pembayaran (pack_erp_recent): invoice ber-tempo yang dibayar ±4 bulan terakhir + pembayarannya;

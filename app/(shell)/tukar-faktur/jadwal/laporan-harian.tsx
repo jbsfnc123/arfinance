@@ -8,13 +8,15 @@ import { tukarDays } from "@/lib/modules/tukar/dashboard";
 import { useViewState } from "@/lib/ui/view-state";
 import { btnGhost, card, emptyTd, inputCls, td, th } from "@/components/ui";
 import { dailyReport } from "@/lib/modules/tukar/daily-report";
-import { downloadXlsx } from "@/lib/xlsx-client";
+import { downloadXlsx, downloadXlsxSheets } from "@/lib/xlsx-client";
+import { tukarDetailSheets } from "@/lib/modules/tukar/detail-export";
 import { TableBox } from "@/components/table-box";
 
 const dateHeader = th.replace("text-left", "text-center");
 
 // Laporan Harian kolektor (pindahan Dashboard Tukar Faktur lama): tukar faktur Done per hari dari Aplikasi Kolektor —
 // Tanggal di kolom; invoice, BP unik, dan lokasi unik di baris. Total di kolom terakhir.
+// Export Detail (Fase 69): per invoice — Business Partner, No Invoice, Kolektor, Kode Unik (+ sheet Titik Lokasi per kode).
 export function LaporanHarian() {
   const [month, setMonth] = useViewState("jadwal:laporan:month", todayJakarta().slice(0, 7));
   const [kurir, setKurir] = useViewState("jadwal:laporan:kurir", "");
@@ -27,6 +29,14 @@ export function LaporanHarian() {
     if (!report || exporting) return;
     setExporting(true); setExportError("");
     try { await downloadXlsx(`Laporan Harian Kolektor ${month} ${kurir || "Semua"}.xlsx`, "Laporan Harian", report.excel); }
+    catch (e) { setExportError(e instanceof Error ? e.message : "Ekspor gagal. Silakan coba lagi."); }
+    finally { setExporting(false); }
+  }
+  const detail = useMemo(() => (tukar.data ? tukarDetailSheets(tukar.data.done, month, kurir) : null), [tukar.data, month, kurir]);
+  async function exportDetail() {
+    if (!detail?.rows || exporting) return;
+    setExporting(true); setExportError("");
+    try { await downloadXlsxSheets(`Detail Laporan Kolektor ${month} ${kurir || "Semua"}.xlsx`, detail.sheets); }
     catch (e) { setExportError(e instanceof Error ? e.message : "Ekspor gagal. Silakan coba lagi."); }
     finally { setExporting(false); }
   }
@@ -44,6 +54,10 @@ export function LaporanHarian() {
         </select>
         <button type="button" className={`${btnGhost} ml-auto`} disabled={!report || tukar.loading || !!tukar.error || exporting} onClick={() => void exportExcel()}>
           {exporting ? "Mengekspor…" : "Export Excel"}
+        </button>
+        <button type="button" className={btnGhost} disabled={!detail?.rows || tukar.loading || !!tukar.error || exporting} onClick={() => void exportDetail()}
+          title="Per invoice: Business Partner, No Invoice, Kolektor, Kode Unik (titik lokasi)">
+          Export Detail
         </button>
         {exportError && <span role="alert" className="text-sm text-danger">Gagal mengekspor: {exportError}</span>}
         {tukar.error && <span className="text-sm text-danger">Gagal memuat: {tukar.error.message}</span>}
