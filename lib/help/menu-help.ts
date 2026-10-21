@@ -45,6 +45,8 @@ export const MENU_HELP: MenuHelp[] = [
   ] },
   { href: "/tukar-faktur/jadwal", menu: "Tukar Faktur › Laporan & Jadwal Kolektor", text: [
     "Laporan Harian: kolom merah = hari Minggu. Total = penjumlahan nilai harian.",
+    "Export Excel = tabel per tanggal seperti di layar. Export Detail = data per invoice hasil Aplikasi Kolektor (Tanggal Tukar, Business Partner, No Invoice, Kolektor, Kode Unik) + sheet Titik Lokasi (satu baris per Kode Unik: jumlah BP & invoice); mengikuti Bulan & Kolektor yang dipilih.",
+    "Kode Unik dibuat satu kali setiap kolektor menyimpan di Aplikasi Kolektor (format tanggal-jam, mis. 02-10-26-101500). Titik Lokasi per hari = jumlah Kode Unik yang berbeda pada hari itu; satu simpan bisa mencakup beberapa BP/invoice.",
   ] },
   { href: "/tukar-faktur/kurir", menu: "Tukar Faktur › Aplikasi Kolektor", text: [
     "Payment Group bersifat opsional, untuk menyaring toko.",
