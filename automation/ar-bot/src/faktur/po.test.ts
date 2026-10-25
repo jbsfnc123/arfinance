@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyPo, readPoRows, verifyStatus, verifySubInvoice } from "./po";
+import { applyPo, docMatches, pickDraftDoc, readPoRows, verifyStatus, verifySubInvoice } from "./po";
 import { groupPages, parsePageText } from "./split";
 import type { FakturItem } from "./split";
 
@@ -37,5 +37,49 @@ describe("kelompok halaman faktur", () => {
     expect(parsePageText("Kode dan Nomor Seri Faktur Pajak: 0400123\n(Referensi: INV/1)")).toEqual({ faktur: "0400123", ref: "INV/1" });
     const g = groupPages(["Nomor Seri Faktur Pajak: 11\nisi", "lanjutan\nReferensi: INV-A)", "Nomor Seri Faktur Pajak: 22", "tanpa nomor"]);
     expect(g.map((x) => [x.faktur, x.invoice, x.pages])).toEqual([["11", "INV-A", [0, 1]], ["22", "22", [2, 3]]]);
+  });
+});
+
+describe("pilih cepat dari data PO", () => {
+  it("invoice yang ada di Excel dicentang, sisanya tidak; baris Excel tanpa faktur dilaporkan", () => {
+    const rows = readPoRows({ text: "Invoice No\tNo PO\nINV-1\tPO1\ninv-3\tPO3\nINV-9\tPO9" });
+    const r = applyPo([item("INV-1"), item("INV-2"), item("INV-3")], rows, { select: true });
+    expect(r.items.map((i) => [i.invoice, i.checked, i.in_po])).toEqual([["INV-1", true, true], ["INV-2", false, false], ["INV-3", true, true]]);
+    expect(r).toMatchObject({ matched: 2, excelRows: 3, unmatchedExcel: ["INV-9"], notInPo: 1 });
+  });
+  it("tanpa select centang tidak berubah", () => {
+    const r = applyPo([{ ...item("INV-2"), checked: true }], readPoRows({ text: "Invoice No\nINV-1" }));
+    expect(r.items[0].checked).toBe(true);
+  });
+});
+
+describe("PO dengan beberapa invoice & SJ", () => {
+  // Contoh user: PO26000016568 → SI/139545 (SJ/173220) & SI/139546 (SJ/174755), masing-masing dokumen Draft sendiri.
+  const docA = { id: "1", docNo: "INV-A", vendorInvoiceNo: "", rows: [{ noSj: "SJ/173220/XXVI/TRA", openAmt: "Rp.1,500,000" }] };
+  const docB = { id: "2", docNo: "INV-B", vendorInvoiceNo: "", rows: [{ noSj: "SJ/174755/XXVI/TRA", openAmt: "Rp.2,750,000" }] };
+  const si545 = { invoice: "SI/139545/X/XXVI/TRA", no_sj: "SJ/173220/XXVI/TRA", open_amt: 1_500_000 };
+  const si546 = { invoice: "SI/139546/X/XXVI/TRA", no_sj: "SJ/174755/XXVI/TRA", open_amt: 2_750_000 };
+  it("dokumen dipilih dari No SJ, urutan hasil cari tidak berpengaruh", () => {
+    expect(pickDraftDoc(si545, [docA, docB])).toMatchObject({ doc: { id: "1" }, sj: "SJ/173220/XXVI/TRA" });
+    expect(pickDraftDoc(si546, [docA, docB])).toMatchObject({ doc: { id: "2" } });
+    expect(pickDraftDoc(si546, [docB, docA])).toMatchObject({ doc: { id: "2" } });
+  });
+  it("dokumen yang sudah berisi invoice lain dilewati; invoice yang sama boleh diproses ulang", () => {
+    const usedA = { ...docA, vendorInvoiceNo: "SI/139546/X/XXVI/TRA" };
+    expect(pickDraftDoc(si545, [usedA, docB])).toEqual({ doc: null, status: "SJ sudah dipakai invoice SI/139546/X/XXVI/TRA (INV-A)" });
+    expect(pickDraftDoc(si545, [{ ...docA, vendorInvoiceNo: "si/139545/x/xxvi/tra" }, docB])).toMatchObject({ doc: { id: "1" } });
+    expect(docMatches(si545, usedA)).toBe(false);
+    expect(docMatches(si545, docA)).toBe(true);
+    expect(docMatches(si546, docA)).toBe(false);
+  });
+  it("SJ tidak ada / nominal beda", () => {
+    expect(pickDraftDoc({ ...si545, no_sj: "SJ/999999", open_amt: 5 }, [docA, docB])).toEqual({ doc: null, status: "SJ Tidak Ditemukan di PO (2 dokumen)" });
+    expect(pickDraftDoc({ ...si545, no_sj: "SJ/999999" }, [docA, docB])).toEqual({ doc: null, status: "Cek Kode Barang (2 dokumen PO)" });
+    expect(pickDraftDoc({ ...si545, open_amt: 9_000_000 }, [docA, docB])).toEqual({ doc: null, status: "Invoice Selisih (INV-A)" });
+  });
+  it("satu dokumen → status bot lama", () => {
+    expect(pickDraftDoc(si546, [docA])).toEqual({ doc: null, status: "Data Tidak Cocok" });
+    expect(pickDraftDoc(si545, [docA])).toMatchObject({ doc: { id: "1" } });
+    expect(pickDraftDoc(si545, [])).toEqual({ doc: null, status: "Not Found in Draft (PO)" });
   });
 });

@@ -302,13 +302,14 @@ async function api(req: http.IncomingMessage, res: http.ServerResponse, url: URL
     return send(res, 200, loadManifest());
   }
   if (p === "/api/faktur/po" && m === "POST") {
-    const b = await body<{ base64?: string; text?: string }>(req);
+    const b = await body<{ base64?: string; text?: string; select?: boolean }>(req);
     const rows = b.base64 ? readPoRows({ buf: Buffer.from(b.base64, "base64") }) : readPoRows({ text: b.text ?? "" });
     const man = loadManifest();
     if (!man.items.length) throw new Error("Belum ada faktur. Unggah PDF Faktur Pajak dulu.");
-    const r = applyPo(man.items, rows);
+    // Pilih cepat (bawaan): invoice yang ada di data PO dicentang, sisanya tidak.
+    const r = applyPo(man.items, rows, { select: b.select !== false });
     saveManifest({ ...man, items: r.items });
-    return send(res, 200, { matched: r.matched, dataRows: r.dataRows, manifest: loadManifest() });
+    return send(res, 200, { matched: r.matched, dataRows: r.dataRows, excelRows: r.excelRows, unmatchedExcel: r.unmatchedExcel, notInPo: r.notInPo, manifest: loadManifest() });
   }
   if (p === "/api/faktur/item" && m === "POST") {
     const { invoice, patch } = await body<{ invoice: string; patch: Record<string, unknown> }>(req);
