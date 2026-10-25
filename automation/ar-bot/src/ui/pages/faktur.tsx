@@ -10,11 +10,13 @@ import { useApp } from "../store";
 import { Card, Confirm, Field, PageHeader } from "../parts/common";
 import { JobLog, RunButtons, useSaveConfig } from "../parts/run";
 
-type Item = { index: number; invoice: string; faktur: string; filename: string; pages: number; size: number; checked: boolean; status: string; no_po?: string; no_sj?: string; open_amt?: number };
+type Item = { index: number; invoice: string; faktur: string; filename: string; pages: number; size: number; checked: boolean; status: string; no_po?: string; no_sj?: string; open_amt?: number; in_po?: boolean };
+type PoResult = { matched: number; dataRows: number; excelRows: number; unmatchedExcel: string[]; notInPo: number; manifest: Manifest };
+const notFound = (s: string) => s.startsWith("Not Found in Draft");
 type Manifest = { source: string | null; createdAt: string | null; totalPages: number; items: Item[] };
 
 const statusTone = (s: string) => s.startsWith("Uploaded") ? "bg-success/15 text-success"
-  : s === "Ready" ? "bg-fill-3 text-fg-2" : s.endsWith("(uji coba)") ? "bg-pill text-pill-fg" : "bg-warning/15 text-warning";
+  : s === "Ready" ? "bg-fill-3 text-fg-2" : s.includes("(uji coba)") ? "bg-pill text-pill-fg" : "bg-warning/15 text-warning";
 
 export function FakturPage() {
   const { state, history } = useApp();
@@ -47,8 +49,10 @@ export function FakturPage() {
     return m;
   });
   const onPo = (body: { base64?: string; text?: string }) => act("po", async () => {
-    const r = await api<{ matched: number; dataRows: number; manifest: Manifest }>("/api/faktur/po", body);
-    toast(`${r.matched} invoice cocok dari ${r.dataRows} baris data.`, r.matched ? "success" : "warning");
+    const r = await api<PoResult>("/api/faktur/po", body);
+    // Pilih cepat: invoice yang ada di data PO langsung dicentang (server), sisanya tidak.
+    const extra = [r.unmatchedExcel.length ? `${r.unmatchedExcel.length} baris Excel tanpa faktur` : "", r.notInPo ? `${r.notInPo} faktur tidak ada di Excel (tidak dicentang)` : ""].filter(Boolean);
+    toast([`${r.matched} invoice dicentang sesuai data PO`, ...extra].join(" · "), r.matched ? "success" : "warning", 8000);
     setPaste(false);
     setPasteText("");
     return r.manifest;
@@ -57,6 +61,10 @@ export function FakturPage() {
   const items = man?.items ?? [];
   const checked = items.filter((i) => i.checked);
   const queue = useMemo(() => items.filter((i) => i.checked && !i.status.startsWith("Uploaded") && (p.mode === "not_found" ? i.status === "Not Found in Draft" || !!i.no_po : true)), [items, p.mode]);
+  const inPo = items.filter((i) => i.in_po);
+  const selectOnly = (pick: (i: Item) => boolean) => act("", () => api<Manifest>("/api/faktur/check", { invoices: items.filter(pick).map((i) => i.invoice) }));
+  const headBox = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (headBox.current) headBox.current.indeterminate = checked.length > 0 && checked.length < items.length; }, [checked.length, items.length]);
   const setParam = (x: JobParams) => save((c) => ({ ...c, jobs: { ...c.jobs, "edi.upload-faktur": { ...c.jobs["edi.upload-faktur"], ...x } } }));
   const reason = !account ? "Tambahkan akun EDI dulu." : !queue.length ? "Tidak ada faktur tercentang yang belum terunggah." : null;
 
@@ -90,10 +98,23 @@ export function FakturPage() {
             </select>
           </Field>
         </div>
-        <div className="max-h-[calc(100vh-330px)] overflow-auto">
+        {!!items.length && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[13px]" role="group" aria-label="Pilih cepat">
+            <span className="mr-1 text-fg-2">Pilih cepat:</span>
+            <button type="button" className={btnGhost} disabled={!!busy} onClick={() => selectOnly(() => true)}>Centang semua</button>
+            <button type="button" className={btnGhost} disabled={!!busy} onClick={() => selectOnly(() => false)}>Hapus centang</button>
+            <button type="button" className={btnGhost} disabled={!!busy || !inPo.length} onClick={() => selectOnly((i) => !!i.in_po)}
+              title="Invoice yang ada di file Excel / tempel PO terakhir">Ada di Excel PO ({inPo.length})</button>
+            <button type="button" className={btnGhost} disabled={!!busy || !items.some((i) => notFound(i.status))} onClick={() => selectOnly((i) => notFound(i.status))}>
+              Not Found ({items.filter((i) => notFound(i.status)).length})
+            </button>
+            <span className="ml-auto text-fg-2">{checked.length} dari {items.length} dicentang</span>
+          </div>
+        )}
+        <div className="max-h-[calc(100vh-370px)] overflow-auto">
           <table className={tableCls}>
             <thead><tr>
-              <th className={th}><input type="checkbox" aria-label="Pilih semua" checked={!!items.length && checked.length === items.length}
+              <th className={th}><input ref={headBox} type="checkbox" aria-label="Pilih semua" checked={!!items.length && checked.length === items.length}
                 onChange={(e) => act("", () => api<Manifest>("/api/faktur/check", { invoices: e.target.checked ? items.map((i) => i.invoice) : [] }))} /></th>
               <th className={th}>No Invoice</th><th className={th}>No Faktur</th><th className={th}>Hal</th>
               <th className={th}>No PO</th><th className={th}>No SJ</th><th className={`${th} text-right`}>Open Amt</th><th className={th}>Status</th><th className={th} />
@@ -103,7 +124,11 @@ export function FakturPage() {
               {items.map((it) => (
                 <tr key={it.invoice}>
                   <td className={td}><input type="checkbox" checked={it.checked} aria-label={`Pilih ${it.invoice}`} onChange={(e) => patch(it, { checked: e.target.checked })} /></td>
-                  <td className={td}>{it.invoice}</td>
+                  <td className={td}>
+                    <span className="inline-flex items-center gap-1">{it.invoice}
+                      {it.in_po && <span title="Ada di file Excel / tempel PO" className={`${chip} bg-accent/12 text-accent`}>PO</span>}
+                    </span>
+                  </td>
                   <td className={`${td} text-fg-2`}>{it.faktur}</td>
                   <td className={td}>{it.pages}</td>
                   <td className={td}><Cell value={it.no_po ?? ""} label="No PO" onSave={(v) => patch(it, { no_po: v })} /></td>

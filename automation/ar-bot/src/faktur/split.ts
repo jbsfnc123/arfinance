@@ -17,6 +17,7 @@ export type FakturItem = {
   no_po?: string;
   no_sj?: string;
   open_amt?: number;
+  in_po?: boolean;     // invoice ini ada di file Excel/tempel PO terakhir (pilih cepat)
 };
 
 const FAKTUR_RE = /(?:Kode dan\s*)?Nomor Seri Faktur Pajak\s*:\s*([0-9]+)/i;

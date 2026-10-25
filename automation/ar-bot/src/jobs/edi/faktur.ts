@@ -1,10 +1,11 @@
 // Upload Faktur Pajak Coretax ke EDI Mitra 10 (Draft Invoice) — port bot_upload_faktur.js.
 // Mode "draft": cari per No Invoice. Mode "not_found": cari per No PO lalu verifikasi No SJ & Open Amt, isi Vendor Invoice No.
+// Satu PO dengan beberapa invoice/SJ (Fase 70): semua dokumen Draft hasil cari PO diuji; dokumen yang SJ-nya cocok yang diisi.
 // Uji coba: hanya cari & verifikasi (tanpa Save / Upload / Send) — status di daftar tidak diubah.
 import type { Page } from "puppeteer-core";
 import type { JobParams } from "~/shared/types";
 import { delay, type RunContext } from "~/runner/ctx";
-import { verifyStatus, verifySubInvoice } from "~/faktur/po";
+import { docMatches, pickDraftDoc, type DraftDoc } from "~/faktur/po";
 import { loadManifest, patchItem, splitFile } from "~/faktur/store";
 import type { FakturItem } from "~/faktur/split";
 import type { JobOut } from "../jasper/jobs";
@@ -77,8 +78,14 @@ async function openDraft(ctx: RunContext, page: Page) {
   await page.waitForSelector("#tableInvoice", { timeout: 15_000 });
 }
 
-/** Cari di Draft; buka detail baris pertama. null bila tidak ada. */
-async function searchDraft(page: Page, term: string) {
+type DocRef = { id: string; docNo: string };
+type ListRead = { notFound: true } | { notFound: false; docs: DocRef[]; total: number } | null;
+
+/**
+ * Cari di Draft; daftar SEMUA dokumen hasil cari (satu PO bisa punya beberapa dokumen: satu per invoice/SJ).
+ * null bila tidak ada. Hasil lebih dari satu halaman → panjang halaman DataTable diperbesar dulu.
+ */
+async function listDraft(page: Page, term: string): Promise<DocRef[] | null> {
   await page.$eval("#searchInv", (el, v) => { const s = el as HTMLInputElement; s.value = v as string; s.dispatchEvent(new Event("input", { bubbles: true })); }, term);
   await delay(300);
   await page.evaluate(() => {
@@ -86,30 +93,70 @@ async function searchDraft(page: Page, term: string) {
     const w = window as unknown as { fetchDraftInv?: () => void };
     if (b) b.click(); else if (typeof w.fetchDraftInv === "function") w.fetchDraftInv();
   });
-  await delay(1500);
-  await page.waitForSelector("#tableInvoice_processing", { hidden: true, timeout: 15_000 }).catch(() => {});
-  await delay(800);
-  let found: { notFound?: boolean; docNo?: string } | null = null;
+  const settle = async () => {
+    await delay(1500);
+    await page.waitForSelector("#tableInvoice_processing", { hidden: true, timeout: 15_000 }).catch(() => {});
+    await delay(800);
+  };
+  await settle();
+  const read = (): Promise<ListRead> => page.evaluate(() => {
+    const rows = [...document.querySelectorAll<HTMLElement>("#tableInvoice tbody tr")];
+    if (!rows.length) return null;
+    const t = rows[0].innerText || "";
+    if (rows.length === 1 && (t.includes("No data available") || t.includes("No matching records"))) return { notFound: true as const };
+    const docs = rows.map((r) => {
+      const btn = r.querySelector<HTMLElement>("button[onclick*='getByInvId']") ?? r.querySelector<HTMLElement>("button.btn-link");
+      const id = /getByInvId\(\s*'?(\d+)'?\s*\)/.exec(btn?.getAttribute("onclick") ?? "")?.[1] ?? r.querySelector<HTMLInputElement>("input.invId")?.value ?? "";
+      return { id, docNo: btn?.innerText.trim() ?? "" };
+    }).filter((d) => d.id);
+    type Dt = { page: { info: () => { recordsDisplay: number } } };
+    const jq = (window as unknown as { jQuery?: (s: string) => { DataTable?: () => Dt } }).jQuery;
+    let total = docs.length;
+    try { total = jq?.("#tableInvoice").DataTable?.().page.info().recordsDisplay ?? docs.length; } catch { /* tanpa DataTable */ }
+    return docs.length ? { notFound: false as const, docs, total } : null;
+  });
+  let found: ListRead = null;
   for (const until = Date.now() + 12_000; Date.now() < until && !found;) {
-    found = await page.evaluate(() => {
-      const row = document.querySelector<HTMLElement>("#tableInvoice tbody tr");
-      if (!row) return null;
-      const t = row.innerText || "";
-      if (t.includes("No data available") || t.includes("No matching records")) return { notFound: true };
-      const btn = row.querySelector<HTMLElement>("button.btn-link") ?? row.querySelector<HTMLElement>("button[onclick*='getByInvId']");
-      return btn ? { docNo: btn.innerText.trim() } : null;
-    });
+    found = await read();
     if (!found) await delay(800);
   }
   if (!found || found.notFound) return null;
-  await page.evaluate(() => {
-    (document.querySelector<HTMLElement>("#tableInvoice tbody tr button.btn-link") ?? document.querySelector<HTMLElement>("#tableInvoice tbody tr button[onclick*='getByInvId']"))?.click();
-  });
+  if (found.total > found.docs.length) {
+    await page.evaluate(() => {
+      type Dt = { page: { len: (n: number) => { draw: (p?: boolean) => void } } };
+      const jq = (window as unknown as { jQuery?: (s: string) => { DataTable?: () => Dt } }).jQuery;
+      try { jq?.("#tableInvoice").DataTable?.().page.len(100).draw(false); } catch { /* biarkan halaman pertama */ }
+    });
+    await settle();
+    const more = await read();
+    if (more && !more.notFound) found = more;
+  }
+  return found.docs;
+}
+
+/** Buka detail satu dokumen Draft (getByInvId) & baca sub-invoice (Vendor Shipment No, Total Amount) + Vendor Invoice No. */
+async function openDoc(page: Page, doc: DocRef): Promise<DraftDoc> {
+  await page.evaluate((id: string) => {
+    const inv = document.querySelector<HTMLInputElement>("#invId");
+    if (inv) inv.value = "";
+    const w = window as unknown as { getByInvId?: (id: number) => void };
+    if (typeof w.getByInvId === "function") w.getByInvId(Number(id));
+    else document.querySelector<HTMLElement>(`button[onclick*='getByInvId(${id})']`)?.click();
+  }, doc.id);
   await page.waitForSelector(".panelInvoice:not(.hidden)", { timeout: 20_000 });
-  await page.waitForFunction(() => !!document.querySelector<HTMLInputElement>("#invId")?.value?.trim(), { timeout: 20_000 });
+  await page.waitForFunction((id: string) => document.querySelector<HTMLInputElement>("#invId")?.value?.trim() === id, { timeout: 20_000 }, doc.id);
   await page.waitForSelector("#preloader", { hidden: true, timeout: 15_000 }).catch(() => {});
-  await delay(800);
-  return found.docNo ?? "";
+  await page.waitForFunction(() => document.querySelectorAll("#tbodySubInv tr").length > 0, { timeout: 15_000 }).catch(() => {});
+  await delay(600);
+  return page.evaluate((d: DocRef) => ({
+    id: d.id,
+    docNo: document.querySelector<HTMLInputElement>("#documentNoInv")?.value?.trim() || d.docNo,
+    vendorInvoiceNo: document.querySelector<HTMLInputElement>("#vendorInvoiceNo")?.value ?? "",
+    rows: [...document.querySelectorAll("#tbodySubInv tr")].map((tr) => {
+      const td = [...tr.querySelectorAll<HTMLElement>("td")].map((x) => x.innerText.trim());
+      return { noSj: td[1] ?? "", openAmt: td[5] ?? "" };
+    }).filter((r) => r.noSj || r.openAmt),
+  }), doc);
 }
 
 async function swalText(page: Page, click = true) {
@@ -164,21 +211,28 @@ async function processOne(ctx: RunContext, page: Page, item: FakturItem, notFoun
   const term = (byPo ? item.no_po : item.invoice)?.trim() ?? "";
   if (byPo && !term) return "No PO Belum Diisi";
   ctx.info(`Cari ${byPo ? "No PO" : "No Invoice"} "${term}"…`);
-  const doc = await searchDraft(page, term);
-  if (doc === null) return byPo ? "Not Found in Draft (PO)" : "Not Found in Draft";
-  ctx.info(`Ditemukan di Draft: ${doc}`);
+  const list = await listDraft(page, term);
+  if (list === null) return byPo ? "Not Found in Draft (PO)" : "Not Found in Draft";
+  let tag = "";
 
   if (byPo) {
-    await page.waitForFunction(() => document.querySelectorAll("#tbodySubInv tr").length > 0, { timeout: 15_000 }).catch(() => {});
-    await delay(600);
-    const rows = await page.evaluate(() => [...document.querySelectorAll("#tbodySubInv tr")].map((tr) => {
-      const td = [...tr.querySelectorAll<HTMLElement>("td")].map((x) => x.innerText.trim());
-      return { noSj: td[1] ?? "", openAmt: td[5] ?? "" };
-    }));
-    const bad = verifyStatus(verifySubInvoice(item, rows));
-    if (bad) { ctx.warn(`Verifikasi: ${bad}`); await toList(page); return bad; }
-    ctx.info("Verifikasi No SJ & Open Amt cocok.");
-    if (ctx.opts.dryRun) return "Cocok (uji coba)";
+    // Satu PO bisa punya beberapa dokumen Draft (satu per invoice/SJ): buka satu per satu sampai No SJ & Open Amt cocok.
+    if (list.length > 1) ctx.info(`PO ${term}: ${list.length} dokumen Draft — dicocokkan dengan No SJ ${item.no_sj || "-"}.`);
+    const docs: DraftDoc[] = [];
+    for (const d of list) {
+      ctx.check();
+      const doc = await openDoc(page, d);
+      docs.push(doc);
+      const used = doc.vendorInvoiceNo.trim() ? ` · Vendor Invoice No ${doc.vendorInvoiceNo.trim()}` : "";
+      ctx.info(`  ${doc.docNo}: SJ ${doc.rows.map((r) => r.noSj).join(", ") || "-"}${used}`);
+      if (docMatches(item, doc)) break;
+    }
+    const pick = pickDraftDoc(item, docs);
+    if (!pick.doc) { ctx.warn(`Verifikasi: ${pick.status}`); await toList(page); return pick.status; }
+    if (docs[docs.length - 1].id !== pick.doc.id) await openDoc(page, pick.doc);
+    tag = pick.sj ? `${pick.doc.docNo} (${pick.sj})` : pick.doc.docNo;
+    ctx.info(`Cocok: ${tag} → Vendor Invoice No ${item.invoice}`);
+    if (ctx.opts.dryRun) { await toList(page); return `Cocok (uji coba): ${tag}`; }
     await page.waitForSelector("#vendorInvoiceNo", { timeout: 10_000 });
     await page.$eval("#vendorInvoiceNo", (el, v) => {
       const i = el as HTMLInputElement;
@@ -196,9 +250,10 @@ async function processOne(ctx: RunContext, page: Page, item: FakturItem, notFoun
     const note = await swalText(page);
     if (note) ctx.info(`Simpan Vendor Invoice No: "${note.slice(0, 160)}"`);
     await delay(1000);
-  } else if (ctx.opts.dryRun) {
-    await toList(page);
-    return "Ditemukan (uji coba)";
+  } else {
+    const doc = await openDoc(page, list[0]);
+    ctx.info(`Ditemukan di Draft: ${doc.docNo}`);
+    if (ctx.opts.dryRun) { await toList(page); return "Ditemukan (uji coba)"; }
   }
 
   ctx.info(`Unggah ${item.filename}…`);
@@ -265,7 +320,7 @@ async function processOne(ctx: RunContext, page: Page, item: FakturItem, notFoun
     status = "Timeout / Unverified";
   }
   await toList(page);
-  return status;
+  return tag ? `${status} · ${tag}` : status;
 }
 
 export async function ediUploadFakturJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
@@ -290,7 +345,7 @@ export async function ediUploadFakturJob(ctx: RunContext, p: JobParams): Promise
       status = `Error: ${(e as Error).message.split("\n")[0]}`.slice(0, 300);
       await toList(page).catch(() => {});
     }
-    const good = uploaded(status) || status.endsWith("(uji coba)");
+    const good = uploaded(status) || status.includes("(uji coba)");
     if (good) ok++; else failed.push(item.invoice);
     ctx.log(good ? "ok" : "warn", `${item.invoice}: ${status}`);
     if (!ctx.opts.dryRun) patchItem(item.invoice, { status });
