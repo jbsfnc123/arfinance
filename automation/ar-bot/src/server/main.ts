@@ -16,6 +16,7 @@ import { APP_DIR, DATA_DIR, ensureDirs, P, readJson, writeAtomic } from "~/core/
 import { appendHistory, loadConfig, readHistory, saveConfig, secretKeys, updateSecrets } from "~/core/store";
 import { applySchedule, listSchedules, removeSchedule, runScheduleNow, taskName } from "~/core/scheduler";
 import { applyPo, readPoRows } from "~/faktur/po";
+import { contentDisposition, downloadName } from "~/faktur/filter";
 import { splitFaktur } from "~/faktur/split";
 import { clearFaktur, loadManifest, patchItem, saveManifest, SPLIT_DIR, splitFile } from "~/faktur/store";
 import { importSources, runImport } from "./import";
@@ -195,8 +196,11 @@ function send(res: http.ServerResponse, status: number, data: unknown) {
   res.end(JSON.stringify(data));
 }
 
-function sendFile(res: http.ServerResponse, file: string, type?: string) {
-  res.writeHead(200, { "Content-Type": type ?? MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream", "Cache-Control": "no-store" });
+function sendFile(res: http.ServerResponse, file: string, type?: string, disposition?: string) {
+  res.writeHead(200, {
+    "Content-Type": type ?? MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream", "Cache-Control": "no-store",
+    ...(disposition ? { "Content-Disposition": disposition } : {}),
+  });
   fs.createReadStream(file).pipe(res);
 }
 
@@ -326,7 +330,15 @@ async function api(req: http.IncomingMessage, res: http.ServerResponse, url: URL
     saveManifest(man);
     return send(res, 200, loadManifest());
   }
-  if (p === "/api/faktur/file" && m === "GET") return sendFile(res, splitFile(url.searchParams.get("name") ?? ""), "application/pdf");
+  // PDF hasil pecah. /api/faktur/file/<No Faktur>.pdf?name=… : segmen nama + Content-Disposition → unduhan/simpan dari
+  // penampil PDF bernama No Faktur Pajak. ?download=1 → langsung unduh.
+  if ((p === "/api/faktur/file" || p.startsWith("/api/faktur/file/")) && m === "GET") {
+    const name = url.searchParams.get("name") ?? "";
+    const file = splitFile(name);
+    const item = loadManifest().items.find((i) => i.filename === path.basename(name));
+    const disp = contentDisposition(downloadName(item?.faktur, path.basename(file)), url.searchParams.get("download") === "1");
+    return sendFile(res, file, "application/pdf", disp);
+  }
   if (p === "/api/faktur/clear" && m === "POST") { clearFaktur(); return send(res, 200, loadManifest()); }
   return send(res, 404, { error: "tidak ditemukan" });
 }

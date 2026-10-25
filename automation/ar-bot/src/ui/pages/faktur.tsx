@@ -5,6 +5,7 @@ import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, chip, emptyTd, inputCls, segGroup, segItem, tableCls, td, th } from "@/components/ui";
 import type { JobParams } from "~/shared/types";
+import { checkedAfter, downloadName, EMPTY_FILTER, filterItems, isFiltered, STATUS_GROUPS, statusCounts, type FakturFilter } from "~/faktur/filter";
 import { api, fileToBase64, fmtSize, withToken } from "../api";
 import { useApp } from "../store";
 import { Card, Confirm, Field, PageHeader } from "../parts/common";
@@ -12,7 +13,10 @@ import { JobLog, RunButtons, useSaveConfig } from "../parts/run";
 
 type Item = { index: number; invoice: string; faktur: string; filename: string; pages: number; size: number; checked: boolean; status: string; no_po?: string; no_sj?: string; open_amt?: number; in_po?: boolean };
 type PoResult = { matched: number; dataRows: number; excelRows: number; unmatchedExcel: string[]; notInPo: number; manifest: Manifest };
-const notFound = (s: string) => s.startsWith("Not Found in Draft");
+const FILTER_KEY = "arbot:faktur:filter";
+/** URL PDF bernama No Faktur: penampil PDF & unduhan memakai nama itu. */
+const fileUrl = (it: Pick<Item, "faktur" | "filename">, download = false) =>
+  withToken(`/api/faktur/file/${encodeURIComponent(downloadName(it.faktur, it.filename))}?name=${encodeURIComponent(it.filename)}${download ? "&download=1" : ""}`);
 type Manifest = { source: string | null; createdAt: string | null; totalPages: number; items: Item[] };
 
 const statusTone = (s: string) => s.startsWith("Uploaded") ? "bg-success/15 text-success"
@@ -61,10 +65,22 @@ export function FakturPage() {
   const items = man?.items ?? [];
   const checked = items.filter((i) => i.checked);
   const queue = useMemo(() => items.filter((i) => i.checked && !i.status.startsWith("Uploaded") && (p.mode === "not_found" ? i.status === "Not Found in Draft" || !!i.no_po : true)), [items, p.mode]);
-  const inPo = items.filter((i) => i.in_po);
-  const selectOnly = (pick: (i: Item) => boolean) => act("", () => api<Manifest>("/api/faktur/check", { invoices: items.filter(pick).map((i) => i.invoice) }));
+  // Filter (diingat di perangkat ini) — centang massal & checkbox header bekerja pada baris yang tampil.
+  const [flt, setFltState] = useState<FakturFilter>(() => {
+    try { return { ...EMPTY_FILTER, ...JSON.parse(localStorage.getItem(FILTER_KEY) ?? "{}") }; } catch { return EMPTY_FILTER; }
+  });
+  const setFlt = (x: Partial<FakturFilter>) => setFltState((f) => {
+    const next = { ...f, ...x };
+    try { localStorage.setItem(FILTER_KEY, JSON.stringify(next)); } catch { /* penyimpanan diblokir */ }
+    return next;
+  });
+  const shown = useMemo(() => filterItems(items, flt), [items, flt]);
+  const counts = useMemo(() => statusCounts(items), [items]);
+  const shownChecked = shown.filter((i) => i.checked).length;
+  const hiddenChecked = checked.length - shownChecked;
+  const setChecked = (invoices: string[]) => act("", () => api<Manifest>("/api/faktur/check", { invoices }));
   const headBox = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (headBox.current) headBox.current.indeterminate = checked.length > 0 && checked.length < items.length; }, [checked.length, items.length]);
+  useEffect(() => { if (headBox.current) headBox.current.indeterminate = shownChecked > 0 && shownChecked < shown.length; }, [shownChecked, shown.length]);
   const setParam = (x: JobParams) => save((c) => ({ ...c, jobs: { ...c.jobs, "edi.upload-faktur": { ...c.jobs["edi.upload-faktur"], ...x } } }));
   const reason = !account ? "Tambahkan akun EDI dulu." : !queue.length ? "Tidak ada faktur tercentang yang belum terunggah." : null;
 
@@ -99,29 +115,52 @@ export function FakturPage() {
           </Field>
         </div>
         {!!items.length && (
-          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[13px]" role="group" aria-label="Pilih cepat">
-            <span className="mr-1 text-fg-2">Pilih cepat:</span>
-            <button type="button" className={btnGhost} disabled={!!busy} onClick={() => selectOnly(() => true)}>Centang semua</button>
-            <button type="button" className={btnGhost} disabled={!!busy} onClick={() => selectOnly(() => false)}>Hapus centang</button>
-            <button type="button" className={btnGhost} disabled={!!busy || !inPo.length} onClick={() => selectOnly((i) => !!i.in_po)}
-              title="Invoice yang ada di file Excel / tempel PO terakhir">Ada di Excel PO ({inPo.length})</button>
-            <button type="button" className={btnGhost} disabled={!!busy || !items.some((i) => notFound(i.status))} onClick={() => selectOnly((i) => notFound(i.status))}>
-              Not Found ({items.filter((i) => notFound(i.status)).length})
-            </button>
-            <span className="ml-auto text-fg-2">{checked.length} dari {items.length} dicentang</span>
+          <div className="mb-2 grid gap-2 text-[13px]">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter">
+              <input className={`${inputCls} !w-60`} value={flt.q} onChange={(e) => setFlt({ q: e.target.value })} placeholder="Cari invoice, faktur, PO, SJ, status" aria-label="Cari" />
+              <select className={`${inputCls} !w-auto`} value={flt.status} onChange={(e) => setFlt({ status: e.target.value as FakturFilter["status"] })} aria-label="Filter status">
+                <option value="">Semua status ({items.length})</option>
+                {STATUS_GROUPS.map((g) => <option key={g.id} value={g.id}>{g.label} ({counts[g.id] ?? 0})</option>)}
+              </select>
+              <select className={`${inputCls} !w-auto`} value={flt.po} onChange={(e) => setFlt({ po: e.target.value as FakturFilter["po"] })} aria-label="Filter No PO">
+                <option value="">No PO: semua</option>
+                <option value="yes">Ada No PO ({items.filter((i) => i.no_po?.trim()).length})</option>
+                <option value="no">Tanpa No PO ({items.filter((i) => !i.no_po?.trim()).length})</option>
+              </select>
+              <select className={`${inputCls} !w-auto`} value={flt.excel} onChange={(e) => setFlt({ excel: e.target.value as FakturFilter["excel"] })} aria-label="Filter Excel PO">
+                <option value="">Excel PO: semua</option>
+                <option value="yes">Ada di Excel PO ({items.filter((i) => i.in_po).length})</option>
+                <option value="no">Tidak ada di Excel ({items.filter((i) => !i.in_po).length})</option>
+              </select>
+              {isFiltered(flt) && <button type="button" className={btnGhost} onClick={() => setFlt(EMPTY_FILTER)}><Icon name="filter_alt_off" />Reset filter</button>}
+              <span className="ml-auto text-fg-2">Menampilkan {shown.length} dari {items.length}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Centang">
+              <button type="button" className={btnGhost} disabled={!!busy || !shown.length} onClick={() => setChecked(checkedAfter(items, shown, "add"))}>Centang yang tampil</button>
+              <button type="button" className={btnGhost} disabled={!!busy || !shownChecked} onClick={() => setChecked(checkedAfter(items, shown, "remove"))}>Hapus centang yang tampil</button>
+              <button type="button" className={btnGhost} disabled={!!busy || !shown.length} onClick={() => setChecked(checkedAfter(items, shown, "only"))}
+                title="Centang hanya baris yang tampil; centang lain dihapus">Hanya yang tampil</button>
+              <span className="mx-1 h-4 w-px bg-hairline" aria-hidden />
+              <button type="button" className={btnGhost} disabled={!!busy} onClick={() => setChecked(items.map((i) => i.invoice))}>Centang semua</button>
+              <button type="button" className={btnGhost} disabled={!!busy || !checked.length} onClick={() => setChecked([])}>Hapus semua</button>
+              <span className="ml-auto text-fg-2">
+                {checked.length} dari {items.length} dicentang{hiddenChecked > 0 && <b className="text-warning"> · {hiddenChecked} di luar filter</b>}
+              </span>
+            </div>
           </div>
         )}
-        <div className="max-h-[calc(100vh-370px)] overflow-auto">
+        <div className="max-h-[calc(100vh-410px)] overflow-auto">
           <table className={tableCls}>
             <thead><tr>
-              <th className={th}><input ref={headBox} type="checkbox" aria-label="Pilih semua" checked={!!items.length && checked.length === items.length}
-                onChange={(e) => act("", () => api<Manifest>("/api/faktur/check", { invoices: e.target.checked ? items.map((i) => i.invoice) : [] }))} /></th>
+              <th className={th}><input ref={headBox} type="checkbox" aria-label="Pilih semua yang tampil" checked={!!shown.length && shownChecked === shown.length}
+                onChange={(e) => setChecked(checkedAfter(items, shown, e.target.checked ? "add" : "remove"))} /></th>
               <th className={th}>No Invoice</th><th className={th}>No Faktur</th><th className={th}>Hal</th>
               <th className={th}>No PO</th><th className={th}>No SJ</th><th className={`${th} text-right`}>Open Amt</th><th className={th}>Status</th><th className={th} />
             </tr></thead>
             <tbody>
               {!items.length && <tr><td colSpan={9} className={emptyTd}>Belum ada faktur.</td></tr>}
-              {items.map((it) => (
+              {!!items.length && !shown.length && <tr><td colSpan={9} className={emptyTd}>Tidak ada faktur yang cocok dengan filter.</td></tr>}
+              {shown.map((it) => (
                 <tr key={it.invoice}>
                   <td className={td}><input type="checkbox" checked={it.checked} aria-label={`Pilih ${it.invoice}`} onChange={(e) => patch(it, { checked: e.target.checked })} /></td>
                   <td className={td}>
@@ -135,7 +174,10 @@ export function FakturPage() {
                   <td className={td}><Cell value={it.no_sj ?? ""} label="No SJ" onSave={(v) => patch(it, { no_sj: v })} /></td>
                   <td className={`${td} text-right`}><Cell value={it.open_amt ? it.open_amt.toLocaleString("id-ID") : ""} label="Open Amt" right onSave={(v) => patch(it, { open_amt: Number(v.replace(/\D/g, "")) || 0 })} /></td>
                   <td className={td}><span className={`${chip} ${statusTone(it.status)}`} title={it.status}>{it.status.length > 34 ? `${it.status.slice(0, 34)}…` : it.status}</span></td>
-                  <td className={td}><button type="button" className={btnGhost} onClick={() => setPreview(it)} aria-label={`Lihat PDF ${it.invoice}`}><Icon name="visibility" /></button></td>
+                  <td className={`${td} whitespace-nowrap`}>
+                    <button type="button" className={btnGhost} onClick={() => setPreview(it)} aria-label={`Lihat PDF ${it.invoice}`}><Icon name="visibility" /></button>
+                    <a className={btnGhost} href={fileUrl(it, true)} download={downloadName(it.faktur, it.filename)} aria-label={`Unduh ${downloadName(it.faktur, it.filename)}`} title={downloadName(it.faktur, it.filename)}><Icon name="download" /></a>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -154,7 +196,12 @@ export function FakturPage() {
           placeholder={"Invoice No\tNo PO\tNo SJ\tOpen Amt"} aria-label="Data PO" />
       </Modal>
       <Modal open={!!preview} title={preview ? `${preview.invoice} · ${preview.faktur} · ${fmtSize(preview.size)}` : ""} onClose={() => setPreview(null)} xl>
-        {preview && <iframe title="Pratinjau PDF" className="h-[75vh] w-full rounded-lg border border-hairline" src={withToken(`/api/faktur/file?name=${encodeURIComponent(preview.filename)}`)} />}
+        {preview && <>
+          <div className="mb-2 flex justify-end">
+            <a className={btnGhost} href={fileUrl(preview, true)} download={downloadName(preview.faktur, preview.filename)}><Icon name="download" />Unduh {downloadName(preview.faktur, preview.filename)}</a>
+          </div>
+          <iframe title="Pratinjau PDF" className="h-[72vh] w-full rounded-lg border border-hairline" src={fileUrl(preview)} />
+        </>}
       </Modal>
       <Confirm open={!!confirm} title="Unggah ke EDI Mitra 10" confirmLabel={`Unggah ${queue.length} faktur`} onClose={() => setConfirm(null)} onConfirm={() => confirm?.()}>
         {queue.length} faktur akan diunggah & dikirim (Send) dengan akun <b>{accounts.find((a) => a.id === account)?.label}</b>, mode <b>{p.mode === "not_found" ? "Not Found in Draft" : "Draft"}</b>. Tindakan ini tidak bisa dibatalkan dari aplikasi.
