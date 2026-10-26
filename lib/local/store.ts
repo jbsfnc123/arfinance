@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { idbGet, idbPut } from "@/lib/cache/idb";
 import { getToken, onVersionChange } from "@/lib/cache/versions";
 import { DATASETS, type DatasetName, type Datasets } from "./datasets";
+import { createLimiter, retryOnTimeout } from "./limiter";
 
 // Store data lokal (satu salinan per dataset untuk seluruh tab browser):
 //   1. paket mentah disimpan di IndexedDB bersama token versi → buka menu berikutnya tanpa unduh ulang;
@@ -25,6 +26,7 @@ let client: SupabaseClient<Database> | null = null;
 let watching = false;
 
 const sb = () => (client ??= createClient());
+const download = createLimiter(2);
 const empty = <K extends DatasetName>(): Entry<K> => ({ data: null, token: null, loading: false, error: null, at: null, version: 0 });
 const SERVER_EMPTY = empty();
 
@@ -65,7 +67,8 @@ export function ensure(name: DatasetName, opts: { force?: boolean } = {}): Promi
         // Data lama tetap ditampilkan selama versi baru diunduh.
         if (hit && !cur.data) set(name, { data: def.decode(hit.data) as never, token: hit.token, at: hit.at });
       }
-      const { data, error } = await sb().rpc(def.rpc as never, def.args as never);
+      // Antre (maks. 2 unduhan paket bersamaan) + coba ulang bila database timeout — lihat limiter.ts.
+      const { data, error } = await download(() => retryOnTimeout(async () => await sb().rpc(def.rpc as never, def.args as never)));
       if (error) throw error;
       const raw = (data ?? {}) as Record<string, unknown>;
       const at = Date.now();

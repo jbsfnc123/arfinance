@@ -12,6 +12,7 @@ import { fmtBytes } from "@/lib/modules/usage";
 import { ARCHIVE_DATASETS, type ArchiveDataset, type ArchiveFile } from "@/lib/archive/datasets";
 import { loadArchive, useArchiveList } from "@/lib/archive/client";
 import { BackupsSection } from "./backups";
+import { DeleteUploadSection } from "./delete-upload";
 
 type Row = Record<string, unknown> & { __k: string };
 
@@ -70,6 +71,7 @@ export function ArchiveView() {
         <LocalTable key={`${ds}:${entry.id}`} title={`Arsip ${ARCHIVE_DATASETS.find((d) => d.id === ds)?.label} ${entry.label ?? entry.period}`}
           rows={rows} cols={cols} rowKey={(r) => r.__k} search={search} loading={loading || (!file && !err)} hideKey={`arsip-${ds}`} />
       )}
+      <DeleteUploadSection />
       <BackupsSection />
     </div>
   );
