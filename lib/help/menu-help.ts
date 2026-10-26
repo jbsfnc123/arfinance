@@ -146,6 +146,7 @@ export const MENU_HELP: MenuHelp[] = [
     "Pembayaran ERP di arsip membawa salinan data invoice-nya (BP, tanggal invoice, jatuh tempo, termin).",
     "Cadangan mingguan (khusus Super Admin): setiap Senin 01:00 WIB semua tabel master (pelanggan & email customer, kontak, catatan, jadwal bayar, tukar faktur, Mitra10/RKM, akun tanpa PIN, pengaturan, data closing) disalin ke Google Drive; 12 cadangan terakhir disimpan. Bisa dicadangkan manual & diunduh sebagai Excel (1 sheet per tabel).",
     "Hak baca arsip mengikuti hak baca data aslinya (mis. pemegang menu Mutasi Bank bisa membaca arsip mutasi & ERP).",
+    "Hapus Data Upload (khusus Super Admin): pilih jenis data (Mutasi Rekening, Pelunasan/Pembayaran ERP, Invoice ERP, Target, Snapshot Aging, Penerimaan SJ, Kwitansi & GR Mitra10, CBD Sales, CoreTax, Jadwal Kolektor, RKM, SO Master) dan periode → pratinjau jumlah baris & nominal → Unduh cadangan Excel → Hapus periode, lalu ketik periode (mis. 2026-09) untuk konfirmasi. Penghapusan permanen & tercatat. Target periode Closed dan Aging aktif / yang dipakai periode Open tidak bisa dihapus. Bila periode sudah diarsip ke Google Drive, centang \"hapus juga arsip\" agar halaman tidak lagi menampilkannya dari arsip.",
   ] },
   { href: "/pengaturan/wa-template", menu: "Pengaturan › Template WA", text: [
     "Template bawaan untuk semua collection; collection tetap bisa mengubah pesan di perangkatnya lewat \"Edit Pesan WA\".",
