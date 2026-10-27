@@ -13,6 +13,15 @@ const items = [
   row("SI/6", "Cocok (uji coba): INV7 (SJ/2)", { po: "PO2", inPo: true }),
 ];
 
+describe("grup No Invoice Terisi (sheet Invoice)", () => {
+  it("status Isi No Invoice dikelompokkan sendiri", () => {
+    expect(statusGroup("No Invoice Terisi · INV1 (SJ/1)")).toBe("filled");
+    expect(statusGroup("Gagal Simpan: x")).toBe("failed");
+    const inv = [{ invoice: "SI/9", status: "No Invoice Terisi · INV1", checked: false, no_po: "PO9", no_sj: "SJ/9" }];
+    expect(filterItems(inv, { ...EMPTY_FILTER, status: "filled", q: "po9" })).toHaveLength(1);
+  });
+});
+
 describe("filter Upload Faktur", () => {
   it("kategori status", () => {
     expect(items.map((i) => statusGroup(i.status))).toEqual(["ready", "not_found", "not_found", "uploaded", "failed", "dry"]);

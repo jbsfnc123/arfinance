@@ -20,6 +20,7 @@ import { contentDisposition, downloadName } from "~/faktur/filter";
 import { parseAmount, toleranceOf } from "~/faktur/amount";
 import { splitFaktur } from "~/faktur/split";
 import { clearFaktur, loadManifest, patchItem, saveManifest, SPLIT_DIR, splitFile } from "~/faktur/store";
+import { clearInvoices, importInvoices, loadInvoices, patchInvoice, saveInvoices } from "~/faktur/invoices";
 import { importSources, runImport } from "./import";
 import { runTest, type TestTarget } from "./tests";
 import { openWindow } from "./window";
@@ -343,6 +344,31 @@ async function api(req: http.IncomingMessage, res: http.ServerResponse, url: URL
     return sendFile(res, file, "application/pdf", disp);
   }
   if (p === "/api/faktur/clear" && m === "POST") { clearFaktur(); return send(res, 200, loadManifest()); }
+  // Sheet Invoice (mode Isi No Invoice): data sendiri dari Excel Invoice / tempel (template Excel PO).
+  if (p === "/api/faktur/invoices" && m === "GET") return send(res, 200, loadInvoices());
+  if (p === "/api/faktur/invoices/import" && m === "POST") {
+    const b = await body<{ base64?: string; text?: string; name?: string }>(req);
+    const rows = b.base64 ? readPoRows({ buf: Buffer.from(b.base64, "base64") }) : readPoRows({ text: b.text ?? "" });
+    const r = importInvoices(rows);
+    saveInvoices({ source: b.name ? path.basename(b.name) : "Tempel data", createdAt: new Date().toISOString(), items: r.items });
+    return send(res, 200, { imported: r.items.length, skipped: r.skipped, sheet: loadInvoices() });
+  }
+  if (p === "/api/faktur/invoices/item" && m === "POST") {
+    const { invoice, patch } = await body<{ invoice: string; patch: Record<string, unknown> }>(req);
+    const allowed: Record<string, unknown> = {};
+    for (const k of ["checked", "no_po", "no_sj", "open_amt"]) if (k in patch) allowed[k] = patch[k];
+    if ("open_amt" in allowed) allowed.open_amt = parseAmount(allowed.open_amt) ?? 0;
+    patchInvoice(invoice, allowed);
+    return send(res, 200, loadInvoices());
+  }
+  if (p === "/api/faktur/invoices/check" && m === "POST") {
+    const { invoices } = await body<{ invoices: string[] }>(req);
+    const s = loadInvoices();
+    for (const it of s.items) it.checked = invoices.includes(it.invoice);
+    saveInvoices(s);
+    return send(res, 200, loadInvoices());
+  }
+  if (p === "/api/faktur/invoices/clear" && m === "POST") { clearInvoices(); return send(res, 200, loadInvoices()); }
   return send(res, 404, { error: "tidak ditemukan" });
 }
 

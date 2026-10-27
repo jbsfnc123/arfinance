@@ -17,7 +17,7 @@ export type JobParams = {
   /** EDI: id akun yang dipakai; kosong = semua akun aktif. */
   accounts?: string[];
   /** Upload Faktur: mode "Not Found in Draft". */
-  mode?: "draft" | "not_found";
+  mode?: "draft" | "not_found" | "fill";
   /** Invoice Inbox: maks. invoice dibuat per akun per run (0 = semua, dibatasi 200). */
   limit?: number;
 };

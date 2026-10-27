@@ -1,5 +1,6 @@
 // Upload Faktur Pajak Coretax ke EDI Mitra 10 (Draft Invoice) — port bot_upload_faktur.js.
-// Mode "draft": cari per No Invoice. Mode "not_found": cari per No PO lalu verifikasi No SJ & Open Amt, isi Vendor Invoice No.
+// Mode "draft" (Upload FP): cari per No Invoice. Mode "not_found" (Isi No Invoice+Upload FP): cari per No PO lalu verifikasi
+// No SJ & Open Amt, isi Vendor Invoice No, unggah FP. Mode "fill" (Isi No Invoice): sama tanpa unggah FP, data dari sheet Invoice.
 // Satu PO dengan beberapa invoice/SJ (Fase 70): semua dokumen Draft hasil cari PO diuji; dokumen yang SJ-nya cocok yang diisi.
 // Uji coba: hanya cari & verifikasi (tanpa Save / Upload / Send) — status di daftar tidak diubah.
 import type { Page } from "puppeteer-core";
@@ -8,6 +9,7 @@ import { delay, type RunContext } from "~/runner/ctx";
 import { docMatches, pickDraftDoc, verifySubInvoice, type DraftDoc } from "~/faktur/po";
 import { formatAmountCheck, toleranceOf } from "~/faktur/amount";
 import { loadManifest, patchItem, splitFile } from "~/faktur/store";
+import { fillStatus, invoiceQueue, isFilled, loadInvoices, patchInvoice, type InvoiceRow } from "~/faktur/invoices";
 import type { FakturItem } from "~/faktur/split";
 import type { JobOut } from "../jasper/jobs";
 import { ediLogin, ediLogout, ediPage, openInvoices, pickAccounts } from "./session";
@@ -168,6 +170,69 @@ async function send(ctx: RunContext, page: Page) {
   }
 }
 
+type PoItem = Pick<FakturItem, "invoice" | "no_sj" | "open_amt">;
+
+/**
+ * Dokumen Draft hasil cari No PO (`list`) → pilih dokumen per No SJ & Open Amt → isi Vendor Invoice No → Save.
+ * Dipakai mode Isi No Invoice+Upload FP (lalu unggah FP) dan Isi No Invoice (berhenti di sini).
+ * `{ status }` = berhenti (verifikasi gagal / uji coba); `{ tag, note }` = tersimpan, `note` = pesan Save dari EDI.
+ */
+async function fillVendorInvoice(ctx: RunContext, page: Page, item: PoItem, list: DocRef[], term: string): Promise<{ status: string } | { tag: string; note: string }> {
+  // Satu PO bisa punya beberapa dokumen Draft (satu per invoice/SJ): buka satu per satu sampai No SJ & Open Amt cocok.
+  // Toleransi selisih Open Amt dari Pengaturan (bawaan Rp 100): nominal cocok bila selisih ≤ toleransi.
+  const tol = toleranceOf(ctx.config.edi.amountTolerance);
+  if (list.length > 1) ctx.info(`PO ${term}: ${list.length} dokumen Draft — dicocokkan dengan No SJ ${item.no_sj || "-"}.`);
+  const docs: DraftDoc[] = [];
+  for (const d of list) {
+    ctx.check();
+    const doc = await openDoc(page, d);
+    docs.push(doc);
+    const used = doc.vendorInvoiceNo.trim() ? ` · Vendor Invoice No ${doc.vendorInvoiceNo.trim()}` : "";
+    ctx.info(`  ${doc.docNo}: SJ ${doc.rows.map((r) => r.noSj).join(", ") || "-"}${used}`);
+    const v = verifySubInvoice(item, doc.rows, tol);
+    for (const c of v.checks) ctx.info(`    ${v.sjOk ? "SJ cocok · " : "SJ tidak cocok · nominal terdekat · "}${formatAmountCheck(c, tol)}`);
+    if (docMatches(item, doc, tol)) break;
+  }
+  const pick = pickDraftDoc(item, docs, tol);
+  if (!pick.doc) { ctx.warn(`Verifikasi: ${pick.status} (toleransi Rp ${tol})`); await toList(page); return { status: pick.status }; }
+  if (docs[docs.length - 1].id !== pick.doc.id) await openDoc(page, pick.doc);
+  const tag = pick.sj ? `${pick.doc.docNo} (${pick.sj})` : pick.doc.docNo;
+  ctx.info(`Verifikasi No SJ & Open Amt cocok (toleransi Rp ${tol}). Cocok: ${tag} → Vendor Invoice No ${item.invoice}`);
+  if (ctx.opts.dryRun) { await toList(page); return { status: `Cocok (uji coba): ${tag}` }; }
+  await page.waitForSelector("#vendorInvoiceNo", { timeout: 10_000 });
+  await page.$eval("#vendorInvoiceNo", (el, v) => {
+    const i = el as HTMLInputElement;
+    i.value = v as string;
+    for (const ev of ["input", "keyup", "change"]) i.dispatchEvent(new Event(ev, { bubbles: true }));
+  }, item.invoice);
+  await delay(500);
+  await page.evaluate(() => {
+    const b = document.querySelector<HTMLElement>("button[onclick*='saveInv()']") ?? [...document.querySelectorAll<HTMLElement>("button")].find((x) => x.innerText?.trim() === "Save");
+    const w = window as unknown as { saveInv?: () => void };
+    if (b) b.click(); else if (typeof w.saveInv === "function") w.saveInv();
+  });
+  await delay(1200);
+  await page.waitForSelector(".swal2-container", { visible: true, timeout: 10_000 }).catch(() => {});
+  const note = await swalText(page);
+  if (note) ctx.info(`Simpan Vendor Invoice No: "${note.slice(0, 160)}"`);
+  await delay(1000);
+  return { tag, note };
+}
+
+/** Mode Isi No Invoice: cari No PO → isi Vendor Invoice No → Save, tanpa unggah FP. Mengembalikan status baru. */
+async function fillOne(ctx: RunContext, page: Page, item: InvoiceRow): Promise<string> {
+  await toList(page);
+  const term = item.no_po.trim();
+  if (!term) return "No PO Belum Diisi";
+  ctx.info(`Cari No PO "${term}"…`);
+  const list = await listDraft(page, term);
+  if (list === null) return "Not Found in Draft (PO)";
+  const r = await fillVendorInvoice(ctx, page, item, list, term);
+  if ("status" in r) return r.status;
+  await toList(page);
+  return fillStatus(r.note, r.tag);
+}
+
 /** Proses satu faktur; mengembalikan status baru. */
 async function processOne(ctx: RunContext, page: Page, item: FakturItem, notFoundMode: boolean): Promise<string> {
   const pdf = splitFile(item.filename);
@@ -181,44 +246,9 @@ async function processOne(ctx: RunContext, page: Page, item: FakturItem, notFoun
   let tag = "";
 
   if (byPo) {
-    // Satu PO bisa punya beberapa dokumen Draft (satu per invoice/SJ): buka satu per satu sampai No SJ & Open Amt cocok.
-    // Toleransi selisih Open Amt dari Pengaturan (bawaan Rp 100): nominal cocok bila selisih ≤ toleransi.
-    const tol = toleranceOf(ctx.config.edi.amountTolerance);
-    if (list.length > 1) ctx.info(`PO ${term}: ${list.length} dokumen Draft — dicocokkan dengan No SJ ${item.no_sj || "-"}.`);
-    const docs: DraftDoc[] = [];
-    for (const d of list) {
-      ctx.check();
-      const doc = await openDoc(page, d);
-      docs.push(doc);
-      const used = doc.vendorInvoiceNo.trim() ? ` · Vendor Invoice No ${doc.vendorInvoiceNo.trim()}` : "";
-      ctx.info(`  ${doc.docNo}: SJ ${doc.rows.map((r) => r.noSj).join(", ") || "-"}${used}`);
-      const v = verifySubInvoice(item, doc.rows, tol);
-      for (const c of v.checks) ctx.info(`    ${v.sjOk ? "SJ cocok · " : "SJ tidak cocok · nominal terdekat · "}${formatAmountCheck(c, tol)}`);
-      if (docMatches(item, doc, tol)) break;
-    }
-    const pick = pickDraftDoc(item, docs, tol);
-    if (!pick.doc) { ctx.warn(`Verifikasi: ${pick.status} (toleransi Rp ${tol})`); await toList(page); return pick.status; }
-    if (docs[docs.length - 1].id !== pick.doc.id) await openDoc(page, pick.doc);
-    tag = pick.sj ? `${pick.doc.docNo} (${pick.sj})` : pick.doc.docNo;
-    ctx.info(`Verifikasi No SJ & Open Amt cocok (toleransi Rp ${tol}). Cocok: ${tag} → Vendor Invoice No ${item.invoice}`);
-    if (ctx.opts.dryRun) { await toList(page); return `Cocok (uji coba): ${tag}`; }
-    await page.waitForSelector("#vendorInvoiceNo", { timeout: 10_000 });
-    await page.$eval("#vendorInvoiceNo", (el, v) => {
-      const i = el as HTMLInputElement;
-      i.value = v as string;
-      for (const ev of ["input", "keyup", "change"]) i.dispatchEvent(new Event(ev, { bubbles: true }));
-    }, item.invoice);
-    await delay(500);
-    await page.evaluate(() => {
-      const b = document.querySelector<HTMLElement>("button[onclick*='saveInv()']") ?? [...document.querySelectorAll<HTMLElement>("button")].find((x) => x.innerText?.trim() === "Save");
-      const w = window as unknown as { saveInv?: () => void };
-      if (b) b.click(); else if (typeof w.saveInv === "function") w.saveInv();
-    });
-    await delay(1200);
-    await page.waitForSelector(".swal2-container", { visible: true, timeout: 10_000 }).catch(() => {});
-    const note = await swalText(page);
-    if (note) ctx.info(`Simpan Vendor Invoice No: "${note.slice(0, 160)}"`);
-    await delay(1000);
+    const r = await fillVendorInvoice(ctx, page, item, list, term);
+    if ("status" in r) return r.status;
+    tag = r.tag;
   } else {
     const doc = await openDoc(page, list[0]);
     ctx.info(`Ditemukan di Draft: ${doc.docNo}`);
@@ -295,9 +325,12 @@ async function processOne(ctx: RunContext, page: Page, item: FakturItem, notFoun
 export async function ediUploadFakturJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const [acc] = pickAccounts(ctx, p.accounts?.slice(0, 1));
   const notFound = p.mode === "not_found";
-  const queue = fakturQueue(loadManifest().items, p.mode);
-  if (!queue.length) return { status: "skipped", summary: "Tidak ada faktur tercentang yang belum terunggah." };
-  ctx.info(`Akun ${acc.label || acc.username} · mode ${notFound ? "Not Found in Draft (cari No PO)" : "Draft (cari No Invoice)"} · ${queue.length} faktur${ctx.opts.dryRun ? " · UJI COBA (tanpa unggah)" : ""}`);
+  // Mode Isi No Invoice memakai sheet Invoice (tanpa PDF); dua mode lain memakai sheet Invoice+FP.
+  const fill = p.mode === "fill";
+  const queue: (FakturItem | InvoiceRow)[] = fill ? invoiceQueue(loadInvoices().items) : fakturQueue(loadManifest().items, p.mode);
+  if (!queue.length) return { status: "skipped", summary: fill ? "Tidak ada invoice tercentang yang belum terisi." : "Tidak ada faktur tercentang yang belum terunggah." };
+  const modeLabel = fill ? "Isi No Invoice (cari No PO, tanpa upload FP)" : notFound ? "Isi No Invoice+Upload FP (cari No PO)" : "Upload FP (cari No Invoice)";
+  ctx.info(`Akun ${acc.label || acc.username} · mode ${modeLabel} · ${queue.length} ${fill ? "invoice" : "faktur"}${ctx.opts.dryRun ? ` · UJI COBA (tanpa ${fill ? "simpan" : "unggah"})` : ""}`);
   const page = await ediPage(ctx);
   await ediLogin(ctx, page, acc);
   await openDraft(ctx, page);
@@ -305,23 +338,23 @@ export async function ediUploadFakturJob(ctx: RunContext, p: JobParams): Promise
   const failed: string[] = [];
   for (const [i, item] of queue.entries()) {
     ctx.check();
-    ctx.info(`[${i + 1}/${queue.length}] Invoice ${item.invoice} · Faktur ${item.faktur}`);
+    ctx.info(`[${i + 1}/${queue.length}] Invoice ${item.invoice}${"faktur" in item ? ` · Faktur ${item.faktur}` : ` · PO ${item.no_po || "-"} · SJ ${item.no_sj || "-"}`}`);
     let status: string;
     try {
-      status = await processOne(ctx, page, item, notFound);
+      status = "faktur" in item ? await processOne(ctx, page, item, notFound) : await fillOne(ctx, page, item);
     } catch (e) {
       ctx.check();
       status = `Error: ${(e as Error).message.split("\n")[0]}`.slice(0, 300);
       await toList(page).catch(() => {});
     }
-    const good = uploaded(status) || status.includes("(uji coba)");
+    const good = (fill ? isFilled(status) : uploaded(status)) || status.includes("(uji coba)");
     if (good) ok++; else failed.push(item.invoice);
     ctx.log(good ? "ok" : "warn", `${item.invoice}: ${status}`);
-    if (!ctx.opts.dryRun) patchItem(item.invoice, { status });
+    if (!ctx.opts.dryRun) { if (fill) patchInvoice(item.invoice, { status }); else patchItem(item.invoice, { status }); }
   }
   await ediLogout(page);
-  const summary = `${ok}/${queue.length} ${ctx.opts.dryRun ? "ditemukan" : "terunggah"}`;
-  // Ada faktur yang tidak berhasil → job gagal (status per faktur sudah tersimpan di daftar Upload Faktur).
-  if (failed.length) throw new Error(`${summary} · ${failed.length} faktur perlu dicek (lihat kolom Status)`);
+  const summary = `${ok}/${queue.length} ${ctx.opts.dryRun ? (fill ? "cocok" : "ditemukan") : fill ? "No Invoice terisi" : "terunggah"}`;
+  // Ada yang tidak berhasil → job gagal (status per baris sudah tersimpan di sheet Invoice+FP / Invoice).
+  if (failed.length) throw new Error(`${summary} · ${failed.length} ${fill ? "invoice" : "faktur"} perlu dicek (lihat kolom Status)`);
   return { summary, rows: queue.length };
 }
