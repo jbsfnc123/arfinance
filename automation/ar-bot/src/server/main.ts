@@ -17,6 +17,7 @@ import { appendHistory, loadConfig, readHistory, saveConfig, secretKeys, updateS
 import { applySchedule, listSchedules, removeSchedule, runScheduleNow, taskName } from "~/core/scheduler";
 import { applyPo, readPoRows } from "~/faktur/po";
 import { contentDisposition, downloadName } from "~/faktur/filter";
+import { parseAmount, toleranceOf } from "~/faktur/amount";
 import { splitFaktur } from "~/faktur/split";
 import { clearFaktur, loadManifest, patchItem, saveManifest, SPLIT_DIR, splitFile } from "~/faktur/store";
 import { importSources, runImport } from "./import";
@@ -165,6 +166,7 @@ function cleanConfig(input: Partial<Config>): Config {
     if (ch.jobs.some((j) => j.id === "edi.upload-faktur")) throw new Error("Upload Faktur tidak boleh masuk rangkaian terjadwal.");
   }
   const ids = new Set<string>();
+  c.edi.amountTolerance = toleranceOf(c.edi.amountTolerance); // 0–1.000.000; bukan angka → 100
   for (const a of c.edi.accounts) {
     if (!/^[\w-]{1,40}$/.test(a.id) || ids.has(a.id)) throw new Error("ID akun EDI tidak valid / ganda.");
     ids.add(a.id);
@@ -319,7 +321,7 @@ async function api(req: http.IncomingMessage, res: http.ServerResponse, url: URL
     const { invoice, patch } = await body<{ invoice: string; patch: Record<string, unknown> }>(req);
     const allowed: Record<string, unknown> = {};
     for (const k of ["checked", "no_po", "no_sj", "open_amt", "status"]) if (k in patch) allowed[k] = patch[k];
-    if ("open_amt" in allowed) allowed.open_amt = Number(String(allowed.open_amt).replace(/\D/g, "")) || 0;
+    if ("open_amt" in allowed) allowed.open_amt = parseAmount(allowed.open_amt) ?? 0; // format EDI / Indonesia / Rp
     patchItem(invoice, allowed);
     return send(res, 200, loadManifest());
   }

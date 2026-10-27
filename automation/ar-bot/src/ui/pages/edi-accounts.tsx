@@ -24,7 +24,7 @@ export function EdiAccountsPage() {
 
   const store = async (d: Draft) => {
     const acc: EdiAccount = { id: d.id, label: d.label.trim() || d.username.trim(), username: d.username.trim(), active: d.active };
-    await save((c) => ({ ...c, edi: { accounts: d.isNew ? [...c.edi.accounts, acc] : c.edi.accounts.map((a) => (a.id === acc.id ? acc : a)) } }));
+    await save((c) => ({ ...c, edi: { ...c.edi, accounts: d.isNew ? [...c.edi.accounts, acc] : c.edi.accounts.map((a) => (a.id === acc.id ? acc : a)) } }));
     if (d.password) {
       try { setState(await api<PublicState>("/api/secrets", { [`edi:${acc.id}`]: d.password })); } catch (e) { toast((e as Error).message, "danger"); return; }
     }
@@ -32,7 +32,7 @@ export function EdiAccountsPage() {
     setEdit(null);
   };
   const remove = async (a: EdiAccount) => {
-    await save((c) => ({ ...c, edi: { accounts: c.edi.accounts.filter((x) => x.id !== a.id) }, jobs: Object.fromEntries(Object.entries(c.jobs).map(([k, p]) => [k, { ...p, accounts: p?.accounts?.filter((x) => x !== a.id) }])) }));
+    await save((c) => ({ ...c, edi: { ...c.edi, accounts: c.edi.accounts.filter((x) => x.id !== a.id) }, jobs: Object.fromEntries(Object.entries(c.jobs).map(([k, p]) => [k, { ...p, accounts: p?.accounts?.filter((x) => x !== a.id) }])) }));
     setState(await api<PublicState>("/api/secrets", { [`edi:${a.id}`]: null }));
     toast("Akun dihapus.", "success");
   };
@@ -53,7 +53,7 @@ export function EdiAccountsPage() {
                 <td className={td}>{a.label}</td>
                 <td className={td}>{a.username}</td>
                 <td className={td}>{state!.secretsSet.includes(`edi:${a.id}`) ? <span className="text-success">tersimpan</span> : <span className="text-danger">kosong</span>}</td>
-                <td className={td}><Switch checked={a.active} label="" onChange={(v) => save((c) => ({ ...c, edi: { accounts: c.edi.accounts.map((x) => (x.id === a.id ? { ...x, active: v } : x)) } }))} /></td>
+                <td className={td}><Switch checked={a.active} label="" onChange={(v) => save((c) => ({ ...c, edi: { ...c.edi, accounts: c.edi.accounts.map((x) => (x.id === a.id ? { ...x, active: v } : x)) } }))} /></td>
                 <td className={td}><TestButton target="edi" accountId={a.id} label="Login" res={res} setRes={setRes} /></td>
                 <td className={`${td} text-right`}>
                   <button type="button" className={btnGhost} onClick={() => setEdit({ ...a, password: "", isNew: false })} aria-label={`Ubah ${a.label}`}><Icon name="edit" /></button>{" "}

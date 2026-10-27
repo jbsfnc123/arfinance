@@ -20,10 +20,16 @@ describe("data PO", () => {
 
 describe("verifikasi sub-invoice", () => {
   const rows = [{ noSj: "SJ/0001", openAmt: "1.000.000" }, { noSj: "SJ/0002", openAmt: "2.000.000" }];
-  it("SJ & nominal cocok (toleransi 500)", () => {
-    const v = verifySubInvoice({ no_sj: "0002", open_amt: 2_000_400 }, rows);
-    expect(v).toEqual({ sjOk: true, amtOk: true });
+  it("SJ & nominal cocok (toleransi bawaan 100, bisa diatur)", () => {
+    const v = verifySubInvoice({ no_sj: "0002", open_amt: 2_000_050 }, rows);
+    expect(v).toMatchObject({ sjOk: true, amtOk: true });
     expect(verifyStatus(v)).toBeNull();
+    expect(verifySubInvoice({ no_sj: "0002", open_amt: 2_000_400 }, rows).amtOk).toBe(false);
+    expect(verifySubInvoice({ no_sj: "0002", open_amt: 2_000_400 }, rows, 500).amtOk).toBe(true);
+  });
+  it("Open Amt dari Excel/tempel: format EDI, Indonesia & Rp", () => {
+    const r = applyPo([item("A"), item("B"), item("C")], readPoRows({ text: "Invoice No\tOpen Amt\nA\t1,804,249.5\nB\t1.804.249,5\nC\tRp 1.804.249" }));
+    expect(r.items.map((i) => i.open_amt)).toEqual([1804249.5, 1804249.5, 1804249]);
   });
   it("status sama dengan bot lama", () => {
     expect(verifyStatus(verifySubInvoice({ no_sj: "0002", open_amt: 2_100_000 }, rows))).toBe("Invoice Selisih");

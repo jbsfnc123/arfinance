@@ -1,6 +1,7 @@
 // Cocokkan data No PO / No SJ / Open Amt (Excel, CSV, atau teks tempelan dari Excel) ke daftar faktur — port parse_po_excel.js.
 import * as XLSX from "xlsx";
 import type { FakturItem } from "./split";
+import { compareAmount, DEFAULT_TOLERANCE, parseAmount, type AmountCheck } from "./amount";
 
 /** Baris tabel dari file (xlsx/xls/csv) atau teks tempel (tab / ; / , dipisah). */
 export function readPoRows(input: { buf: Buffer } | { text: string }): unknown[][] {
@@ -22,7 +23,8 @@ export function findPoColumns(header: unknown[]) {
   return { inv, po, sj, amt };
 }
 
-const toAmount = (v: unknown) => typeof v === "number" ? Math.round(v) : Number(String(v ?? "").replace(/\D/g, "")) || 0;
+/** Open Amt dari Excel/tempel PO: format EDI, Indonesia, atau ber-Rp (lihat amount.ts). Desimal disimpan apa adanya. */
+const toAmount = (v: unknown) => parseAmount(v) ?? 0;
 
 /**
  * Terapkan ke `items` (salinan baru). Pencocokan No Invoice tanpa beda huruf besar/kecil.
@@ -53,18 +55,21 @@ export function applyPo(items: FakturItem[], rows: unknown[][], opts: { select?:
 }
 
 /**
- * Verifikasi mode "Not Found in Draft": cocokkan No SJ (angka saja) & Open Amt (toleransi Rp 500) dengan baris sub-invoice EDI.
- * Port logika bot_upload_faktur.js.
+ * Verifikasi mode "Not Found in Draft": cocokkan No SJ (angka saja) & Open Amt dengan baris sub-invoice EDI. Nominal cocok bila
+ * selisih ≤ `tol` (Pengaturan, bawaan Rp 100) — dipakai untuk baris yang No SJ-nya cocok DAN saat mencari baris lain yang
+ * nominalnya cocok. `checks` = rincian perbandingan untuk log (baris SJ cocok, atau selisih terkecil bila SJ tidak ada).
  */
-export function verifySubInvoice(item: Pick<FakturItem, "no_sj" | "open_amt">, rows: { noSj: string; openAmt: string }[]) {
+export function verifySubInvoice(item: Pick<FakturItem, "no_sj" | "open_amt">, rows: { noSj: string; openAmt: string }[], tol = DEFAULT_TOLERANCE) {
   const digits = (s: unknown) => String(s ?? "").replace(/\D/g, "");
-  const appSj = digits(item.no_sj), appAmt = Number(digits(item.open_amt));
-  const amtOf = (r: { openAmt: string }) => Number(digits(r.openAmt));
-  const near = (n: number) => !Number.isNaN(n) && !Number.isNaN(appAmt) && Math.abs(n - appAmt) <= 500;
-  if (!rows.length) return { sjOk: false, amtOk: false };
+  const appSj = digits(item.no_sj);
+  const cmp = (r: { noSj: string; openAmt: string }) => compareAmount(r.noSj, r.openAmt, item.open_amt, tol);
+  if (!rows.length) return { sjOk: false, amtOk: false, checks: [] as AmountCheck[] };
   const sjRow = rows.find((r) => digits(r.noSj) === appSj && appSj !== "");
-  if (sjRow) return { sjOk: true, amtOk: near(amtOf(sjRow)) };
-  return { sjOk: false, amtOk: rows.some((r) => near(amtOf(r))) };
+  if (sjRow) { const c = cmp(sjRow); return { sjOk: true, amtOk: c.ok, checks: [c] }; }
+  const all = rows.map(cmp);
+  const hit = all.find((c) => c.ok);
+  const nearest = [...all].sort((a, b) => (a.diff ?? Infinity) - (b.diff ?? Infinity))[0];
+  return { sjOk: false, amtOk: !!hit, checks: [hit ?? nearest] };
 }
 
 /** Status hasil verifikasi (sama dengan bot lama). */
@@ -79,19 +84,19 @@ const sameInv = (a: string, b: string) => a.trim().toUpperCase() === b.trim().to
 /** Dokumen boleh dipakai invoice ini: Vendor Invoice No masih kosong atau sudah berisi invoice yang sama (proses ulang). */
 export const docFree = (d: DraftDoc, invoice: string) => !d.vendorInvoiceNo.trim() || sameInv(d.vendorInvoiceNo, invoice);
 /** Dokumen ini jelas milik invoice tsb (SJ & nominal cocok, belum dipakai invoice lain) → tidak perlu membuka dokumen lain. */
-export const docMatches = (item: PoItem, d: DraftDoc) => {
-  const v = verifySubInvoice(item, d.rows);
+export const docMatches = (item: PoItem, d: DraftDoc, tol = DEFAULT_TOLERANCE) => {
+  const v = verifySubInvoice(item, d.rows, tol);
   return v.sjOk && v.amtOk && docFree(d, item.invoice);
 };
 
 /**
  * Pilih dokumen Draft untuk invoice (mode Not Found in Draft / cari No PO). Satu PO bisa punya beberapa invoice & SJ, masing-
- * masing dokumen Draft sendiri: dokumen dipilih dari No SJ (angka saja) + Open Amt (toleransi Rp 500), lalu No Invoice milik
+ * masing dokumen Draft sendiri: dokumen dipilih dari No SJ (angka saja) + Open Amt (selisih ≤ toleransi), lalu No Invoice milik
  * SJ itu yang diisi. Dokumen yang Vendor Invoice No-nya sudah berisi invoice lain dilewati. Satu dokumen → status bot lama.
  */
-export function pickDraftDoc(item: PoItem, docs: DraftDoc[]): { doc: DraftDoc; sj: string } | { doc: null; status: string } {
-  const sjOf = (d: DraftDoc) => d.rows.find((r) => verifySubInvoice(item, [r]).sjOk)?.noSj ?? "";
-  const v = (d: DraftDoc) => verifySubInvoice(item, d.rows);
+export function pickDraftDoc(item: PoItem, docs: DraftDoc[], tol = DEFAULT_TOLERANCE): { doc: DraftDoc; sj: string } | { doc: null; status: string } {
+  const sjOf = (d: DraftDoc) => d.rows.find((r) => verifySubInvoice(item, [r], tol).sjOk)?.noSj ?? "";
+  const v = (d: DraftDoc) => verifySubInvoice(item, d.rows, tol);
   if (!docs.length) return { doc: null, status: "Not Found in Draft (PO)" };
   if (docs.length === 1) {
     const d = docs[0];
