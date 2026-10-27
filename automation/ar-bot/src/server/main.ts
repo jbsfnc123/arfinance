@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { mergeConfig, validTime } from "~/shared/catalog";
+import { jobInfo, mergeConfig, validTime } from "~/shared/catalog";
 import type { Config, PublicState, RunEvent, RunRecord, RunRequest, SecretKey } from "~/shared/types";
 import { findBrowser } from "~/core/browser";
 import { activeLock, alive, releaseLock } from "~/core/lock";
@@ -163,7 +163,8 @@ function cleanConfig(input: Partial<Config>): Config {
   for (const ch of c.chains) {
     if (!/^[a-z0-9-]{2,40}$/.test(ch.id)) throw new Error(`ID rangkaian tidak valid: ${ch.id}`);
     if (!validTime(ch.schedule.time)) throw new Error(`Jam rangkaian ${ch.name} tidak valid.`);
-    if (ch.jobs.some((j) => j.id === "edi.upload-faktur")) throw new Error("Upload Faktur tidak boleh masuk rangkaian terjadwal.");
+    const w = ch.jobs.find((j) => jobInfo(j.id)?.confirm);
+    if (w) throw new Error(`${jobInfo(w.id).label} tidak boleh masuk rangkaian terjadwal (aksi tulis di EDI butuh konfirmasi).`);
   }
   const ids = new Set<string>();
   c.edi.amountTolerance = toleranceOf(c.edi.amountTolerance); // 0–1.000.000; bukan angka → 100

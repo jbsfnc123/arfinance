@@ -75,6 +75,51 @@ export async function openEdiReport(page: Page, hrefPart: string) {
   await delay(1500);
 }
 
+/**
+ * Langkah awal menu Invoices (dipakai Upload Faktur → Draft dan Invoice Inbox → Inbox): partner → menu Invoices → pilih vendor
+ * `#c2cInvoice` (opsi pertama yang bukan placeholder) → buka `https://edi.mitra10.com/<path>` → pilih vendor yang sama lagi.
+ */
+export async function openInvoices(ctx: RunContext, page: Page, path: "einvoice-draft" | "einvoice-inbox") {
+  await page.evaluate(() => {
+    const sel = document.querySelector<HTMLSelectElement>("#partnerlist") ?? document.querySelector<HTMLSelectElement>("select.partnerCompany");
+    if (sel && sel.options.length > 1) { sel.selectedIndex = 1; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+  });
+  await page.waitForSelector("#preloader", { hidden: true, timeout: 15_000 }).catch(() => {});
+  await delay(1500);
+  await page.evaluate(() => {
+    const link = [...document.querySelectorAll<HTMLElement>(".sidebar .nav-link, a.nav-link")].find((el) => el.innerText?.trim().toLowerCase().includes("invoices"));
+    link?.click();
+  });
+  await delay(800);
+  await page.waitForFunction(() => (document.querySelector<HTMLSelectElement>("#c2cInvoice")?.options.length ?? 0) > 1, { timeout: 15_000 }).catch(() => {});
+  const vendor = await page.evaluate(() => {
+    const s = document.querySelector<HTMLSelectElement>("#c2cInvoice");
+    if (!s || s.options.length < 2) return null;
+    if (s.selectedIndex === 0) s.selectedIndex = 1;
+    s.dispatchEvent(new Event("change", { bubbles: true }));
+    const w = window as unknown as { partnerChange?: () => void };
+    if (typeof w.partnerChange === "function") w.partnerChange();
+    localStorage.setItem("vendorCodeInvoice", s.value);
+    return s.value;
+  });
+  ctx.info(`Vendor: ${vendor ?? "(bawaan)"}`);
+  await delay(1000);
+  await page.goto(`https://edi.mitra10.com/${path}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForSelector("#preloader", { hidden: true, timeout: 15_000 }).catch(() => {});
+  await delay(1500);
+  await page.waitForFunction(() => (document.querySelector<HTMLSelectElement>("#c2cInvoice")?.options.length ?? 0) > 1, { timeout: 15_000 }).catch(() => {});
+  await page.evaluate((v: string | null) => {
+    const s = document.querySelector<HTMLSelectElement>("#c2cInvoice");
+    if (!s || s.options.length < 2) return;
+    if (v) s.value = v; else if (s.selectedIndex === 0) s.selectedIndex = 1;
+    s.dispatchEvent(new Event("change", { bubbles: true }));
+    const w = window as unknown as { partnerChange?: () => void };
+    if (typeof w.partnerChange === "function") w.partnerChange();
+  }, vendor);
+  await delay(1000);
+  return vendor;
+}
+
 export async function ediLogout(page: Page) {
   try {
     await page.waitForSelector("#navbarDropdownMenuLink", { visible: true, timeout: 15_000 });

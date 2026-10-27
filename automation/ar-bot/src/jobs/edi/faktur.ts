@@ -10,7 +10,7 @@ import { formatAmountCheck, toleranceOf } from "~/faktur/amount";
 import { loadManifest, patchItem, splitFile } from "~/faktur/store";
 import type { FakturItem } from "~/faktur/split";
 import type { JobOut } from "../jasper/jobs";
-import { ediLogin, ediLogout, ediPage, pickAccounts } from "./session";
+import { ediLogin, ediLogout, ediPage, openInvoices, pickAccounts } from "./session";
 
 const uploaded = (s?: string) => !!s && s.startsWith("Uploaded");
 
@@ -34,43 +34,7 @@ async function toList(page: Page) {
 
 /** Login → menu Invoices → vendor → Draft Invoice › tab Invoice. */
 async function openDraft(ctx: RunContext, page: Page) {
-  await page.evaluate(() => {
-    const sel = document.querySelector<HTMLSelectElement>("#partnerlist") ?? document.querySelector<HTMLSelectElement>("select.partnerCompany");
-    if (sel && sel.options.length > 1) { sel.selectedIndex = 1; sel.dispatchEvent(new Event("change", { bubbles: true })); }
-  });
-  await page.waitForSelector("#preloader", { hidden: true, timeout: 15_000 }).catch(() => {});
-  await delay(1500);
-  await page.evaluate(() => {
-    const link = [...document.querySelectorAll<HTMLElement>(".sidebar .nav-link, a.nav-link")].find((el) => el.innerText?.trim().toLowerCase().includes("invoices"));
-    link?.click();
-  });
-  await delay(800);
-  await page.waitForFunction(() => (document.querySelector<HTMLSelectElement>("#c2cInvoice")?.options.length ?? 0) > 1, { timeout: 15_000 }).catch(() => {});
-  const vendor = await page.evaluate(() => {
-    const s = document.querySelector<HTMLSelectElement>("#c2cInvoice");
-    if (!s || s.options.length < 2) return null;
-    if (s.selectedIndex === 0) s.selectedIndex = 1;
-    s.dispatchEvent(new Event("change", { bubbles: true }));
-    const w = window as unknown as { partnerChange?: () => void };
-    if (typeof w.partnerChange === "function") w.partnerChange();
-    localStorage.setItem("vendorCodeInvoice", s.value);
-    return s.value;
-  });
-  ctx.info(`Vendor: ${vendor ?? "(bawaan)"}`);
-  await delay(1000);
-  await page.goto("https://edi.mitra10.com/einvoice-draft", { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.waitForSelector("#preloader", { hidden: true, timeout: 15_000 }).catch(() => {});
-  await delay(1500);
-  await page.waitForFunction(() => (document.querySelector<HTMLSelectElement>("#c2cInvoice")?.options.length ?? 0) > 1, { timeout: 15_000 }).catch(() => {});
-  await page.evaluate((v: string | null) => {
-    const s = document.querySelector<HTMLSelectElement>("#c2cInvoice");
-    if (!s || s.options.length < 2) return;
-    if (v) s.value = v; else if (s.selectedIndex === 0) s.selectedIndex = 1;
-    s.dispatchEvent(new Event("change", { bubbles: true }));
-    const w = window as unknown as { partnerChange?: () => void };
-    if (typeof w.partnerChange === "function") w.partnerChange();
-  }, vendor);
-  await delay(1000);
+  await openInvoices(ctx, page, "einvoice-draft");
   await page.waitForSelector("#custom-tabs-one-invoices-tab", { timeout: 15_000 });
   await page.click("#custom-tabs-one-invoices-tab");
   await delay(1500);

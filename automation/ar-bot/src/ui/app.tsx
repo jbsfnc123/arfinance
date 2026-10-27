@@ -17,7 +17,7 @@ const job = (id: JobId): NavItem => { const j = JOBS.find((x) => x.id === id)!; 
 const NAV: { group?: string; items: NavItem[] }[] = [
   { items: [{ key: "dashboard", label: "Dashboard", icon: "space_dashboard" }] },
   { group: "Jaspersoft", items: [job("jasper.aging"), job("jasper.send-invoice"), job("jasper.sj"), job("jasper.invoice-by-date")] },
-  { group: "EDI Mitra 10", items: [{ key: "edi.accounts", label: "Akun", icon: "groups" }, job("edi.gr"), job("edi.kwitansi"), job("edi.upload-faktur")] },
+  { group: "EDI Mitra 10", items: [{ key: "edi.accounts", label: "Akun", icon: "groups" }, job("edi.gr"), job("edi.kwitansi"), job("edi.upload-faktur"), job("edi.invoice-inbox")] },
   { group: "Sistem", items: [{ key: "chains", label: "Rangkaian & Jadwal", icon: "event" }, { key: "history", label: "Riwayat", icon: "history" }, { key: "settings", label: "Pengaturan", icon: "settings" }] },
 ];
 

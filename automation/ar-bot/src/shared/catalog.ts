@@ -10,7 +10,7 @@ export type JobInfo = {
   /** Bisa dikirim ke AR Workspace. */
   pushable: boolean;
   /** Format file hasil. */
-  format: "Excel" | "CSV" | "PDF";
+  format: "Excel" | "CSV" | "PDF" | "-";
   /** Butuh konfirmasi sebelum dijalankan sungguhan (aksi tulis di situs luar). */
   confirm?: boolean;
   /** Label pendek untuk menu samping (bila label penuh terlalu panjang). */
@@ -25,6 +25,7 @@ export const JOBS: readonly JobInfo[] = [
   { id: "edi.gr", group: "edi", label: "GR Report Detail", short: "GR Report", icon: "download", pushable: true, format: "CSV" },
   { id: "edi.kwitansi", group: "edi", label: "Download Kwitansi", short: "Kwitansi", icon: "receipt_long", pushable: true, format: "CSV" },
   { id: "edi.upload-faktur", group: "edi", label: "Upload Faktur Pajak", short: "Upload Faktur", icon: "upload_file", pushable: false, format: "PDF", confirm: true },
+  { id: "edi.invoice-inbox", group: "edi", label: "Invoice Inbox", short: "Invoice Inbox", icon: "inventory_2", pushable: false, format: "-", confirm: true },
 ];
 
 export const jobInfo = (id: JobId) => JOBS.find((j) => j.id === id)!;
@@ -37,6 +38,7 @@ export const DEFAULT_PARAMS: Record<JobId, JobParams> = {
   "edi.gr": { push: true },
   "edi.kwitansi": { push: true },
   "edi.upload-faktur": { mode: "draft" },
+  "edi.invoice-inbox": { limit: 0 },
 };
 
 export const DEFAULT_CHAIN: Chain = {
