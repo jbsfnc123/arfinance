@@ -5,7 +5,8 @@
 import type { Page } from "puppeteer-core";
 import type { JobParams } from "~/shared/types";
 import { delay, type RunContext } from "~/runner/ctx";
-import { docMatches, pickDraftDoc, type DraftDoc } from "~/faktur/po";
+import { docMatches, pickDraftDoc, verifySubInvoice, type DraftDoc } from "~/faktur/po";
+import { formatAmountCheck, toleranceOf } from "~/faktur/amount";
 import { loadManifest, patchItem, splitFile } from "~/faktur/store";
 import type { FakturItem } from "~/faktur/split";
 import type { JobOut } from "../jasper/jobs";
@@ -217,6 +218,8 @@ async function processOne(ctx: RunContext, page: Page, item: FakturItem, notFoun
 
   if (byPo) {
     // Satu PO bisa punya beberapa dokumen Draft (satu per invoice/SJ): buka satu per satu sampai No SJ & Open Amt cocok.
+    // Toleransi selisih Open Amt dari Pengaturan (bawaan Rp 100): nominal cocok bila selisih ≤ toleransi.
+    const tol = toleranceOf(ctx.config.edi.amountTolerance);
     if (list.length > 1) ctx.info(`PO ${term}: ${list.length} dokumen Draft — dicocokkan dengan No SJ ${item.no_sj || "-"}.`);
     const docs: DraftDoc[] = [];
     for (const d of list) {
@@ -225,13 +228,15 @@ async function processOne(ctx: RunContext, page: Page, item: FakturItem, notFoun
       docs.push(doc);
       const used = doc.vendorInvoiceNo.trim() ? ` · Vendor Invoice No ${doc.vendorInvoiceNo.trim()}` : "";
       ctx.info(`  ${doc.docNo}: SJ ${doc.rows.map((r) => r.noSj).join(", ") || "-"}${used}`);
-      if (docMatches(item, doc)) break;
+      const v = verifySubInvoice(item, doc.rows, tol);
+      for (const c of v.checks) ctx.info(`    ${v.sjOk ? "SJ cocok · " : "SJ tidak cocok · nominal terdekat · "}${formatAmountCheck(c, tol)}`);
+      if (docMatches(item, doc, tol)) break;
     }
-    const pick = pickDraftDoc(item, docs);
-    if (!pick.doc) { ctx.warn(`Verifikasi: ${pick.status}`); await toList(page); return pick.status; }
+    const pick = pickDraftDoc(item, docs, tol);
+    if (!pick.doc) { ctx.warn(`Verifikasi: ${pick.status} (toleransi Rp ${tol})`); await toList(page); return pick.status; }
     if (docs[docs.length - 1].id !== pick.doc.id) await openDoc(page, pick.doc);
     tag = pick.sj ? `${pick.doc.docNo} (${pick.sj})` : pick.doc.docNo;
-    ctx.info(`Cocok: ${tag} → Vendor Invoice No ${item.invoice}`);
+    ctx.info(`Verifikasi No SJ & Open Amt cocok (toleransi Rp ${tol}). Cocok: ${tag} → Vendor Invoice No ${item.invoice}`);
     if (ctx.opts.dryRun) { await toList(page); return `Cocok (uji coba): ${tag}`; }
     await page.waitForSelector("#vendorInvoiceNo", { timeout: 10_000 });
     await page.$eval("#vendorInvoiceNo", (el, v) => {

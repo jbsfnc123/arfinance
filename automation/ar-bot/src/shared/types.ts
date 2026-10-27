@@ -86,7 +86,8 @@ export type Config = {
   retentionDays: number;
   jasper: { username: string; organization: string };
   arw: { supabaseUrl: string; anonKey: string; botEmail: string };
-  edi: { accounts: EdiAccount[] };
+  /** amountTolerance: toleransi selisih Open Amt (Rp) saat verifikasi Upload Faktur (bawaan 100). */
+  edi: { accounts: EdiAccount[]; amountTolerance: number };
   jobs: Partial<Record<JobId, JobParams>>;
   chains: Chain[];
   theme: "system" | "light" | "dark";

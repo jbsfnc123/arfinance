@@ -108,6 +108,13 @@ export function SettingsPage() {
         <div className="mt-3"><TestButton target="arw" label="Uji login" res={res} setRes={setRes} /></div>
       </Card>
 
+      <Card title="EDI Mitra 10 · Upload Faktur">
+        <div className="w-64">
+          <CfgInput label="Toleransi selisih Open Amt (Rp)" type="number" value={String(cfg.edi.amountTolerance ?? 100)}
+            onSave={(v) => patch((c) => ({ ...c, edi: { ...c.edi, amountTolerance: v.trim() === "" ? 100 : Math.max(0, Number(v) || 0) } }), "Toleransi disimpan.")} />
+        </div>
+        <p className="mt-2 text-xs text-fg-2">Data dianggap cocok bila selisih nominal Open Amt EDI dan aplikasi ≤ toleransi (bawaan Rp 100). Berlaku saat No SJ cocok maupun saat mencari baris lain yang nominalnya cocok.</p>
+      </Card>
 
       <Card title="Browser bot">
         <div className="flex flex-wrap items-center gap-4">

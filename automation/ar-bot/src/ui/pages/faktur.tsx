@@ -5,6 +5,7 @@ import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, chip, emptyTd, inputCls, segGroup, segItem, tableCls, td, th } from "@/components/ui";
 import type { JobParams } from "~/shared/types";
+import { parseAmount } from "~/faktur/amount";
 import { checkedAfter, downloadName, EMPTY_FILTER, filterItems, isFiltered, STATUS_GROUPS, statusCounts, type FakturFilter } from "~/faktur/filter";
 import { api, fileToBase64, fmtSize, withToken } from "../api";
 import { useApp } from "../store";
@@ -172,7 +173,7 @@ export function FakturPage() {
                   <td className={td}>{it.pages}</td>
                   <td className={td}><Cell value={it.no_po ?? ""} label="No PO" onSave={(v) => patch(it, { no_po: v })} /></td>
                   <td className={td}><Cell value={it.no_sj ?? ""} label="No SJ" onSave={(v) => patch(it, { no_sj: v })} /></td>
-                  <td className={`${td} text-right`}><Cell value={it.open_amt ? it.open_amt.toLocaleString("id-ID") : ""} label="Open Amt" right onSave={(v) => patch(it, { open_amt: Number(v.replace(/\D/g, "")) || 0 })} /></td>
+                  <td className={`${td} text-right`}><Cell value={it.open_amt ? it.open_amt.toLocaleString("id-ID") : ""} label="Open Amt" right onSave={(v) => patch(it, { open_amt: parseAmount(v) ?? 0 })} /></td>
                   <td className={td}><span className={`${chip} ${statusTone(it.status)}`} title={it.status}>{it.status.length > 34 ? `${it.status.slice(0, 34)}…` : it.status}</span></td>
                   <td className={`${td} whitespace-nowrap`}>
                     <button type="button" className={btnGhost} onClick={() => setPreview(it)} aria-label={`Lihat PDF ${it.invoice}`}><Icon name="visibility" /></button>
