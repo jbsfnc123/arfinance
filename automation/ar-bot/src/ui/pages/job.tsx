@@ -4,7 +4,7 @@ import { inputCls, toggleChip } from "@/components/ui";
 import { DEFAULT_PARAMS, jobInfo } from "~/shared/catalog";
 import type { JobId, JobParams } from "~/shared/types";
 import { useApp } from "../store";
-import { Card, Field, FileList, PageHeader, Switch } from "../parts/common";
+import { Card, Confirm, Field, FileList, PageHeader, Switch } from "../parts/common";
 import { dateParams, initialDates, JobDates, type Dates } from "../parts/dates";
 import { JobLog, RunButtons, useSaveConfig } from "../parts/run";
 
@@ -17,6 +17,8 @@ export function JobPage({ id }: { id: JobId }) {
   // Tanggal hanya untuk run ini (tidak disimpan) agar rangkaian terjadwal selalu memakai tanggal hari itu.
   // Terisi default yang sama dengan runner (Send Invoice: Senin s/d hari ini, GR: 30 hari, Kwitansi: bulan ini).
   const [dates, setDates] = useState<Dates | null>(() => initialDates(id));
+  // Job ber-konfirmasi (aksi tulis di situs luar, mis. Invoice Inbox): Jalankan meminta persetujuan dulu.
+  const [confirm, setConfirm] = useState<(() => void) | null>(null);
   const setSaved = (p: JobParams) => save((c) => ({ ...c, jobs: { ...c.jobs, [id]: { ...c.jobs[id], ...p } } }));
 
   const isEdi = info.group === "edi";
@@ -33,7 +35,8 @@ export function JobPage({ id }: { id: JobId }) {
   return (
     <div className="grid gap-4">
       <PageHeader title={info.label}>
-        <RunButtons jobs={[spec]} pushable={info.pushable && !!saved.push} disabledReason={reason} />
+        <RunButtons jobs={[spec]} pushable={info.pushable && !!saved.push} disabledReason={reason}
+          confirm={info.confirm ? (go) => setConfirm(() => go) : undefined} />
       </PageHeader>
       {reason && <p className="text-[13px] text-warning">{reason}</p>}
 
@@ -46,6 +49,12 @@ export function JobPage({ id }: { id: JobId }) {
             <Field label="Rentang hari (termasuk hari ini)" className="w-48">
               <input className={inputCls} type="number" min={1} max={31} value={saved.days ?? 7}
                 onChange={(e) => setSaved({ days: Math.min(31, Math.max(1, Number(e.target.value) || 7)) })} />
+            </Field>
+          )}
+          {id === "edi.invoice-inbox" && (
+            <Field label="Maks. invoice per akun per run (0 = semua)" className="w-64">
+              <input className={inputCls} type="number" min={0} max={200} value={saved.limit ?? 0}
+                onChange={(e) => setSaved({ limit: Math.min(200, Math.max(0, Math.floor(Number(e.target.value) || 0))) })} />
             </Field>
           )}
           <JobDates id={id} value={dates} onChange={setDates} />
@@ -70,7 +79,14 @@ export function JobPage({ id }: { id: JobId }) {
       </Card>
 
       <Card title="Log"><JobLog jobId={id} /></Card>
-      <FileList job={id} refreshKey={lastRun?.finishedAt} />
+      {info.format !== "-" && <FileList job={id} refreshKey={lastRun?.finishedAt} />}
+      {info.confirm && (
+        <Confirm open={!!confirm} title={info.label} confirmLabel="Jalankan" onClose={() => setConfirm(null)} onConfirm={() => confirm?.()}>
+          {id === "edi.invoice-inbox"
+            ? <>Bot akan menekan <b>Create Invoice</b> satu per satu untuk baris berstatus <b>Completed</b> di Inbox EDI Mitra 10 ({chosen.length} akun{saved.limit ? `, maks. ${saved.limit} per akun` : ""}). Tindakan ini tidak bisa dibatalkan dari aplikasi — jalankan Uji Coba dulu bila ragu.</>
+            : <>Job ini melakukan aksi tulis di situs luar dan tidak bisa dibatalkan dari aplikasi.</>}
+        </Confirm>
+      )}
     </div>
   );
 }

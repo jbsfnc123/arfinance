@@ -2,7 +2,7 @@
 
 export type JobId =
   | "jasper.aging" | "jasper.send-invoice" | "jasper.sj" | "jasper.invoice-by-date"
-  | "edi.gr" | "edi.kwitansi" | "edi.upload-faktur";
+  | "edi.gr" | "edi.kwitansi" | "edi.upload-faktur" | "edi.invoice-inbox";
 
 export type JobGroup = "jasper" | "edi";
 
@@ -18,6 +18,8 @@ export type JobParams = {
   accounts?: string[];
   /** Upload Faktur: mode "Not Found in Draft". */
   mode?: "draft" | "not_found";
+  /** Invoice Inbox: maks. invoice dibuat per akun per run (0 = semua, dibatasi 200). */
+  limit?: number;
 };
 
 export type JobSpec = { id: JobId; params?: JobParams };

@@ -72,8 +72,8 @@ async function runJob(ctx: RunContext, config: Config, spec: JobSpec, res: JobRe
       if (parallel) await jctx.closeJob(); else await ctx.closeBrowser();
       if (js) resetJasper(jctx);
       if (cancelled) { res.status = "cancelled"; res.error = msg; jctx.warn(msg); break; }
-      // Upload Faktur tidak diulang otomatis: aksi tulis di situs luar.
-      if (attempt < 3 && !permanent(msg) && spec.id !== "edi.upload-faktur") {
+      // Job ber-konfirmasi (Upload Faktur, Invoice Inbox) tidak diulang otomatis: aksi tulis di situs luar.
+      if (attempt < 3 && !permanent(msg) && !info.confirm) {
         jctx.warn(`${info.label} gagal (percobaan ${attempt}/3): ${msg} — ulang dalam 20 detik`);
         await delay(20_000);
         if (!ctx.isCancelled) continue;
