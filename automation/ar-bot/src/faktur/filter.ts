@@ -1,17 +1,19 @@
 // Filter & centang per filter untuk daftar Upload Faktur (Fase 70b). Fungsi murni: dipakai UI, diuji vitest.
 import type { FakturItem } from "./split";
 
-export type StatusGroup = "ready" | "not_found" | "dry" | "failed" | "uploaded";
+export type StatusGroup = "ready" | "not_found" | "dry" | "failed" | "uploaded" | "filled";
 export const STATUS_GROUPS: { id: StatusGroup; label: string }[] = [
   { id: "ready", label: "Ready" },
   { id: "not_found", label: "Not Found" },
   { id: "dry", label: "Uji coba" },
   { id: "failed", label: "Gagal / perlu cek" },
   { id: "uploaded", label: "Uploaded" },
+  { id: "filled", label: "No Invoice Terisi" },
 ];
 
 export function statusGroup(s: string): StatusGroup {
   if (s.startsWith("Uploaded")) return "uploaded";
+  if (s.startsWith("No Invoice Terisi")) return "filled";
   if (s.startsWith("Not Found in Draft")) return "not_found";
   if (s.includes("(uji coba)")) return "dry";
   if (s === "Ready") return "ready";
@@ -22,7 +24,8 @@ export type FakturFilter = { q: string; status: StatusGroup | ""; po: "" | "yes"
 export const EMPTY_FILTER: FakturFilter = { q: "", status: "", po: "", excel: "" };
 export const isFiltered = (f: FakturFilter) => !!(f.q.trim() || f.status || f.po || f.excel);
 
-type Row = Pick<FakturItem, "invoice" | "faktur" | "status" | "checked" | "no_po" | "no_sj" | "in_po">;
+// Sheet Invoice+FP (FakturItem) dan sheet Invoice (InvoiceRow, tanpa No Faktur / tanda Excel PO).
+type Row = Pick<FakturItem, "invoice" | "status" | "checked" | "no_po" | "no_sj"> & { faktur?: string; in_po?: boolean };
 
 export function filterItems<T extends Row>(items: T[], f: FakturFilter): T[] {
   const words = f.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
