@@ -18,8 +18,10 @@ export type JobParams = {
   accounts?: string[];
   /** Upload Faktur: mode "Not Found in Draft". */
   mode?: "draft" | "not_found" | "fill";
-  /** Invoice Inbox: maks. invoice dibuat per akun per run (0 = semua, dibatasi 200). */
+  /** Invoice Inbox: maks. dokumen diproses per akun per run (0 = semua, dibatasi 200). */
   limit?: number;
+  /** Invoice Inbox: completed = Create Invoice dari status Completed; new = Accept PFI berstatus New. */
+  inboxMode?: "completed" | "new";
 };
 
 export type JobSpec = { id: JobId; params?: JobParams };

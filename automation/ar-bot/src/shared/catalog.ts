@@ -38,7 +38,7 @@ export const DEFAULT_PARAMS: Record<JobId, JobParams> = {
   "edi.gr": { push: true },
   "edi.kwitansi": { push: true },
   "edi.upload-faktur": { mode: "draft" },
-  "edi.invoice-inbox": { limit: 0 },
+  "edi.invoice-inbox": { limit: 0, inboxMode: "completed" },
 };
 
 export const DEFAULT_CHAIN: Chain = {
