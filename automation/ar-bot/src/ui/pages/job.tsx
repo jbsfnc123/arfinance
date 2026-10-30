@@ -1,6 +1,6 @@
 // Halaman satu job (Jaspersoft / EDI unduh): parameter, jalankan, log, file hasil.
 import { useMemo, useState } from "react";
-import { inputCls, toggleChip } from "@/components/ui";
+import { inputCls, segGroup, segItem, toggleChip } from "@/components/ui";
 import { DEFAULT_PARAMS, jobInfo } from "~/shared/catalog";
 import type { JobId, JobParams } from "~/shared/types";
 import { useApp } from "../store";
@@ -52,7 +52,18 @@ export function JobPage({ id }: { id: JobId }) {
             </Field>
           )}
           {id === "edi.invoice-inbox" && (
-            <Field label="Maks. invoice per akun per run (0 = semua)" className="w-64">
+            <div className="grid gap-1">
+              <span className="text-xs text-fg-2">Fitur</span>
+              <div className={segGroup} role="group" aria-label="Fitur Invoice Inbox">
+                {([["completed", "Completed · Create Invoice"], ["new", "New · Accept"]] as const).map(([m, l]) => (
+                  <button key={m} type="button" aria-pressed={(saved.inboxMode ?? "completed") === m} className={segItem((saved.inboxMode ?? "completed") === m)}
+                    onClick={() => setSaved({ inboxMode: m })}>{l}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {id === "edi.invoice-inbox" && (
+            <Field label="Maks. dokumen per akun per run (0 = semua)" className="w-64">
               <input className={inputCls} type="number" min={0} max={200} value={saved.limit ?? 0}
                 onChange={(e) => setSaved({ limit: Math.min(200, Math.max(0, Math.floor(Number(e.target.value) || 0))) })} />
             </Field>
@@ -82,7 +93,9 @@ export function JobPage({ id }: { id: JobId }) {
       {info.format !== "-" && <FileList job={id} refreshKey={lastRun?.finishedAt} />}
       {info.confirm && (
         <Confirm open={!!confirm} title={info.label} confirmLabel="Jalankan" onClose={() => setConfirm(null)} onConfirm={() => confirm?.()}>
-          {id === "edi.invoice-inbox"
+          {id === "edi.invoice-inbox" && saved.inboxMode === "new"
+            ? <>Bot akan membuka Document No lalu menekan <b>Accept</b> satu per satu untuk PFI berstatus <b>New</b> di Inbox EDI Mitra 10, sampai status New habis ({chosen.length} akun{saved.limit ? `, maks. ${saved.limit} per akun` : ""}). Tindakan ini tidak bisa dibatalkan dari aplikasi — jalankan Uji Coba dulu bila ragu.</>
+            : id === "edi.invoice-inbox"
             ? <>Bot akan menekan <b>Create Invoice</b> satu per satu untuk baris berstatus <b>Completed</b> di Inbox EDI Mitra 10 ({chosen.length} akun{saved.limit ? `, maks. ${saved.limit} per akun` : ""}). Tindakan ini tidak bisa dibatalkan dari aplikasi — jalankan Uji Coba dulu bila ragu.</>
             : <>Job ini melakukan aksi tulis di situs luar dan tidak bisa dibatalkan dari aplikasi.</>}
         </Confirm>
