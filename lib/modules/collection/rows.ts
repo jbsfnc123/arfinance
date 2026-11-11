@@ -49,7 +49,9 @@ function latestBy<T extends { id: number; invoice_no: string }>(rows: T[]) {
   return m;
 }
 
-const TUKAR_ORDER = ["Kolektor", "Ekspedisi", "Sistem", "WA", "Email"];
+// "Kwitansi EDI" = baris virtual dari Kwitansi Mitra10 (pack_activity, id negatif; tanggal = Kuitansi Date) — prioritas
+// terakhir agar tukar faktur yang dicatat manual/kurir/ekspedisi tetap diutamakan.
+const TUKAR_ORDER = ["Kolektor", "Ekspedisi", "Sistem", "WA", "Email", "Kwitansi EDI"];
 
 /** Tukar faktur terpilih per invoice: metode prioritas (Kolektor > Ekspedisi > Sistem > WA > Email), lalu id terkecil. */
 export function pickExchanges(exchanges: Exchange[]) {

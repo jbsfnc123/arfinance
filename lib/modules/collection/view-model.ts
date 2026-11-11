@@ -87,7 +87,12 @@ export function applyExchange(
   row: CollectionRow,
   ex: { metode: string; tanggal: string; keterangan: string | null; resi: string | null; foto_path: string | null },
 ): CollectionRow {
-  const rank = (m: string | null) => (m ? TUKAR_METHODS.indexOf(m as (typeof TUKAR_METHODS)[number]) : 99);
+  // Metode di luar daftar (mis. "Kwitansi EDI" virtual dari Kwitansi Mitra10) = prioritas terakhir, tetap di atas "belum ada".
+  const rank = (m: string | null) => {
+    if (!m) return 99;
+    const i = TUKAR_METHODS.indexOf(m as (typeof TUKAR_METHODS)[number]);
+    return i < 0 ? TUKAR_METHODS.length : i;
+  };
   if (rank(ex.metode) >= rank(row.metode_tukar)) return row;
   return withSearch({
     ...row,

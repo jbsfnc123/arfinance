@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { pickExchanges } from "./rows";
 import { agingOf } from "./aging";
 import { parseTarget } from "./parse-target";
 import { buildWaMessage, DEFAULT_WA_TEMPLATE, effectiveTemplate, normalizePhone, waLink } from "./wa-message";
@@ -82,5 +83,15 @@ describe("pesan WA", () => {
 
   it("tautan wa.me", () => {
     expect(waLink("0812", "a b")).toBe("https://wa.me/62812?text=a%20b");
+  });
+});
+
+describe("Kwitansi EDI (Kuitansi Date Mitra10 = Tgl Tukar Faktur)", () => {
+  const ex = (id: number, invoice_no: string, metode: string, tanggal: string) =>
+    ({ id, invoice_no, metode, tanggal, keterangan: null, resi: null, foto_path: null, kurir: null, collection_name: null });
+  it("hanya Kwitansi → tanggal tukar = Kuitansi Date; ada catatan manual → manual menang", () => {
+    const p = pickExchanges([ex(-10, "SI/1", "Kwitansi EDI", "2026-11-05"), ex(-11, "SI/2", "Kwitansi EDI", "2026-11-06"), ex(7, "SI/2", "Kolektor", "2026-11-09")]);
+    expect(p.get("SI/1")).toMatchObject({ metode: "Kwitansi EDI", tanggal: "2026-11-05" });
+    expect(p.get("SI/2")).toMatchObject({ metode: "Kolektor", tanggal: "2026-11-09" });
   });
 });

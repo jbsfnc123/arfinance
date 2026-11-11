@@ -64,7 +64,8 @@ export const MENU_HELP: MenuHelp[] = [
   { href: "/mitra10", menu: "Tukar Faktur › Mitra10 Tukar Faktur", text: [
     "Upload 1 Aging: file MASTER AGING / Blank_A4 — laporan yang sama dengan Update Tagihan, cukup sekali (di sini atau di Pusat Upload). Mitra10 membaca baris dengan Tax Name terpilih; Aging terbaru menggantikan data aktif. Invoice yang tidak ada di Aging terbaru keluar dari dashboard & Kertas Kerja; keterangan, tanggal tukar faktur, warna & data pendukung tetap tersimpan.",
     "Upload 2 Receiving: GR_Report_Detail.csv (pemisah \";\"). SJ NO dibentuk dari Vendor Ship No; baris baru (GR No + Item Code belum ada) ditambahkan.",
-    "Upload 3 Kwitansi: Invoice_Summary.csv (pemisah \";\"). Invoice No yang sudah ada dilewati.",
+    "Upload 3 Kwitansi: Invoice_Summary.csv (pemisah \";\"). Invoice No yang sudah ada dilewati. Kuitansi Date otomatis menjadi Tgl Tukar Faktur di Daftar Tagihan (metode \"Kwitansi EDI\") bila invoice belum dicatat tukar faktur manual/kurir/ekspedisi.",
+    "Kertas Kerja menampilkan kolom Kuitansi Date (tanggal Kwitansi pertama invoice). Jadwal Bayar disembunyikan bawaan — tampilkan lewat tombol kolom tersembunyi di atas tabel.",
     "Upload 4 Jadwal Bayar: Excel dengan header NO KW, SPP, NILAI KW, TGL TUKAR FAKTUR, JADWAL TRANSFER, Notes. No KW yang sudah ada diperbarui; Jadwal Bayar invoice di KW tersebut ikut terisi (satu field dengan Daftar Tagihan).",
     "Siap TF = GR sudah Done, Tukar Faktur masih Pending.",
   ] },
