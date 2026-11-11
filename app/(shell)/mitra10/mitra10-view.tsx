@@ -40,6 +40,8 @@ const KK_COLS: LCol<WorksheetRow>[] = [
   { k: "gr", l: "GR", badge: { Done: OK, Pending: WAIT } },
   { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
   { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 200 },
+  // Kuitansi Date (Kwitansi pertama invoice ini) = Tgl Tukar Faktur di Daftar Tagihan (metode "Kwitansi EDI").
+  { k: "tf_date", l: "Kuitansi Date", d: true },
   { k: "jadwal_bayar", l: "Jadwal Bayar", d: true },
 ];
 const GR_EDIT: { k: keyof Gr & string; l: string; t?: "number" }[] = [
@@ -163,7 +165,7 @@ export function Mitra10View() {
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard stateKey="mitra10" m={m} />}
         {tab === "kk" && (
-          <LocalTable title="Kertas Kerja" hideKey="m10-kk" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Kertas Kerja" hideKey="m10-kk-v2" defaultHidden={["jadwal_bayar"]} rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             onRowsChange={setShown}
             search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan"]}
             filters={[

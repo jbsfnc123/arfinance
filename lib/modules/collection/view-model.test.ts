@@ -128,3 +128,14 @@ describe("Receive Date SJ (Monitor Surat Jalan) & kolom default", () => {
     expect(DEFAULT_COLUMNS).toEqual(["business_partner", "invoice_no", "invoice_date", "due_date", "open_amt", "keterangan", "tanggal_tukar"]);
   });
 });
+
+describe("applyExchange vs Kwitansi EDI", () => {
+  it("tukar faktur manual baru menggantikan Kwitansi EDI; Kwitansi tidak menimpa yang manual", async () => {
+    const { applyExchange } = await import("./view-model");
+    const base = { metode_tukar: "Kwitansi EDI", tanggal_tukar: "2026-11-05", ket_tukar: "", resi: "", foto_path: null } as unknown as Parameters<typeof applyExchange>[0];
+    const manual = applyExchange(base, { metode: "Sistem", tanggal: "2026-11-10", keterangan: null, resi: null, foto_path: null });
+    expect(manual).toMatchObject({ metode_tukar: "Sistem", tanggal_tukar: "2026-11-10" });
+    const back = applyExchange(manual, { metode: "Kwitansi EDI", tanggal: "2026-11-01", keterangan: null, resi: null, foto_path: null });
+    expect(back.metode_tukar).toBe("Sistem");
+  });
+});

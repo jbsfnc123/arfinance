@@ -88,7 +88,7 @@ const tables = (raw: Raw, names: string[]) => Object.fromEntries(names.map((n) =
 
 export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string, unknown>; deps: DatasetKey[]; decode: (raw: Raw) => Datasets[K] } } = {
   aging: { rpc: "pack_aging", deps: ["aging"], decode: (r) => ({ month: (r.month as string) ?? null, uploadedAt: (r.uploadedAt as string) ?? null, lines: unpack<AgingLine>(r.lines as Packed) }) },
-  activity: { rpc: "pack_activity", deps: ["activity"], decode: (r) => tables(r, ["notes", "promises", "exchanges"]) as Datasets["activity"] },
+  activity: { rpc: "pack_activity", deps: ["activity", "m10"], decode: (r) => tables(r, ["notes", "promises", "exchanges"]) as Datasets["activity"] },
   targets: { rpc: "pack_targets", deps: ["targets"], decode: (r) => tables(r, ["targets"]) as Datasets["targets"] },
   m10: { rpc: "pack_m10", deps: ["m10", "aging", "activity"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi", "schedule", "promises"]) as Datasets["m10"] },
   rkm: { rpc: "pack_rkm", deps: ["rkm"], decode: (r) => tables(r, ["worksheet", "gr", "kwitansi"]) as Datasets["rkm"] },
