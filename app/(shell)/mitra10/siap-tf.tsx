@@ -7,6 +7,8 @@ import { Icon } from "@/components/icons";
 // Tombol "Siap Tukar Faktur" di Kertas Kerja (Mitra10 & RKM): GR Done + Tukar Faktur Pending.
 // Menulis/membaca state filter LocalTable yang sama (`table:<stateKey>:f`), jadi tombol menyala selama filter itu aktif —
 // termasuk bila dipilih lewat dropdown — dan mati saat dilepas atau di-Reset.
+// PENTING: LocalTable-nya wajib diberi `stateKey` yang sama persis dengan prop `stateKey` tombol ini. Tanpa stateKey,
+// LocalTable memakai hideKey sebagai kunci state, sehingga mengganti hideKey diam-diam memutus tombol (regresi Fase 76).
 export function SiapTfButton({ stateKey }: { stateKey: string }) {
   const [f, setF] = useViewState<Record<string, string>>(`table:${stateKey}:f`, {});
   const active = f.gr === "Done" && f.tukar_faktur === "Pending";

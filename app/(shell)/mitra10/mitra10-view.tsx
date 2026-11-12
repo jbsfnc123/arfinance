@@ -29,6 +29,10 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
+// Kunci state tabel Kertas Kerja (cari/filter/urutan). Tombol Siap Tukar Faktur menulis filter ke kunci yang SAMA —
+// jangan diturunkan dari hideKey (hideKey boleh berganti versi untuk mereset kolom tersembunyi bawaan).
+const KK_KEY = "m10-kk";
+
 const OK = "bg-success/20 text-success";
 const WAIT = "bg-warning/20 text-warning";
 const BAD = "bg-danger/20 text-danger";
@@ -165,7 +169,7 @@ export function Mitra10View() {
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard stateKey="mitra10" m={m} />}
         {tab === "kk" && (
-          <LocalTable title="Kertas Kerja" hideKey="m10-kk-v2" defaultHidden={["jadwal_bayar"]} rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Kertas Kerja" stateKey={KK_KEY} hideKey="m10-kk-v2" defaultHidden={["jadwal_bayar"]} rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             onRowsChange={setShown}
             search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan"]}
             filters={[
@@ -175,7 +179,7 @@ export function Mitra10View() {
             onEdit={(r, _k, v) => setKeterangan([r], String(v ?? ""))}
             toolbar={(
               <span className="flex flex-wrap items-center gap-2 text-sm">
-                <SiapTfButton stateKey="m10-kk" />
+                <SiapTfButton stateKey={KK_KEY} />
                 <span className="text-fg-2">Invoice Date</span>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} !w-auto`} />
                 <span className="text-fg-2">s/d</span>

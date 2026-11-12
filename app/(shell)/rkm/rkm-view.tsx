@@ -147,7 +147,7 @@ export function RkmView() {
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard stateKey="rkm" m={m} showJadwal={false} />}
         {tab === "kk" && (
-          <LocalTable title="Kertas Kerja" hideKey="rkm-kk" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Kertas Kerja" stateKey="rkm-kk" hideKey="rkm-kk" rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "keterangan", "no_faktur_pajak"]}
             filters={[
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
