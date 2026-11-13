@@ -35,7 +35,8 @@ export function parseDate(value: unknown): string | null {
   }
 
   const s = String(value).trim();
-  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  // Tahun di depan: 2026-11-12, 2026.11.12 (GR Date EDI Mitra10), 2026/11/12.
+  let m = /^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/.exec(s);
   if (m) return iso(+m[1], +m[2], +m[3]);
 
   m = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2}|\d{4})(?:\s+\d{1,2}[:.]\d{2}(?:[:.]\d{2})?)?$/.exec(s);
