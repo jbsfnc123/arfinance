@@ -18,6 +18,7 @@ import { useViewState } from "@/lib/ui/view-state";
 import { useRowMarks } from "@/lib/ui/use-row-marks";
 import { RowMarkButton } from "@/components/row-mark-button";
 import { SiapTfButton } from "./siap-tf";
+import { parseDate } from "@/lib/parsers/date";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -73,6 +74,25 @@ const JADWAL_COLS: LCol<Schedule>[] = [
   { k: "tgl_tukar_faktur", l: "Tgl Tukar Faktur", d: true }, { k: "jadwal_transfer", l: "Jadwal Bayar", d: true }, { k: "notes", l: "Notes" },
 ];
 
+/** Filter rentang tanggal (Dari … s/d …) per tabel; diingat selama tab browser terbuka. Nilai tanggal baris harus ISO. */
+function useDateRange(key: string) {
+  const [from, setFrom] = useViewState(`mitra10:${key}:from`, "");
+  const [to, setTo] = useViewState(`mitra10:${key}:to`, "");
+  const inRange = (iso: string | null | undefined) => (!from && !to) || (!!iso && (!from || iso >= from) && (!to || iso <= to));
+  return { from, to, setFrom, setTo, inRange };
+}
+function DateRange({ label, r }: { label: string; r: ReturnType<typeof useDateRange> }) {
+  return (
+    <span className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-fg-2">{label}</span>
+      <input type="date" value={r.from} onChange={(e) => r.setFrom(e.target.value)} className={`${inputCls} !w-auto`} aria-label={`${label} dari`} />
+      <span className="text-fg-2">s/d</span>
+      <input type="date" value={r.to} onChange={(e) => r.setTo(e.target.value)} className={`${inputCls} !w-auto`} aria-label={`${label} sampai`} />
+      {(r.from || r.to) && <button type="button" className={btnGhost} onClick={() => { r.setFrom(""); r.setTo(""); }}>Reset</button>}
+    </span>
+  );
+}
+
 type AddKind = { table: "gr" | "kwitansi"; fields: { k: string; l: string; t?: "number" | "date" }[] } | null;
 
 // Port workbook "VBA Mitra10 Tukar Faktur.xlsm". Semua rumus dihitung di browser (use-m10);
@@ -108,6 +128,11 @@ export function Mitra10View() {
   // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
   const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
     (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user)), [c, from, to, user]);
+  // Filter tanggal: Receiving (GR Date, teks "yyyy.MM.dd" dari EDI → ISO), Kwitansi (Kuitansi Date), Jadwal Bayar.
+  const grRange = useDateRange("gr"), kwRange = useDateRange("kw"), jadwalRange = useDateRange("jadwal");
+  const grRows = useMemo(() => (c?.gr ?? []).filter((r) => grRange.inRange(parseDate(r.gr_date))), [c, grRange.from, grRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
+  const kwRows = useMemo(() => (c?.kwitansi ?? []).filter((r) => kwRange.inRange(r.kuitansi_date)), [c, kwRange.from, kwRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
+  const jadwalRows = useMemo(() => m.schedule.filter((r) => jadwalRange.inRange(r.jadwal_transfer)), [m.schedule, jadwalRange.from, jadwalRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
   // KPI di samping judul: invoice yang sedang tampil di tabel Kertas Kerja (ikut cari/filter), per Username.
   const [shown, setShown] = useState<WorksheetRow[]>([]);
   const kpi = useMemo(() => invoicesByUsername(shown), [shown]);
@@ -206,7 +231,7 @@ export function Mitra10View() {
             )} />
         )}
         {tab === "gr" && (
-          <LocalTable title="Receiving" hideKey="m10-gr" rows={c?.gr ?? []} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Receiving" hideKey="m10-gr" rows={grRows} toolbar={<DateRange label="GR Date" r={grRange} />} cols={GR_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["gr_no", "po_no", "sj_no", "item_name", "delivery_to", "vendor_ship_no", "item_code"]}
             filters={[{ k: "check_status", l: "Check", options: ["Done", "Check"] }]}
             onEdit={(r, k, v) => editRow("gr", r.id, k, v)}
@@ -214,14 +239,14 @@ export function Mitra10View() {
             selectable onDelete={(rows) => deleteRows("gr", rows.map((r) => r.id))} />
         )}
         {tab === "kw" && (
-          <LocalTable title="KW Update" hideKey="m10-kw" rows={c?.kwitansi ?? []} cols={KW_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="KW Update" hideKey="m10-kw" rows={kwRows} toolbar={<DateRange label="Kuitansi Date" r={kwRange} />} cols={KW_COLS} rowKey={(r) => r.id} loading={m.loading}
             search={["invoice_no", "vendor_invoice_no", "kuitansi_no", "po_no", "username"]}
             onEdit={(r, k, v) => editRow("kwitansi", r.id, k, v)}
             onAdd={() => setAdd({ table: "kwitansi", fields: KW_EDIT })}
             selectable onDelete={(rows) => deleteRows("kwitansi", rows.map((r) => r.id))} />
         )}
         {tab === "jadwal" && (
-          <LocalTable title="Jadwal Bayar" rows={m.schedule} cols={JADWAL_COLS} rowKey={(r) => r.no_kw} loading={m.loading}
+          <LocalTable title="Jadwal Bayar" rows={jadwalRows} toolbar={<DateRange label="Jadwal Bayar" r={jadwalRange} />} cols={JADWAL_COLS} rowKey={(r) => r.no_kw} loading={m.loading}
             search={["no_kw", "spp", "notes"]} selectable onDelete={deleteSchedule} />
         )}
         {tab === "upload" && <M10Upload version={0} onDone={() => undefined} />}
