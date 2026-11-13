@@ -39,3 +39,16 @@ describe("mitra10", () => {
       .toEqual([{ no_kw: "M1", spp: "SP1", nilai_kw: 1257408, tgl_tukar_faktur: "2026-07-01", jadwal_transfer: "2026-09-15", notes: "" }]);
   });
 });
+
+describe("kategori Keterangan (filter Kertas Kerja)", () => {
+  it("Litigasi / LTKP / Lainnya / Kosong — isi persis tanpa beda huruf, seperti hitungan Dashboard", async () => {
+    const { ketKategori } = await import("./compute");
+    expect(ketKategori(" litigasi ")).toBe("Litigasi");
+    expect(ketKategori("LTKP")).toBe("LTKP");
+    expect(ketKategori("ltkp")).toBe("LTKP");
+    expect(ketKategori("Sudah konfirmasi toko")).toBe("Lainnya");
+    expect(ketKategori("")).toBe("Kosong");
+    expect(ketKategori("   ")).toBe("Kosong");
+    expect(ketKategori(null)).toBe("Kosong");
+  });
+});
