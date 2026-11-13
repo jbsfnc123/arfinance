@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { optimistic } from "@/lib/local/store";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import type { Gr, Kwitansi, Schedule } from "@/lib/local/datasets";
-import { invoicesByUsername, type GrRow, type KwRow, type WorksheetRow } from "@/lib/modules/m10/compute";
+import { invoicesByUsername, KET_KATEGORI, type GrRow, type KwRow, type WorksheetRow } from "@/lib/modules/m10/compute";
 import { Tabs } from "@/components/tabs";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
@@ -175,6 +175,7 @@ export function Mitra10View() {
             filters={[
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
               { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },
+              { k: "ket_kat", l: "Keterangan", options: KET_KATEGORI },
             ]}
             onEdit={(r, _k, v) => setKeterangan([r], String(v ?? ""))}
             toolbar={(

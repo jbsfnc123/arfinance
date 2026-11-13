@@ -17,8 +17,16 @@ export const usernameOf = (paymentGroup: string | null | undefined) => {
   return s ? s.slice(-8) : "kosong";
 };
 
+/** Kategori Keterangan untuk filter Kertas Kerja — aturan sama dengan hitungan LTKP/Litigasi di Dashboard (isi persis, tanpa beda huruf). */
+export type KetKategori = "Litigasi" | "LTKP" | "Lainnya" | "Kosong";
+export const KET_KATEGORI: KetKategori[] = ["Litigasi", "LTKP", "Lainnya", "Kosong"];
+export function ketKategori(s: string | null | undefined): KetKategori {
+  const t = (s ?? "").trim().toUpperCase();
+  return !t ? "Kosong" : t === "LITIGASI" ? "Litigasi" : t === "LTKP" ? "LTKP" : "Lainnya";
+}
+
 export type WorksheetRow = Worksheet & {
-  username: string; bp_short: string; keterangan: string | null; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
+  username: string; bp_short: string; keterangan: string | null; ket_kat: KetKategori; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
   status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null; tf_date: string | null;
 };
 export type GrRow = Gr & { po_aging: string; check_status: "Done" | "Check" };
@@ -80,6 +88,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
       username: usernameOf(w.payment_group),
       bp_short: bpShort(w.business_partner),
       keterangan: input.remarks?.get(remarkKey(w.no_sj, w.invoice_no)) || null,
+      ket_kat: ketKategori(input.remarks?.get(remarkKey(w.no_sj, w.invoice_no))),
       gr: grSj.has(w.no_sj) ? "Done" : "Pending",
       tukar_faktur: total > 10000 ? "Done" : "Pending",
       selisih: num(w.open_amt) - total,
