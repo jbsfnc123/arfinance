@@ -93,7 +93,9 @@ export function JobPage({ id }: { id: JobId }) {
       {info.format !== "-" && <FileList job={id} refreshKey={lastRun?.finishedAt} />}
       {info.confirm && (
         <Confirm open={!!confirm} title={info.label} confirmLabel="Jalankan" onClose={() => setConfirm(null)} onConfirm={() => confirm?.()}>
-          {id === "edi.invoice-inbox" && saved.inboxMode === "new"
+          {id === "edi.outbox-invoice"
+            ? <>Bot akan membuka Outbox › Invoice, menampilkan 100 invoice per halaman, <b>mencentang semua</b> lalu menekan <b>Create Kuitansi</b>, dan mengulanginya sampai list habis ({chosen.length} akun). Tindakan ini tidak bisa dibatalkan dari aplikasi — jalankan Uji Coba dulu untuk melihat jumlah invoice.</>
+            : id === "edi.invoice-inbox" && saved.inboxMode === "new"
             ? <>Bot akan membuka Document No lalu menekan <b>Accept</b> satu per satu untuk PFI berstatus <b>New</b> di Inbox EDI Mitra 10, sampai status New habis ({chosen.length} akun{saved.limit ? `, maks. ${saved.limit} per akun` : ""}). Tindakan ini tidak bisa dibatalkan dari aplikasi — jalankan Uji Coba dulu bila ragu.</>
             : id === "edi.invoice-inbox"
             ? <>Bot akan menekan <b>Create Invoice</b> satu per satu untuk baris berstatus <b>Completed</b> di Inbox EDI Mitra 10 ({chosen.length} akun{saved.limit ? `, maks. ${saved.limit} per akun` : ""}). Tindakan ini tidak bisa dibatalkan dari aplikasi — jalankan Uji Coba dulu bila ragu.</>

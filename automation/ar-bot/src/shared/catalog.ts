@@ -26,6 +26,7 @@ export const JOBS: readonly JobInfo[] = [
   { id: "edi.kwitansi", group: "edi", label: "Download Kwitansi", short: "Kwitansi", icon: "receipt_long", pushable: true, format: "CSV" },
   { id: "edi.upload-faktur", group: "edi", label: "Upload Faktur Pajak", short: "Upload Faktur", icon: "upload_file", pushable: false, format: "PDF", confirm: true },
   { id: "edi.invoice-inbox", group: "edi", label: "Invoice Inbox", short: "Invoice Inbox", icon: "inventory_2", pushable: false, format: "-", confirm: true },
+  { id: "edi.outbox-invoice", group: "edi", label: "Outbox Invoice", short: "Outbox Invoice", icon: "receipt_long", pushable: false, format: "-", confirm: true },
 ];
 
 export const jobInfo = (id: JobId) => JOBS.find((j) => j.id === id)!;
@@ -39,6 +40,7 @@ export const DEFAULT_PARAMS: Record<JobId, JobParams> = {
   "edi.kwitansi": { push: true },
   "edi.upload-faktur": { mode: "draft" },
   "edi.invoice-inbox": { limit: 0, inboxMode: "completed" },
+  "edi.outbox-invoice": {},
 };
 
 export const DEFAULT_CHAIN: Chain = {

@@ -79,7 +79,7 @@ export async function openEdiReport(page: Page, hrefPart: string) {
  * Langkah awal menu Invoices (dipakai Upload Faktur → Draft dan Invoice Inbox → Inbox): partner → menu Invoices → pilih vendor
  * `#c2cInvoice` (opsi pertama yang bukan placeholder) → buka `https://edi.mitra10.com/<path>` → pilih vendor yang sama lagi.
  */
-export async function openInvoices(ctx: RunContext, page: Page, path: "einvoice-draft" | "einvoice-inbox") {
+export async function openInvoices(ctx: RunContext, page: Page, path: "einvoice-draft" | "einvoice-inbox" | "einvoice-outbox") {
   await page.evaluate(() => {
     const sel = document.querySelector<HTMLSelectElement>("#partnerlist") ?? document.querySelector<HTMLSelectElement>("select.partnerCompany");
     if (sel && sel.options.length > 1) { sel.selectedIndex = 1; sel.dispatchEvent(new Event("change", { bubbles: true })); }
