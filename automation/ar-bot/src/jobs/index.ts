@@ -4,6 +4,7 @@ import type { RunContext } from "~/runner/ctx";
 import { agingJob, invoiceByDateJob, sendInvoiceJob, sjJob, type JobOut } from "./jasper/jobs";
 import { ediGrJob, ediKwitansiJob, ediUploadFakturJob } from "./edi/jobs";
 import { ediInvoiceInboxJob } from "./edi/inbox";
+import { ediOutboxInvoiceJob } from "./edi/outbox";
 
 export type JobFn = (ctx: RunContext, p: JobParams) => Promise<JobOut>;
 
@@ -16,4 +17,5 @@ export const JOB_FNS: Record<JobId, JobFn> = {
   "edi.kwitansi": ediKwitansiJob,
   "edi.upload-faktur": ediUploadFakturJob,
   "edi.invoice-inbox": ediInvoiceInboxJob,
+  "edi.outbox-invoice": ediOutboxInvoiceJob,
 };

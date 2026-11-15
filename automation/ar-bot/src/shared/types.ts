@@ -2,7 +2,7 @@
 
 export type JobId =
   | "jasper.aging" | "jasper.send-invoice" | "jasper.sj" | "jasper.invoice-by-date"
-  | "edi.gr" | "edi.kwitansi" | "edi.upload-faktur" | "edi.invoice-inbox";
+  | "edi.gr" | "edi.kwitansi" | "edi.upload-faktur" | "edi.invoice-inbox" | "edi.outbox-invoice";
 
 export type JobGroup = "jasper" | "edi";
 
