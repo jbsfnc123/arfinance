@@ -102,7 +102,8 @@ async function main(): Promise<RunStatus> {
     request = JSON.parse(await readStdin()) as RunRequest;
   }
   if (!request.jobs?.length) throw new Error("Tidak ada job yang dipilih.");
-  const parallel = !!request.parallel && request.jobs.length > 1;
+  // Task beraksi tulis di EDI (confirm) selalu berurutan, walau diminta paralel.
+  const parallel = !!request.parallel && request.jobs.length > 1 && !request.jobs.some((j) => jobInfo(j.id)?.confirm);
 
   const runId = newRunId();
   const startedAt = new Date().toISOString();

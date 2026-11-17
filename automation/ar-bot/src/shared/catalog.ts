@@ -60,7 +60,7 @@ export function defaultConfig(): Config {
     jobs: {},
     chains: [DEFAULT_CHAIN],
     theme: "system",
-    multi: { jobs: ["edi.gr", "edi.kwitansi"], parallel: true },
+    multi: { jobs: ["edi.gr", "edi.kwitansi"], parallel: true, order: JOBS.map((j) => j.id) },
   };
 }
 
@@ -76,7 +76,7 @@ export function mergeConfig(saved: Partial<Config> | null | undefined): Config {
     edi: { accounts: saved.edi?.accounts ?? [], amountTolerance: typeof saved.edi?.amountTolerance === "number" ? saved.edi.amountTolerance : 100 },
     jobs: { ...saved.jobs },
     chains: saved.chains?.length ? saved.chains : d.chains,
-    multi: { ...d.multi, ...saved.multi },
+    multi: { ...d.multi, ...saved.multi, order: multiOrder(saved.multi?.order) },
   };
 }
 
@@ -143,3 +143,23 @@ export function defaultDates(id: JobId, today: string, days = 7): { start: strin
     default: return null;
   }
 }
+
+/** Urutan task kartu "Jalankan beberapa task": urutan tersimpan (id dikenal, tanpa ganda) + task baru di akhir. */
+export function multiOrder(saved: readonly string[] | undefined): JobId[] {
+  const known = new Set<string>(JOBS.map((j) => j.id));
+  const out: JobId[] = [];
+  for (const id of saved ?? []) if (known.has(id) && !out.includes(id as JobId)) out.push(id as JobId);
+  for (const j of JOBS) if (!out.includes(j.id)) out.push(j.id);
+  return out;
+}
+
+/** Pindahkan `id` ke posisi `to` (indeks sesudah dihapus dari posisi lama). */
+export function moveInOrder<T>(order: readonly T[], id: T, to: number): T[] {
+  const rest = order.filter((x) => x !== id);
+  if (rest.length === order.length) return [...order];
+  const at = Math.max(0, Math.min(rest.length, to));
+  return [...rest.slice(0, at), id, ...rest.slice(at)];
+}
+
+/** Task tercentang sesuai urutan kartu = urutan jalan. */
+export const orderedSelection = (order: readonly JobId[], selected: readonly JobId[]) => order.filter((id) => selected.includes(id));
