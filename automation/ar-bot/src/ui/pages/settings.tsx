@@ -77,6 +77,14 @@ export function SettingsPage() {
   const [sources, setSources] = useState<{ source: "mando" | "erpbot"; dir: string; env: boolean; accounts: boolean }[]>([]);
   useEffect(() => { api<typeof sources>("/api/import/sources").then(setSources).catch(() => {}); }, []);
   const patch = (f: (c: Config) => Config, msg = "Tersimpan.") => save(f, msg);
+  const [picking, setPicking] = useState(false);
+  const pick = async () => {
+    setPicking(true);
+    try {
+      const r = await api<{ path: string | null }>("/api/pick-folder", {});
+      if (r.path) patch((c) => ({ ...c, downloadDir: r.path! }), "Folder unduhan disimpan.");
+    } catch (e) { toast((e as Error).message, "danger"); } finally { setPicking(false); }
+  };
   const doImport = async (s: (typeof sources)[number], dir: string) => {
     try {
       const r = await api<{ imported: string[]; state: PublicState }>("/api/import", { source: s.source, dir });
@@ -127,6 +135,26 @@ export function SettingsPage() {
           <Switch checked={!cfg.browser.headless} onChange={(v) => patch((c) => ({ ...c, browser: { ...c.browser, headless: !v } }))} label="Tampilkan browser saat bot berjalan" />
         </div>
         <div className="mt-3"><TestButton target="browser" label="Cek browser" res={res} setRes={setRes} /></div>
+      </Card>
+
+      <Card title="Folder unduhan">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[280px] flex-1">
+            <CfgInput label="Simpan file hasil unduhan ke" value={cfg.downloadDir} placeholder="mis. D:\Laporan AR (kosong = hanya di folder data)"
+              onSave={(v) => patch((c) => ({ ...c, downloadDir: v }), v ? "Folder unduhan disimpan." : "Folder unduhan dikosongkan.")} />
+          </div>
+          <button type="button" className={btnGhost} disabled={picking} onClick={pick}>
+            <Icon name={picking ? "progress_activity" : "folder_open"} className={picking ? "animate-spin" : ""} />Pilih…
+          </button>
+          {cfg.downloadDir && <>
+            <button type="button" className={btnGhost} onClick={() => api("/api/open-download-dir", {}).catch((e) => toast((e as Error).message, "danger"))}><Icon name="folder_open" />Buka</button>
+            <button type="button" className={btnGhost} onClick={() => patch((c) => ({ ...c, downloadDir: "" }), "Folder unduhan dikosongkan.")}>Kosongkan</button>
+          </>}
+        </div>
+        <p className="mt-2 text-xs text-fg-2">
+          File hasil setiap menu disalin ke subfolder per menu, mis. <b>{cfg.downloadDir || "D:\\Laporan AR"}\Aging Detail\</b>. File di folder ini tidak dihapus otomatis;
+          salinan asli tetap di folder data sesuai masa simpan.
+        </p>
       </Card>
 
       <Card title="Penyimpanan & tampilan">

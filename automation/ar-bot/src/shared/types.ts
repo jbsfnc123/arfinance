@@ -22,6 +22,8 @@ export type JobParams = {
   limit?: number;
   /** Invoice Inbox: completed = Create Invoice dari status Completed; new = Accept PFI berstatus New. */
   inboxMode?: "completed" | "new";
+  /** Aging Detail: Statement Date cut off akhir bulan (YYYY-MM-DD) — hanya unduh, tidak dikirim. Tidak disimpan di config. */
+  cutoffs?: string[];
 };
 
 export type JobSpec = { id: JobId; params?: JobParams };
@@ -88,6 +90,8 @@ export type EdiAccount = { id: string; label: string; username: string; active: 
 export type Config = {
   browser: { channel: "auto" | "edge" | "chrome"; headless: boolean };
   retentionDays: number;
+  /** Folder pilihan user: file unduhan disalin ke <downloadDir>\<label menu>\ (kosong = tidak disalin). */
+  downloadDir: string;
   jasper: { username: string; organization: string };
   arw: { supabaseUrl: string; anonKey: string; botEmail: string };
   /** amountTolerance: toleransi selisih Open Amt (Rp) saat verifikasi Upload Faktur (bawaan 100). */

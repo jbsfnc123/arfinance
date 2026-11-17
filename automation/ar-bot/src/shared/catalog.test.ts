@@ -83,3 +83,19 @@ describe("urutan Jalankan beberapa task", () => {
     expect(c.multi.jobs).toEqual(["edi.gr"]);
   });
 });
+
+describe("Aging banyak bulan — cut off akhir bulan", () => {
+  it("akhir bulan, kabisat, bulan berjalan = hari ini, bulan depan dibuang", async () => {
+    const { monthEndCutoffs, monthEnd } = await import("./catalog");
+    expect(monthEndCutoffs(2026, [2, 1], "2026-11-17")).toEqual(["2026-01-31", "2026-02-28"]);
+    expect(monthEnd(2028, 2)).toBe("2028-02-29");
+    expect(monthEndCutoffs(2026, [10, 11, 12], "2026-11-17")).toEqual(["2026-10-31", "2026-11-17"]);
+    expect(monthEndCutoffs(2027, [1], "2026-11-17")).toEqual([]);
+    expect(monthEndCutoffs(2025, [4, 4, 13, 0], "2026-11-17")).toEqual(["2025-04-30"]);
+  });
+  it("mergeConfig mengisi downloadDir", async () => {
+    const { mergeConfig } = await import("./catalog");
+    expect(mergeConfig({}).downloadDir).toBe("");
+    expect(mergeConfig({ downloadDir: "  D:\AR  " }).downloadDir).toBe("D:\AR");
+  });
+});

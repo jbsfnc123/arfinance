@@ -54,6 +54,7 @@ export function defaultConfig(): Config {
   return {
     browser: { channel: "auto", headless: true },
     retentionDays: 30,
+    downloadDir: "",
     jasper: { username: "", organization: "Penguin Trading" },
     arw: { supabaseUrl: "", anonKey: "", botEmail: "" },
     edi: { accounts: [], amountTolerance: 100 },
@@ -74,6 +75,7 @@ export function mergeConfig(saved: Partial<Config> | null | undefined): Config {
     jasper: { ...d.jasper, ...saved.jasper },
     arw: { ...d.arw, ...saved.arw },
     edi: { accounts: saved.edi?.accounts ?? [], amountTolerance: typeof saved.edi?.amountTolerance === "number" ? saved.edi.amountTolerance : 100 },
+    downloadDir: typeof saved.downloadDir === "string" ? saved.downloadDir.trim() : "",
     jobs: { ...saved.jobs },
     chains: saved.chains?.length ? saved.chains : d.chains,
     multi: { ...d.multi, ...saved.multi, order: multiOrder(saved.multi?.order) },
@@ -163,3 +165,21 @@ export function moveInOrder<T>(order: readonly T[], id: T, to: number): T[] {
 
 /** Task tercentang sesuai urutan kartu = urutan jalan. */
 export const orderedSelection = (order: readonly JobId[], selected: readonly JobId[]) => order.filter((id) => selected.includes(id));
+
+/** Tanggal terakhir bulan `month` (1–12) tahun `year` (YYYY-MM-DD). */
+export const monthEnd = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+
+/**
+ * Aging banyak bulan: Statement Date cut off akhir tiap bulan terpilih. Bulan berjalan = hari ini (akhir bulan belum
+ * tiba), bulan yang akan datang dibuang. `today` = YYYY-MM-DD (WIB). Hasil terurut naik tanpa ganda.
+ */
+export function monthEndCutoffs(year: number, months: readonly number[], today: string): string[] {
+  const out = new Set<string>();
+  for (const m of months) {
+    if (!Number.isInteger(m) || m < 1 || m > 12) continue;
+    const ym = `${year}-${String(m).padStart(2, "0")}`;
+    if (ym > today.slice(0, 7)) continue;
+    out.add(ym === today.slice(0, 7) ? today : monthEnd(year, m));
+  }
+  return [...out].sort();
+}
