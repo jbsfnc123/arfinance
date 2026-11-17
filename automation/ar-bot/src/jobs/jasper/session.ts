@@ -1,4 +1,4 @@
-// Sesi Jaspersoft (report.tangki.id). Langkah & selector dari bot_jaspersoft.js milik user, disempurnakan di Bot ERP
+// Sesi Jaspersoft (bawaan report.tangki.id; URL login di Pengaturan). Langkah & selector dari bot_jaspersoft.js milik user, disempurnakan di Bot ERP
 // (uji nyata 2026-10-09). Satu sesi login dipakai bersama oleh semua laporan dalam satu run.
 //
 // PENTING: kode yang dijalankan di browser (evaluate/waitForFunction/$eval) TIDAK boleh berisi fungsi bernama:
@@ -6,10 +6,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Page } from "puppeteer-core";
+import { DEFAULT_URLS } from "~/shared/catalog";
 import { delay, type RunContext } from "~/runner/ctx";
 import { waitDownload } from "~/runner/download";
 
-const LOGIN_URL = "https://report.tangki.id/jasperserver/login.html";
 const LOADERS = ["#loading", ".dimmer", "#exportLoadingIndicator"];
 const EMPTY_REPORT = "report is empty|laporan kosong|no data|tidak ada data";
 
@@ -32,7 +32,7 @@ export class JasperSession {
     const page = await ctx.newPage();
     this.page = page;
     ctx.info("Login Jaspersoft…");
-    await page.goto(LOGIN_URL, { waitUntil: "networkidle2", timeout: 60_000 });
+    await page.goto(ctx.config.jasper.loginUrl || DEFAULT_URLS.jasper, { waitUntil: "networkidle2", timeout: 60_000 });
     await page.waitForSelector("#j_username", { timeout: 15_000 });
     await page.type("#j_username", user);
     await page.type("#j_password_pseudo", pass);

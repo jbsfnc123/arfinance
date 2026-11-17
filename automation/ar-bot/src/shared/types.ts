@@ -92,10 +92,12 @@ export type Config = {
   retentionDays: number;
   /** Folder pilihan user: file unduhan disalin ke <downloadDir>\<label menu>\ (kosong = tidak disalin). */
   downloadDir: string;
-  jasper: { username: string; organization: string };
+  /** loginUrl: halaman login Jaspersoft (bisa diubah bila domain pindah). */
+  jasper: { username: string; organization: string; loginUrl: string };
   arw: { supabaseUrl: string; anonKey: string; botEmail: string };
   /** amountTolerance: toleransi selisih Open Amt (Rp) saat verifikasi Upload Faktur (bawaan 100). */
-  edi: { accounts: EdiAccount[]; amountTolerance: number };
+  /** loginUrl: halaman login EDI; menu Invoices/Outbox memakai domain (origin) yang sama. */
+  edi: { accounts: EdiAccount[]; amountTolerance: number; loginUrl: string };
   jobs: Partial<Record<JobId, JobParams>>;
   chains: Chain[];
   theme: "system" | "light" | "dark";

@@ -1,12 +1,13 @@
-// Sesi EDI Mitra 10 (edi.mitra10.com). Langkah & selector dari bot.js / bot_download_kwitansi.js milik user.
+// Sesi EDI Mitra 10 (bawaan edi.mitra10.com; URL login di Pengaturan, menu lain memakai domain yang sama). Langkah & selector dari bot.js / bot_download_kwitansi.js milik user.
 import fs from "node:fs";
 import path from "node:path";
 import type { Page } from "puppeteer-core";
+import { DEFAULT_URLS, siteBase } from "~/shared/catalog";
 import type { EdiAccount } from "~/shared/types";
 import { delay, type RunContext } from "~/runner/ctx";
 import { waitDownload } from "~/runner/download";
 
-const LOGIN_URL = "https://edi.mitra10.com/site/login";
+const loginUrl = (ctx: RunContext) => ctx.config.edi.loginUrl || DEFAULT_URLS.edi;
 
 /** Akun EDI yang dipakai job: `ids` terpilih, atau semua akun aktif. */
 export function pickAccounts(ctx: RunContext, ids?: string[]): (EdiAccount & { password: string })[] {
@@ -38,7 +39,7 @@ export async function ediPage(ctx: RunContext, dir?: string) {
 
 export async function ediLogin(ctx: RunContext, page: Page, acc: { username: string; password: string }) {
   ctx.check();
-  await page.goto(LOGIN_URL, { waitUntil: "networkidle2", timeout: 60_000 });
+  await page.goto(loginUrl(ctx), { waitUntil: "networkidle2", timeout: 60_000 });
   await page.waitForSelector("#loginform-username", { timeout: 20_000 });
   await page.$eval("#loginform-username", (el) => { (el as HTMLInputElement).value = ""; });
   await page.$eval("#loginform-password", (el) => { (el as HTMLInputElement).value = ""; });
@@ -77,7 +78,7 @@ export async function openEdiReport(page: Page, hrefPart: string) {
 
 /**
  * Langkah awal menu Invoices (dipakai Upload Faktur → Draft dan Invoice Inbox → Inbox): partner → menu Invoices → pilih vendor
- * `#c2cInvoice` (opsi pertama yang bukan placeholder) → buka `https://edi.mitra10.com/<path>` → pilih vendor yang sama lagi.
+ * `#c2cInvoice` (opsi pertama yang bukan placeholder) → buka `<domain EDI>/<path>` → pilih vendor yang sama lagi.
  */
 export async function openInvoices(ctx: RunContext, page: Page, path: "einvoice-draft" | "einvoice-inbox" | "einvoice-outbox") {
   await page.evaluate(() => {
@@ -104,7 +105,7 @@ export async function openInvoices(ctx: RunContext, page: Page, path: "einvoice-
   });
   ctx.info(`Vendor: ${vendor ?? "(bawaan)"}`);
   await delay(1000);
-  await page.goto(`https://edi.mitra10.com/${path}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.goto(`${siteBase(loginUrl(ctx))}/${path}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.waitForSelector("#preloader", { hidden: true, timeout: 15_000 }).catch(() => {});
   await delay(1500);
   await page.waitForFunction(() => (document.querySelector<HTMLSelectElement>("#c2cInvoice")?.options.length ?? 0) > 1, { timeout: 15_000 }).catch(() => {});

@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { jobInfo, mergeConfig, validTime } from "~/shared/catalog";
+import { cleanUrl, DEFAULT_URLS, jobInfo, mergeConfig, validTime } from "~/shared/catalog";
 import type { Config, PublicState, RunEvent, RunRecord, RunRequest, SecretKey } from "~/shared/types";
 import { findBrowser } from "~/core/browser";
 import { activeLock, alive, releaseLock } from "~/core/lock";
@@ -160,6 +160,8 @@ function stopRun() {
 // ── Validasi konfigurasi dari UI ────────────────────────────────────────────
 function cleanConfig(input: Partial<Config>): Config {
   const c = mergeConfig({ ...loadConfig(), ...input });
+  c.jasper.loginUrl = cleanUrl(c.jasper.loginUrl, DEFAULT_URLS.jasper, "URL login Jaspersoft");
+  c.edi.loginUrl = cleanUrl(c.edi.loginUrl, DEFAULT_URLS.edi, "URL login EDI");
   c.retentionDays = Math.min(365, Math.max(1, Math.round(Number(c.retentionDays) || 30)));
   if (c.downloadDir) {
     c.downloadDir = path.normalize(c.downloadDir.replace(/^"+|"+$/g, ""));
