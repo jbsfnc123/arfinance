@@ -58,3 +58,28 @@ describe("tanggal bawaan per job", () => {
     expect(defaultDates("jasper.aging", "2026-10-10")).toBeNull();
   });
 });
+
+describe("urutan Jalankan beberapa task", () => {
+  it("multiOrder: simpanan dipakai, id asing/ganda dibuang, task baru di akhir", async () => {
+    const { multiOrder, JOBS } = await import("./catalog");
+    const o = multiOrder(["edi.outbox-invoice", "xx", "edi.gr", "edi.gr"]);
+    expect(o.slice(0, 2)).toEqual(["edi.outbox-invoice", "edi.gr"]);
+    expect(o).toHaveLength(JOBS.length);
+    expect(new Set(o).size).toBe(o.length);
+    expect(multiOrder(undefined)).toEqual(JOBS.map((j) => j.id));
+  });
+  it("moveInOrder & orderedSelection", async () => {
+    const { moveInOrder, orderedSelection } = await import("./catalog");
+    expect(moveInOrder(["a", "b", "c", "d"], "d", 0)).toEqual(["d", "a", "b", "c"]);
+    expect(moveInOrder(["a", "b", "c", "d"], "a", 2)).toEqual(["b", "c", "a", "d"]);
+    expect(moveInOrder(["a", "b"], "z", 0)).toEqual(["a", "b"]);
+    expect(orderedSelection(["edi.outbox-invoice", "edi.gr", "edi.invoice-inbox"], ["edi.invoice-inbox", "edi.outbox-invoice"]))
+      .toEqual(["edi.outbox-invoice", "edi.invoice-inbox"]);
+  });
+  it("mergeConfig mengisi order untuk config lama", async () => {
+    const { mergeConfig, JOBS } = await import("./catalog");
+    const c = mergeConfig({ multi: { jobs: ["edi.gr"], parallel: false } } as never);
+    expect(c.multi.order).toHaveLength(JOBS.length);
+    expect(c.multi.jobs).toEqual(["edi.gr"]);
+  });
+});

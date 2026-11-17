@@ -96,7 +96,8 @@ export type Config = {
   chains: Chain[];
   theme: "system" | "light" | "dark";
   /** Pilihan terakhir kartu "Jalankan beberapa task" di Dashboard. */
-  multi: { jobs: JobId[]; parallel: boolean };
+  /** jobs = task tercentang; order = urutan semua task di kartu (diseret user) = urutan jalan. */
+  multi: { jobs: JobId[]; parallel: boolean; order: JobId[] };
 };
 
 /** Nama rahasia yang disimpan terenkripsi (DPAPI). Password EDI: `edi:<id akun>`. */
