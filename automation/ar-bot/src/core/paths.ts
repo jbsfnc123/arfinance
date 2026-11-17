@@ -42,3 +42,26 @@ export function writeAtomic(file: string, data: string | Buffer) {
 export function readJson<T>(file: string): T | null {
   try { return JSON.parse(fs.readFileSync(file, "utf8")) as T; } catch { return null; }
 }
+
+/** Nama file unik di `dir`: "a.xlsx" → "a (2).xlsx" bila sudah ada. */
+export function uniqueName(dir: string, name: string, exists: (f: string) => boolean = fs.existsSync) {
+  const ext = path.extname(name), base = name.slice(0, name.length - ext.length);
+  let out = name;
+  for (let i = 2; exists(path.join(dir, out)); i++) out = `${base} (${i})${ext}`;
+  return out;
+}
+
+/** Nama subfolder menu di folder unduhan user (karakter terlarang Windows dibuang). */
+export const menuFolder = (label: string) => label.replace(/[<>:"/\|?*]+/g, " ").replace(/\s+/g, " ").trim();
+
+/**
+ * Salin file hasil unduhan ke folder pilihan user: <downloadDir>\<label menu>\<nama file>.
+ * File asli tetap di folder data (daftar file, arsip, masa simpan). Folder user tidak pernah dibersihkan otomatis.
+ */
+export function copyToUserDir(downloadDir: string, label: string, file: string) {
+  const dir = path.join(downloadDir, menuFolder(label));
+  fs.mkdirSync(dir, { recursive: true });
+  const dest = path.join(dir, uniqueName(dir, path.basename(file)));
+  fs.copyFileSync(file, dest);
+  return dest;
+}

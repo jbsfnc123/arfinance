@@ -5,7 +5,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 import { defaultDates, weekToDate } from "~/shared/catalog";
 import type { JobParams, JobResult } from "~/shared/types";
 import { jobDir } from "~/core/paths";
-import type { RunContext } from "~/runner/ctx";
+import { CancelledError, type RunContext } from "~/runner/ctx";
 import {
   inspectAging, inspectErp, inspectSchedule, inspectSj, markPushed, num, pushAging, pushErp, pushSchedule, pushSj, readSheets, rp, sha256, unchanged,
 } from "../arw";
@@ -34,7 +34,62 @@ async function shouldPush(ctx: RunContext, job: Parameters<typeof unchanged>[1],
   return sha;
 }
 
+/** Satu laporan Aging Detail (Piutang) per Statement Date → file Excel. */
+async function downloadAging(ctx: RunContext, date: string, prefix: string) {
+  const js = jasperOf(ctx);
+  await js.openReport("Aging Detail");
+  await js.pickOrganization(["AD_Org_ID"]);
+  await js.setDate("statementdate", date, "Statement Date");
+  await js.waitForLoading();
+  await js.pickOption("isSOtrx", "Piutang", "Tipe Transaksi");
+  ctx.info(`Statement Date ${date} · Piutang`);
+  if (!(await js.applyAndWait())) throw new Error("laporan Aging kosong");
+  return finalize(ctx, await js.exportAs(jobDir("jasper.aging"), "Excel", /\.xlsx?$/i), prefix);
+}
+
+const dmy = (iso: string) => `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}`;
+
+/**
+ * Aging banyak bulan: satu file per cut off akhir bulan. Hanya unduh (tidak dikirim ke AR Workspace, agar Aging terkini
+ * tidak tertimpa data lama). Galat satu bulan → dicatat, lanjut bulan berikutnya (login ulang); gagal semua = job gagal.
+ */
+async function agingMonthsJob(ctx: RunContext, cutoffs: string[]): Promise<JobOut> {
+  ctx.info(`Aging per akhir bulan: ${cutoffs.map(dmy).join(", ")} · hanya unduh (tidak dikirim ke AR Workspace)`);
+  const files: string[] = [], done: string[] = [], failed: string[] = [];
+  let rows = 0;
+  for (const [i, d] of cutoffs.entries()) {
+    ctx.check();
+    ctx.info(`Bulan ${i + 1}/${cutoffs.length}: per ${dmy(d)}`);
+    try {
+      const file = await downloadAging(ctx, d, `Aging Detail per ${d}`);
+      files.push(file);
+      const info = inspectAging(readSheets(fs.readFileSync(file)));
+      rows += info.rows;
+      done.push(`${dmy(d)}: ${num(info.rows)} baris`);
+      ctx.log("ok", `  per ${dmy(d)}: ${num(info.rows)} baris · Open Amt ${rp(info.total)}`);
+    } catch (e) {
+      if (e instanceof CancelledError) throw e;
+      const msg = (e as Error).message.split("\n")[0];
+      failed.push(`${dmy(d)}: ${msg}`);
+      ctx.warn(`  per ${dmy(d)} gagal: ${msg}`);
+      await ctx.diagnose(jasperOf(ctx).currentPage, `aging-${d}`);
+      await jasperOf(ctx).currentPage?.close().catch(() => {});
+      resetJasper(ctx);
+    }
+  }
+  const summary = `${files.length}/${cutoffs.length} bulan · ${done.join(" · ")}${failed.length ? ` · gagal ${failed.join(" · ")}` : ""}`;
+  if (!files.length) throw new Error(`semua bulan gagal — ${failed.slice(0, 3).join(" · ")}`);
+  return { files, rows, summary, pushed: false };
+}
+
 export async function agingJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
+  if (p.cutoffs?.length) {
+    const today = todayJakarta();
+    const cutoffs = [...new Set(p.cutoffs.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= today))].sort();
+    if (!cutoffs.length) throw new Error("tanggal cut off tidak valid (maksimal hari ini)");
+    if (cutoffs.length > 24) throw new Error("maksimal 24 bulan per run");
+    return agingMonthsJob(ctx, cutoffs);
+  }
   const js = jasperOf(ctx);
   await js.openReport("Aging Detail");
   await js.pickOrganization(["AD_Org_ID"]);

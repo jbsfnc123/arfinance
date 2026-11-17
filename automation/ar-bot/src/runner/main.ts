@@ -8,7 +8,7 @@ import { parseArgs } from "node:util";
 import { jobInfo, paramsFor } from "~/shared/catalog";
 import type { Config, JobResult, JobSpec, RunRecord, RunRequest, RunStatus } from "~/shared/types";
 import { acquireLock, releaseLock } from "~/core/lock";
-import { DATA_DIR, ensureDirs, P } from "~/core/paths";
+import { copyToUserDir, DATA_DIR, ensureDirs, P } from "~/core/paths";
 import { appendHistory, loadConfig, loadSecrets, trimHistory } from "~/core/store";
 import { JOB_FNS } from "~/jobs";
 import { jasperOf, resetJasper } from "~/jobs/jasper/jobs";
@@ -41,6 +41,15 @@ function cleanup(days: number) {
   for (const d of [P.downloads, P.shots, P.runs]) { try { walk(d); } catch { /* tidak ada */ } }
 }
 
+/** Salin file hasil ke folder unduhan pilihan user (Pengaturan). Gagal salin = peringatan saja. */
+function copyOut(ctx: RunContext, config: Config, label: string, files: string[] | undefined) {
+  if (!config.downloadDir || !files?.length) return;
+  for (const f of files) {
+    try { ctx.info(`Disalin ke ${copyToUserDir(config.downloadDir, label, f)}`); }
+    catch (e) { ctx.warn(`Gagal menyalin ${path.basename(f)} ke folder unduhan: ${(e as Error).message.split("\n")[0]}`); }
+  }
+}
+
 /** Galat yang tidak akan berubah bila diulang (kredensial / pengaturan / isi file). */
 const permanent = (msg: string) => /belum diisi|belum lengkap|belum tersedia|akun gagal|tidak ada akun|login .*gagal|tidak ditemukan di PC|bukan laporan|kosong \(0 baris\)|maksimal/i.test(msg);
 
@@ -63,6 +72,7 @@ async function runJob(ctx: RunContext, config: Config, spec: JobSpec, res: JobRe
       const status = out.status ?? "ok";
       Object.assign(res, out, { status, error: undefined });
       jctx.log(status === "ok" ? "ok" : "info", `${info.label}: ${status === "ok" ? "selesai" : "dilewati"}${res.summary ? ` — ${res.summary}` : ""}`);
+      copyOut(jctx, config, info.label, res.files);
       break;
     } catch (e) {
       const js = spec.id.startsWith("jasper.") ? jasperOf(jctx) : null;

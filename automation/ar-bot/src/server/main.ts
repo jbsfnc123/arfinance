@@ -12,7 +12,7 @@ import { jobInfo, mergeConfig, validTime } from "~/shared/catalog";
 import type { Config, PublicState, RunEvent, RunRecord, RunRequest, SecretKey } from "~/shared/types";
 import { findBrowser } from "~/core/browser";
 import { activeLock, alive, releaseLock } from "~/core/lock";
-import { APP_DIR, DATA_DIR, ensureDirs, P, readJson, writeAtomic } from "~/core/paths";
+import { APP_DIR, DATA_DIR, ensureDirs, menuFolder, P, readJson, writeAtomic } from "~/core/paths";
 import { appendHistory, loadConfig, readHistory, saveConfig, secretKeys, updateSecrets } from "~/core/store";
 import { applySchedule, listSchedules, removeSchedule, runScheduleNow, taskName } from "~/core/scheduler";
 import { applyPo, readPoRows } from "~/faktur/po";
@@ -161,6 +161,11 @@ function stopRun() {
 function cleanConfig(input: Partial<Config>): Config {
   const c = mergeConfig({ ...loadConfig(), ...input });
   c.retentionDays = Math.min(365, Math.max(1, Math.round(Number(c.retentionDays) || 30)));
+  if (c.downloadDir) {
+    c.downloadDir = path.normalize(c.downloadDir.replace(/^"+|"+$/g, ""));
+    if (!/^([a-zA-Z]:\\|\\\\)/.test(c.downloadDir)) throw new Error("Folder unduhan harus jalur lengkap, mis. D:\\Laporan AR.");
+    try { fs.mkdirSync(c.downloadDir, { recursive: true }); } catch (e) { throw new Error(`Folder unduhan tidak bisa dibuat: ${(e as Error).message.split("\n")[0]}`); }
+  }
   for (const ch of c.chains) {
     if (!/^[a-z0-9-]{2,40}$/.test(ch.id)) throw new Error(`ID rangkaian tidak valid: ${ch.id}`);
     if (!validTime(ch.schedule.time)) throw new Error(`Jam rangkaian ${ch.name} tidak valid.`);
@@ -215,6 +220,40 @@ function reveal(target: string) {
   fs.mkdirSync(fs.existsSync(full) && fs.statSync(full).isFile() ? path.dirname(full) : full, { recursive: true });
   const args = fs.existsSync(full) && fs.statSync(full).isFile() ? [`/select,${full}`] : [full];
   spawn("explorer.exe", args, { detached: true, stdio: "ignore" }).unref();
+}
+
+/** Buka Explorer pada folder unduhan pilihan user (opsional subfolder menu). */
+function revealUserDir(sub?: string) {
+  const root = loadConfig().downloadDir;
+  if (!root) throw new Error("Folder unduhan belum diatur di Pengaturan.");
+  const full = sub ? path.join(root, menuFolder(sub)) : root;
+  fs.mkdirSync(full, { recursive: true });
+  spawn("explorer.exe", [full], { detached: true, stdio: "ignore" }).unref();
+}
+
+/** Dialog Windows "Pilih folder" (PowerShell STA + FolderBrowserDialog di atas jendela lain). null = dibatalkan. */
+function pickFolder(initial: string): Promise<string | null> {
+  const ps = [
+    "[Console]::OutputEncoding = [Text.Encoding]::UTF8",
+    "Add-Type -AssemblyName System.Windows.Forms, System.Drawing",
+    "$o = New-Object System.Windows.Forms.Form",
+    "$o.TopMost = $true; $o.ShowInTaskbar = $false; $o.StartPosition = 'CenterScreen'; $o.Size = New-Object System.Drawing.Size(1,1); $o.Opacity = 0",
+    "$o.Show(); $o.Activate()",
+    "$d = New-Object System.Windows.Forms.FolderBrowserDialog",
+    "$d.Description = 'Pilih folder penyimpanan file unduhan AR Bot'; $d.ShowNewFolderButton = $true",
+    "if ($env:ARBOT_PICK_INITIAL -and (Test-Path -LiteralPath $env:ARBOT_PICK_INITIAL)) { $d.SelectedPath = $env:ARBOT_PICK_INITIAL }",
+    "if ($d.ShowDialog($o) -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($d.SelectedPath) }",
+    "$o.Close()",
+  ].join("; ");
+  return new Promise((resolve, reject) => {
+    const child = spawn("powershell.exe", ["-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-Command", ps],
+      { windowsHide: true, env: { ...process.env, ARBOT_PICK_INITIAL: initial } });
+    let out = "";
+    child.stdout.on("data", (b: Buffer) => { out += b.toString("utf8"); });
+    const timer = setTimeout(() => { child.kill(); resolve(null); }, 10 * 60_000);
+    child.on("error", (e) => { clearTimeout(timer); reject(e); });
+    child.on("close", () => { clearTimeout(timer); resolve(out.trim() || null); });
+  });
 }
 
 async function api(req: http.IncomingMessage, res: http.ServerResponse, url: URL) {
@@ -291,6 +330,12 @@ async function api(req: http.IncomingMessage, res: http.ServerResponse, url: URL
     reveal(target);
     return send(res, 200, { ok: true });
   }
+  if (p === "/api/open-download-dir" && m === "POST") {
+    const { sub } = await body<{ sub?: string }>(req);
+    revealUserDir(sub);
+    return send(res, 200, { ok: true });
+  }
+  if (p === "/api/pick-folder" && m === "POST") return send(res, 200, { path: await pickFolder(loadConfig().downloadDir) });
   if (p === "/api/shot" && m === "GET") {
     const f = path.join(P.shots, path.basename(url.searchParams.get("name") ?? ""));
     if (!fs.existsSync(f)) return send(res, 404, { error: "tidak ada" });

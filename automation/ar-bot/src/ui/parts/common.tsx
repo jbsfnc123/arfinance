@@ -117,13 +117,19 @@ export function Confirm({ open, title, children, confirmLabel, danger, onConfirm
   );
 }
 
-export function FileList({ job, refreshKey }: { job: string; refreshKey: unknown }) {
+/** `copyDir` = folder unduhan pilihan user (Pengaturan); `menu` = nama subfolder menu di dalamnya. */
+export function FileList({ job, refreshKey, copyDir, menu }: { job: string; refreshKey: unknown; copyDir?: string; menu?: string }) {
   const [files, setFiles] = useState<{ name: string; size: number; at: string }[] | null>(null);
   const toast = useToast();
   useEffect(() => { api<typeof files>(`/api/files?job=${job}`).then(setFiles).catch(() => setFiles([])); }, [job, refreshKey]);
   const open = (name?: string) => api("/api/open", { target: name ? `downloads/${job}/${name}` : `downloads/${job}` }).catch((e) => toast((e as Error).message, "danger"));
   return (
-    <Card title="File hasil" actions={<button type="button" className={btnGhost} onClick={() => open()}><Icon name="folder_open" />Buka folder</button>}>
+    <Card title="File hasil" actions={<>
+      {copyDir && menu && <button type="button" className={btnGhost} title={`${copyDir}\\${menu}`}
+        onClick={() => api("/api/open-download-dir", { sub: menu }).catch((e) => toast((e as Error).message, "danger"))}><Icon name="folder_open" />Folder unduhan</button>}
+      <button type="button" className={btnGhost} onClick={() => open()}><Icon name="folder_open" />Buka folder</button>
+    </>}>
+      {copyDir && menu && <p className="mb-2 text-xs text-fg-2">File juga disalin ke <b className="text-fg">{copyDir}\{menu}</b> (tidak dihapus otomatis).</p>}
       <div className="max-h-72 overflow-auto">
         <table className={tableCls}>
           <thead><tr><th className={th}>Nama file</th><th className={`${th} text-right`}>Ukuran</th><th className={th}>Waktu</th></tr></thead>
