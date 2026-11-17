@@ -99,3 +99,18 @@ describe("Aging banyak bulan — cut off akhir bulan", () => {
     expect(mergeConfig({ downloadDir: "  D:\AR  " }).downloadDir).toBe("D:\AR");
   });
 });
+
+describe("URL login situs", () => {
+  it("cleanUrl, siteBase, bawaan untuk config lama", async () => {
+    const { cleanUrl, siteBase, mergeConfig, DEFAULT_URLS } = await import("./catalog");
+    expect(cleanUrl("  https://edi.baru.co.id/site/login ", DEFAULT_URLS.edi)).toBe("https://edi.baru.co.id/site/login");
+    expect(cleanUrl("", DEFAULT_URLS.edi)).toBe(DEFAULT_URLS.edi);
+    expect(() => cleanUrl("edi.mitra10.com/site/login", DEFAULT_URLS.edi)).toThrow(/tidak valid/);
+    expect(() => cleanUrl("ftp://x.com/a", DEFAULT_URLS.edi)).toThrow(/http/);
+    expect(siteBase("https://edi.mitra10.com/site/login")).toBe("https://edi.mitra10.com");
+    const c = mergeConfig({ jasper: { username: "u", organization: "o" } as never, edi: { accounts: [], amountTolerance: 50 } as never });
+    expect(c.jasper.loginUrl).toBe(DEFAULT_URLS.jasper);
+    expect(c.edi.loginUrl).toBe(DEFAULT_URLS.edi);
+    expect(c.edi.amountTolerance).toBe(50);
+  });
+});

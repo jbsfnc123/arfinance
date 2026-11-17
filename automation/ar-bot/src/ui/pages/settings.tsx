@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, inputCls, segGroup, segItem } from "@/components/ui";
+import { DEFAULT_URLS } from "~/shared/catalog";
 import type { Config, PublicState, SecretKey } from "~/shared/types";
 import { api } from "../api";
 import { useApp } from "../store";
@@ -47,6 +48,22 @@ function CfgInput({ label, value, onSave, type = "text", placeholder }: { label:
     </Field>
   );
 }
+
+/** URL login situs: simpan saat keluar kolom; ditolak server → kolom kembali ke nilai tersimpan. Pulihkan bawaan bila diubah. */
+function UrlField({ label, value, fallback, onSave }: { label: string; value: string; fallback: string; onSave: (v: string) => Promise<void> }) {
+  const [nonce, setNonce] = useState(0);
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="min-w-[320px] flex-1">
+        <CfgInput key={`${value}|${nonce}`} label={label} value={value} placeholder={fallback}
+          onSave={(v) => { void onSave(v).finally(() => setNonce((n) => n + 1)); }} />
+      </div>
+      {value !== fallback && <button type="button" className={btnGhost} onClick={() => void onSave(fallback)}>Pulihkan bawaan</button>}
+    </div>
+  );
+}
+
+const hostOf = (u: string) => { try { return new URL(u).host; } catch { return u; } };
 
 type TestRes = Record<string, { ok: boolean; message: string } | "busy">;
 
@@ -97,8 +114,10 @@ export function SettingsPage() {
     <div className="grid gap-4">
       <PageHeader title="Pengaturan" />
 
-      <Card title="Jaspersoft (report.tangki.id)">
-        <div className="grid gap-3 md:grid-cols-2">
+      <Card title={`Jaspersoft (${hostOf(cfg.jasper.loginUrl)})`}>
+        <UrlField label="URL login" value={cfg.jasper.loginUrl} fallback={DEFAULT_URLS.jasper}
+          onSave={(v) => patch((c) => ({ ...c, jasper: { ...c.jasper, loginUrl: v } }), "URL login Jaspersoft disimpan.")} />
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
           <CfgInput label="Username" value={cfg.jasper.username} onSave={(v) => patch((c) => ({ ...c, jasper: { ...c.jasper, username: v } }))} />
           <SecretInput k="jasperPassword" label="Password" />
           <CfgInput label="Organization" value={cfg.jasper.organization} onSave={(v) => patch((c) => ({ ...c, jasper: { ...c.jasper, organization: v || "Penguin Trading" } }))} />
@@ -116,8 +135,11 @@ export function SettingsPage() {
         <div className="mt-3"><TestButton target="arw" label="Uji login" res={res} setRes={setRes} /></div>
       </Card>
 
-      <Card title="EDI Mitra 10 · Upload Faktur">
-        <div className="w-64">
+      <Card title={`EDI Mitra 10 (${hostOf(cfg.edi.loginUrl)})`}>
+        <UrlField label="URL login" value={cfg.edi.loginUrl} fallback={DEFAULT_URLS.edi}
+          onSave={(v) => patch((c) => ({ ...c, edi: { ...c.edi, loginUrl: v } }), "URL login EDI disimpan.")} />
+        <p className="mt-1 text-xs text-fg-2">Menu Invoices (Draft, Inbox, Outbox) memakai domain yang sama dengan URL login. Uji login per akun ada di EDI Mitra 10 › Akun.</p>
+        <div className="mt-3 w-64">
           <CfgInput label="Toleransi selisih Open Amt (Rp)" type="number" value={String(cfg.edi.amountTolerance ?? 100)}
             onSave={(v) => patch((c) => ({ ...c, edi: { ...c.edi, amountTolerance: v.trim() === "" ? 100 : Math.max(0, Number(v) || 0) } }), "Toleransi disimpan.")} />
         </div>

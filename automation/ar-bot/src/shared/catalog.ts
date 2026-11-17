@@ -50,14 +50,33 @@ export const DEFAULT_CHAIN: Chain = {
   schedule: { enabled: false, days: [1, 2, 3, 4, 5], time: "10:00" },
 };
 
+/** Alamat login bawaan (bisa diganti di Pengaturan bila domain situs berubah). */
+export const DEFAULT_URLS = {
+  jasper: "https://report.tangki.id/jasperserver/login.html",
+  edi: "https://edi.mitra10.com/site/login",
+} as const;
+
+/** Rapikan URL dari Pengaturan: kosong = bawaan; wajib http(s) dengan host. Galat bila tidak valid. */
+export function cleanUrl(v: string | undefined, fallback: string, label = "URL"): string {
+  const s = (v ?? "").trim();
+  if (!s) return fallback;
+  let u: URL;
+  try { u = new URL(s); } catch { throw new Error(`${label} tidak valid — tulis lengkap, mis. ${fallback}`); }
+  if (!/^https?:$/.test(u.protocol) || !u.hostname) throw new Error(`${label} harus diawali http:// atau https://`);
+  return u.toString();
+}
+
+/** Origin situs dari URL login, mis. https://edi.mitra10.com (untuk jalur menu lain). */
+export const siteBase = (loginUrl: string) => new URL(loginUrl).origin;
+
 export function defaultConfig(): Config {
   return {
     browser: { channel: "auto", headless: true },
     retentionDays: 30,
     downloadDir: "",
-    jasper: { username: "", organization: "Penguin Trading" },
+    jasper: { username: "", organization: "Penguin Trading", loginUrl: DEFAULT_URLS.jasper },
     arw: { supabaseUrl: "", anonKey: "", botEmail: "" },
-    edi: { accounts: [], amountTolerance: 100 },
+    edi: { accounts: [], amountTolerance: 100, loginUrl: DEFAULT_URLS.edi },
     jobs: {},
     chains: [DEFAULT_CHAIN],
     theme: "system",
@@ -72,9 +91,12 @@ export function mergeConfig(saved: Partial<Config> | null | undefined): Config {
   return {
     ...d, ...saved,
     browser: { ...d.browser, ...saved.browser },
-    jasper: { ...d.jasper, ...saved.jasper },
+    jasper: { ...d.jasper, ...saved.jasper, loginUrl: saved.jasper?.loginUrl?.trim() || DEFAULT_URLS.jasper },
     arw: { ...d.arw, ...saved.arw },
-    edi: { accounts: saved.edi?.accounts ?? [], amountTolerance: typeof saved.edi?.amountTolerance === "number" ? saved.edi.amountTolerance : 100 },
+    edi: {
+      accounts: saved.edi?.accounts ?? [], amountTolerance: typeof saved.edi?.amountTolerance === "number" ? saved.edi.amountTolerance : 100,
+      loginUrl: saved.edi?.loginUrl?.trim() || DEFAULT_URLS.edi,
+    },
     downloadDir: typeof saved.downloadDir === "string" ? saved.downloadDir.trim() : "",
     jobs: { ...saved.jobs },
     chains: saved.chains?.length ? saved.chains : d.chains,
