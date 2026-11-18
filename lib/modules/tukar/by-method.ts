@@ -3,7 +3,7 @@ import { daysBetween } from "@/lib/parsers/date";
 
 // Dashboard Tukar Faktur per metode (Fase 81). Sumber: pack_tf_summary — satu baris per invoice yang SUDAH tukar faktur
 // (metode prioritas Kolektor > Ekspedisi > Sistem/WA/Email > Kwitansi EDI). Bulan = bulan TANGGAL TUKAR FAKTUR.
-// Ukuran dashboard = JUMLAH INVOICE (Fase 81b). Tanpa perbandingan antarbulan (Fase 81c): data hanya memuat invoice yang
+// Ukuran dashboard = JUMLAH INVOICE (Fase 81b). Tanpa perbandingan antarbulan (Fase 81c); setiap angka bisa diklik → rincian (Fase 81d): data hanya memuat invoice yang
 // masih tercatat (lunas bisa hilang), jadi jumlah bulan lampau tidak setara untuk dibandingkan.
 // Nominal tetap dibawa untuk kolom tersembunyi di rincian: EDI Mitra10 = total Kwitansi; lainnya = ERP / Aging.
 
@@ -100,61 +100,14 @@ export function breakdownStats(rows: TfDoneRow[], method: MethodKey): Breakdown[
   }).sort((a, b) => b.inv - a.inv || a.name.localeCompare(b.name, "id"));
 }
 
-/** Satu poin kesimpulan: potongan teks; `b` = ditebalkan, `warn` = perlu perhatian. */
-export type Insight = { parts: { t: string; b?: boolean; warn?: boolean }[] };
+/** Filter rincian (drill-down): invoice bulan `month`, opsional satu metode dan/atau satu nama kolektor. */
+export function drillRows(rows: TfDoneRow[], f: { month: string; method?: MethodKey; kurir?: string }): TfDoneRow[] {
+  const name = (r: TfDoneRow) => r.kurir?.trim() || "(tanpa nama)";
+  return rows.filter((r) => r.bulan === f.month && (!f.method || r.method === f.method) && (f.kurir === undefined || name(r) === f.kurir));
+}
 
-const num = (v: number) => v.toLocaleString("id-ID");
-const pct = (v: number) => `${(Math.round(v * 1000) / 10).toLocaleString("id-ID")}%`;
-const hariTxt = (v: number) => `${v.toLocaleString("id-ID")} hari`;
-
-/**
- * Kesimpulan otomatis untuk bulan terpilih (tanpa perbandingan antarbulan): jumlah & BP, laju per hari, perkiraan akhir
- * bulan (bulan berjalan), komposisi metode, kecepatan proses (rata-rata hari invoice → TF), kolektor/ekspedisi teratas,
- * dan metode utama yang belum ada tukar faktur.
- */
-export function insights(input: { month: string; monthName: string; row: MonthRow; rows: TfDoneRow[]; today: string; methods: MethodKey[] }): Insight[] {
-  const { month, monthName, row, rows, today, methods } = input;
-  const out: Insight[] = [];
-  const { elapsed, running } = monthDays(month, today);
-  const daily = perDay(row.total.inv, month, today);
-  out.push({ parts: [
-    { t: `${monthName}${running ? ` (s/d tanggal ${elapsed})` : ""}: ` }, { t: `${num(row.total.inv)} invoice`, b: true },
-    { t: " sudah tukar faktur dari " }, { t: `${num(row.total.bp)} BP`, b: true },
-    ...(daily !== null ? [{ t: ` — rata-rata ${num(daily)} invoice per hari.` }] : [{ t: "." }]),
-  ] });
-  const proj = projection(row.total.inv, month, today);
-  if (proj !== null) out.push({ parts: [{ t: "Perkiraan akhir bulan " }, { t: `±${num(proj)} invoice`, b: true }, { t: " bila laju harian tetap." }] });
-
-  const comp = methods.filter((k) => row.by[k].inv > 0).sort((a, b) => row.by[b].inv - row.by[a].inv);
-  if (comp.length && row.total.inv) {
-    out.push({ parts: [{ t: "Komposisi: " }, ...comp.flatMap((k, i) => [
-      ...(i ? [{ t: " · " }] : []), { t: `${methodLabel(k)} ${num(row.by[k].inv)}`, b: i === 0 }, { t: ` (${pct(row.by[k].inv / row.total.inv)})` },
-    ]), { t: "." }] });
-  }
-  const timed = comp.filter((k) => row.by[k].avgHari !== null).sort((a, b) => row.by[a].avgHari! - row.by[b].avgHari!);
-  if (timed.length >= 2) {
-    const f = timed[0], s = timed[timed.length - 1];
-    out.push({ parts: [
-      { t: "Proses tercepat " }, { t: methodLabel(f), b: true }, { t: ` (rata-rata ${hariTxt(row.by[f].avgHari!)} dari invoice), terlama ` },
-      { t: methodLabel(s), b: true }, { t: ` (${hariTxt(row.by[s].avgHari!)}).` },
-    ] });
-  }
-  const kol = breakdownStats(rows, "kolektor")[0], eks = breakdownStats(rows, "ekspedisi")[0];
-  if (kol || eks) {
-    out.push({ parts: [
-      ...(kol ? [{ t: "Kolektor teratas: " }, { t: `${kol.name} ${num(kol.inv)} invoice`, b: true }, { t: ` (${pct(kol.share)} porsi kolektor)` }] : []),
-      ...(kol && eks ? [{ t: "; " }] : []),
-      ...(eks ? [{ t: "Ekspedisi terbanyak: " }, { t: `${eks.name} ${num(eks.inv)} invoice`, b: true }] : []),
-      { t: "." },
-    ] });
-  }
-  // Kolektor paling lama (rata-rata hari invoice → TF), hanya bila ada ≥ 2 kolektor ber-rata-rata.
-  const slow = breakdownStats(rows, "kolektor").filter((k) => k.avgHari !== null).sort((a, b) => b.avgHari! - a.avgHari!);
-  if (slow.length >= 2) {
-    const rest = slow.slice(1).map((k) => `${k.name} ${hariTxt(k.avgHari!)}`).join(", ");
-    out.push({ parts: [{ t: "Kolektor paling lama memproses: " }, { t: `${slow[0].name} (rata-rata ${hariTxt(slow[0].avgHari!)})`, b: true }, { t: `; ${rest}.` }] });
-  }
-  const empty = methods.filter((k) => k !== "lainnya" && row.by[k].inv === 0);
-  if (empty.length) out.push({ parts: [{ t: empty.map(methodLabel).join(", ") }, { t: " belum ada tukar faktur pada bulan ini.", warn: true }] });
-  return out;
+/** Judul modal rincian, mis. "Tukar Faktur · Kolektor Karnadi · November 2026 (s/d 18)". */
+export function drillTitle(f: { monthName: string; method?: MethodKey; kurir?: string }) {
+  const who = f.kurir !== undefined ? `Kolektor ${f.kurir}` : f.method ? methodLabel(f.method) : "Semua metode";
+  return `Tukar Faktur · ${who} · ${f.monthName}`;
 }
