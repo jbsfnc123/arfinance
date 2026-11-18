@@ -3,7 +3,8 @@ import { daysBetween } from "@/lib/parsers/date";
 
 // Dashboard Tukar Faktur per metode (Fase 81). Sumber: pack_tf_summary — satu baris per invoice yang SUDAH tukar faktur
 // (metode prioritas Kolektor > Ekspedisi > Sistem/WA/Email > Kwitansi EDI). Bulan = bulan TANGGAL TUKAR FAKTUR.
-// Nominal: EDI Mitra10 = total Kwitansi; metode lain = amount invoice ERP / Open Amt Aging (bisa kosong).
+// Ukuran dashboard = JUMLAH INVOICE (Fase 81b). Nominal tetap dibawa untuk kolom tersembunyi di rincian:
+// EDI Mitra10 = total Kwitansi; metode lain = amount invoice ERP / Open Amt Aging (bisa kosong).
 
 export type MethodKey = "kolektor" | "ekspedisi" | "edi" | "lainnya";
 export const METHODS: { key: MethodKey; label: string; hint: string }[] = [
@@ -77,5 +78,5 @@ export function breakdown(rows: TfDoneRow[], method: MethodKey): { name: string;
     cur.inv++; cur.nominal += r.nominal ?? 0;
     m.set(k, cur);
   }
-  return [...m.values()].sort((a, b) => b.nominal - a.nominal || b.inv - a.inv);
+  return [...m.values()].sort((a, b) => b.inv - a.inv || a.name.localeCompare(b.name, "id"));
 }

@@ -35,7 +35,7 @@ describe("Dashboard Tukar Faktur per metode", () => {
     expect(s[1].by.lainnya).toMatchObject({ inv: 1, nominal: 200 });
   });
   it("rincian per kurir / collection & pertumbuhan", () => {
-    expect(breakdown(rows, "kolektor")).toEqual([{ name: "Karnadi", inv: 1, nominal: 3000 }, { name: "Firman", inv: 2, nominal: 1000 }]);
+    expect(breakdown(rows, "kolektor")).toEqual([{ name: "Firman", inv: 2, nominal: 1000 }, { name: "Karnadi", inv: 1, nominal: 3000 }]);
     expect(breakdown(rows, "ekspedisi")).toEqual([{ name: "Jakarta", inv: 1, nominal: 500 }]);
     expect(growth(150, 100)).toBe(0.5);
     expect(growth(150, 0)).toBeNull();
