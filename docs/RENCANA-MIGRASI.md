@@ -671,10 +671,9 @@ Menggantikan Fase 23 (snapshot/Tutup Bulan/Collection otomatis — semuanya diha
   Duplikat erp_payments sudah hilang lewat upload ERP berikutnya (erp_commit mencegahnya).
 
 ## Dashboard Tukar Faktur & Laporan & Jadwal Kolektor (Fase 30, 2026-09-27)
-- Dashboard Tukar Faktur (`lib/modules/tukar/summary.ts`): per bulan invoice date → jumlah invoice, TF Done, belum TF,
-  % TF, rata-rata hari (tanggal TF − invoice date). Baris tetap: Mitra10 & RKM (Kertas Kerja; TF = SJ di file Kwitansi,
-  identik dengan dashboard Mitra10/RKM), Modern Market (marketing Modern Market + National, di luar tax name Mitra10/RKM)
-  & Proyek dari aging terbaru + `invoice_exchanges` (TF pertama). Filter bulan default bulan berjalan.
+- Dashboard Tukar Faktur: digantikan Fase 81 (2026-11-18) — `lib/modules/tukar/by-method.ts` + RPC `pack_tf_summary`:
+  jumlah invoice sudah TF per metode (Kolektor, Ekspedisi, EDI Mitra10) per bulan tanggal TF; hanya angka & tabel
+  (kesimpulan otomatis, tanpa grafik & tanpa perbandingan antarbulan). Tampilan lama per kelompok (summary.ts) dihapus.
 - Tabel harian kolektor lama → menu `tukar.jadwal` kini "Laporan & Jadwal Kolektor" (tab Jadwal / Laporan Harian, tanpa KPI).
 - Migrasi 0034: `pack_m10`/`pack_rkm`/`pack_activity`/`pack_remarks`/`pack_aging` terbuka untuk `dash.tukar`
   (aging & remarks semua collection hanya untuk akun non-collection); `pack_tukar` juga untuk `tukar.jadwal`.
