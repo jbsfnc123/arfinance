@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TfDone } from "@/lib/local/datasets";
-import { breakdownStats, insights, methodOf, monthDays, monthlySummary, perDay, prepareRows, projection } from "./by-method";
+import { breakdownStats, drillRows, drillTitle, methodOf, monthDays, monthlySummary, perDay, prepareRows, projection } from "./by-method";
 
 const r = (o: Partial<TfDone>): TfDone => ({
   invoice_no: "X", metode: "Kolektor", tanggal: "2026-11-05", nominal: 1000, business_partner: "Toko A", invoice_date: "2026-11-01",
@@ -48,21 +48,15 @@ describe("Dashboard Tukar Faktur per metode", () => {
     ]);
     expect(breakdownStats(rows, "ekspedisi")[0]).toMatchObject({ name: "Jakarta", inv: 1, share: 1 });
   });
-  it("kesimpulan: jumlah, perkiraan, komposisi, kecepatan, teratas, metode kosong", () => {
-    const nov = rows.filter((x) => x.bulan === "2026-11");
-    const row = monthlySummary(rows)[0];
-    const txt = insights({ month: "2026-11", monthName: "November 2026", row, rows: nov, today: "2026-11-18", methods: ["kolektor", "ekspedisi", "edi"] })
-      .map((i) => i.parts.map((p) => p.t).join(""));
-    expect(txt[0]).toBe("November 2026 (s/d tanggal 18): 4 invoice sudah tukar faktur dari 3 BP — rata-rata 0,2 invoice per hari.");
-    expect(txt[1]).toBe("Perkiraan akhir bulan ±7 invoice bila laju harian tetap.");
-    expect(txt[2]).toBe("Komposisi: Kolektor 3 (75%) · EDI Mitra10 1 (25%).");
-    expect(txt[3]).toBe("Proses tercepat EDI Mitra10 (rata-rata 1 hari dari invoice), terlama Kolektor (3 hari).");
-    expect(txt[4]).toBe("Kolektor teratas: Firman 2 invoice (66,7% porsi kolektor).");
-    expect(txt[5]).toBe("Kolektor paling lama memproses: Firman (rata-rata 4 hari); Karnadi 2 hari.");
-    expect(txt[6]).toBe("Ekspedisi belum ada tukar faktur pada bulan ini.");
-    const okt = insights({ month: "2026-10", monthName: "Oktober 2026", row: monthlySummary(rows)[1], rows: rows.filter((x) => x.bulan === "2026-10"), today: "2026-11-18", methods: ["kolektor", "ekspedisi", "edi"] })
-      .map((i) => i.parts.map((p) => p.t).join(""));
-    expect(okt[0]).toBe("Oktober 2026: 2 invoice sudah tukar faktur dari 1 BP — rata-rata 0,1 invoice per hari.");
-    expect(okt.some((t) => t.startsWith("Perkiraan"))).toBe(false);
+  it("rincian klik: per bulan, metode, dan kolektor", () => {
+    const ids = (xs: { invoice_no: string }[]) => xs.map((x) => x.invoice_no).sort();
+    expect(ids(drillRows(rows, { month: "2026-11" }))).toEqual(["K1", "K2", "K3", "M1"]);
+    expect(ids(drillRows(rows, { month: "2026-11", method: "kolektor" }))).toEqual(["K1", "K2", "K3"]);
+    expect(ids(drillRows(rows, { month: "2026-11", method: "kolektor", kurir: "Firman" }))).toEqual(["K1", "K3"]);
+    expect(ids(drillRows(rows, { month: "2026-10", method: "ekspedisi" }))).toEqual(["E1"]);
+    expect(drillRows(rows, { month: "2026-11", method: "ekspedisi" })).toEqual([]);
+    expect(drillTitle({ monthName: "November 2026 (s/d 18)", method: "kolektor" })).toBe("Tukar Faktur · Kolektor · November 2026 (s/d 18)");
+    expect(drillTitle({ monthName: "November 2026", method: "kolektor", kurir: "Karnadi" })).toBe("Tukar Faktur · Kolektor Karnadi · November 2026");
+    expect(drillTitle({ monthName: "Oktober 2026" })).toBe("Tukar Faktur · Semua metode · Oktober 2026");
   });
 });
