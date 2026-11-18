@@ -8,10 +8,11 @@ import { tukarMonths, tukarSummary, type TfKey, type TfRow, type TfStat } from "
 import { useRemarks } from "@/lib/modules/remarks";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import { useViewState } from "@/lib/ui/view-state";
-import { card, inputCls, td, th } from "@/components/ui";
+import { card, inputCls, segGroup, segItem, td, th } from "@/components/ui";
 import { useM10 } from "../../mitra10/use-m10";
 import { useRkm } from "../../rkm/use-rkm";
 import { Icon } from "@/components/icons";
+import { MethodDashboard } from "./method-view";
 
 const n = (v: number) => v.toLocaleString("id-ID");
 const hari = (v: number | null) => (v === null ? "–" : `${v.toLocaleString("id-ID")} hari`);
@@ -36,9 +37,30 @@ const DETAIL_HIDDEN = ["no_sj", "due_date", "status", "hari", "collection"];
 
 const pctTxt = (v: number | null) => (v === null ? "–" : `${(Math.floor(v * 1000) / 10).toFixed(1)}%`);
 
-// Dashboard Tukar Faktur: per bulan invoice date — jumlah invoice, sudah tukar faktur, rata-rata hari invoice → TF.
-// Urutan: Mitra10, RKM, Modern Market, Proyek. Laporan harian kolektor ada di menu Laporan & Jadwal Kolektor.
+type Tab = "metode" | "kelompok";
+
+// Dashboard Tukar Faktur (Fase 81): tab utama "Per Metode" (Kolektor · Ekspedisi · EDI Mitra10, ringkasan bulanan nominal yang
+// sudah TF per tanggal tukar) + tab "Status per Kelompok" (tampilan lama: status TF per bulan invoice date).
 export function TukarDashboard() {
+  const [tab, setTab] = useViewState<Tab>("dash-tukar:tab", "metode");
+  return (
+    <div className="mx-auto max-w-[1800px] space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-[22px] font-semibold tracking-tight">Dashboard Tukar Faktur</h1>
+        <div className={`${segGroup} ml-auto`} role="tablist" aria-label="Tampilan">
+          {([["metode", "Per Metode"], ["kelompok", "Status per Kelompok"]] as const).map(([k, l]) => (
+            <button key={k} type="button" role="tab" aria-selected={tab === k} className={segItem(tab === k)} onClick={() => setTab(k)}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {tab === "metode" ? <MethodDashboard /> : <StatusKelompok />}
+    </div>
+  );
+}
+
+// Status per kelompok: per bulan invoice date — jumlah invoice, sudah tukar faktur, rata-rata hari invoice → TF.
+// Urutan: Mitra10, RKM, Modern Market, Proyek. Laporan harian kolektor ada di menu Laporan & Jadwal Kolektor.
+function StatusKelompok() {
   const current = todayJakarta().slice(0, 7);
   const [month, setMonth] = useViewState("dash-tukar:month", current);
   const m10 = useM10();
@@ -67,9 +89,9 @@ export function TukarDashboard() {
   const err = m10.error ?? rkm.error ?? aging.error ?? activity.error;
 
   return (
-    <div className="mx-auto max-w-[1800px] space-y-4">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-[22px] font-semibold tracking-tight">Dashboard Tukar Faktur</h1>
+        <p className="text-sm text-fg-2">Status tukar faktur per kelompok pelanggan, berdasarkan <b>bulan Invoice Date</b>.</p>
         <select value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} ml-auto !w-auto`} aria-label="Bulan">
           {(months.includes(month) ? months : [month, ...months]).map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
