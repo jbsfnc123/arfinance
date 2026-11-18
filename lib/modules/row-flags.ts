@@ -1,15 +1,16 @@
-// Tanda LTKP / Litigasi per baris Kertas Kerja (Fase 82): anotasi manual bersama, tersimpan di tabel row_flags.
+// Tanda Tolakan / LTKP / Litigasi per baris Kertas Kerja (Fase 82): anotasi manual bersama, tersimpan di tabel row_flags.
 // Normal = tidak ada baris. Terpisah dari Keterangan — teks Keterangan tidak lagi ditafsirkan sebagai LTKP/Litigasi.
 
-export const ROW_FLAGS = ["ltkp", "litigasi"] as const;
+export const ROW_FLAGS = ["tolakan", "ltkp", "litigasi"] as const;
 export type RowFlagValue = (typeof ROW_FLAGS)[number];
 export type RowFlagModule = "m10" | "rkm";
 export type RowFlag = { id: number; flag: RowFlagValue };
 
-export type Tanda = "Normal" | "LTKP" | "Litigasi";
-export const TANDA: Tanda[] = ["Normal", "LTKP", "Litigasi"];
-export const tandaOf = (f: RowFlagValue | null | undefined): Tanda => (f === "ltkp" ? "LTKP" : f === "litigasi" ? "Litigasi" : "Normal");
-export const flagOf = (t: Tanda): RowFlagValue | null => (t === "LTKP" ? "ltkp" : t === "Litigasi" ? "litigasi" : null);
+export type Tanda = "Normal" | "Tolakan" | "LTKP" | "Litigasi";
+export const TANDA: Tanda[] = ["Normal", "Tolakan", "LTKP", "Litigasi"];
+const LABEL: Record<RowFlagValue, Tanda> = { tolakan: "Tolakan", ltkp: "LTKP", litigasi: "Litigasi" };
+export const tandaOf = (f: RowFlagValue | null | undefined): Tanda => (f ? LABEL[f] ?? "Normal" : "Normal");
+export const flagOf = (t: Tanda): RowFlagValue | null => ROW_FLAGS.find((f) => LABEL[f] === t) ?? null;
 
 /** Terapkan (flag) atau hapus (null = Normal) tanda pada ids — untuk pembaruan lokal sebelum server mengonfirmasi. */
 export function applyFlags(list: readonly RowFlag[], ids: readonly number[], flag: RowFlagValue | null): RowFlag[] {

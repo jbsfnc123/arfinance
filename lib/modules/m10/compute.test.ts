@@ -35,7 +35,7 @@ describe("Mitra10 compute", () => {
     aging,
     // Keterangan "ltkp" TIDAK lagi berarti LTKP (Fase 82) — tanda datang dari row_flags.
     remarks: new Map([["SJ/2", "ltkp"], ["SJ/1", "Litigasi"]]),
-    flags: new Map([[2, "ltkp"], [3, "litigasi"]]),
+    flags: new Map([[2, "ltkp"], [3, "litigasi"], [1, "tolakan"]]),
     worksheet: [
       ws({ id: 1, payment_group: "CMSS - Pengu338", invoice_no: "SI1", invoice_date: "2026-09-03", open_amt: 2000000, no_sj: "SJ/1" }),
       ws({ id: 2, invoice_no: "SI2", invoice_date: "2026-09-04", open_amt: 50000, no_sj: "SJ/2" }),
@@ -57,7 +57,7 @@ describe("Mitra10 compute", () => {
   });
 
   it("Tanda dari row_flags, bukan Keterangan; filter Keterangan = isi teks apa adanya (Fase 82)", () => {
-    expect(c.worksheet.map((w) => [w.tanda, w.ket_isi])).toEqual([["Normal", "Litigasi"], ["LTKP", "ltkp"], ["Litigasi", "(Kosong)"]]);
+    expect(c.worksheet.map((w) => [w.tanda, w.ket_isi])).toEqual([["Tolakan", "Litigasi"], ["LTKP", "ltkp"], ["Litigasi", "(Kosong)"]]);
   });
 
   it("Jadwal Bayar terpadu (Fase 58): field per invoice menang atas jadwal KW; tanpa field → jadwal KW", () => {
@@ -78,11 +78,11 @@ describe("Mitra10 compute", () => {
     const d = m10Dashboard(c, aging, [{ no_kw: "KW1", spp: null, nilai_kw: 0, tgl_tukar_faktur: "2026-09-10", jadwal_transfer: "2026-09-25", notes: null }],
       { month: null, today: "2026-09-25", lastAging: null });
     expect(d.month).toBe("2026-09");
-    expect(d.summary).toMatchObject({ total: 3, outstanding: 2, lunas: 1, grPending: 0, siapTukar: 1, tfDone: 1, ltkp: 1, litigasi: 1, pendingPrev: 1, pendingCur: 1, openOutstanding: 2050000 });
+    expect(d.summary).toMatchObject({ total: 3, outstanding: 2, lunas: 1, grPending: 0, siapTukar: 1, tfDone: 1, tolakan: 1, ltkp: 1, litigasi: 1, pendingPrev: 1, pendingCur: 1, openOutstanding: 2050000 });
     expect(d.grCheck).toBe(2);
     // Modul tanpa tanda (RKM): tetap dari isi Keterangan persis.
     const noTanda = { ...c, worksheet: c.worksheet.map((w) => ({ ...w, tanda: undefined })) };
-    expect(m10Dashboard(noTanda, aging, [], { month: null, today: "2026-09-25", lastAging: null }).summary).toMatchObject({ ltkp: 1, litigasi: 1 });
+    expect(m10Dashboard(noTanda, aging, [], { month: null, today: "2026-09-25", lastAging: null }).summary).toMatchObject({ tolakan: 0, ltkp: 1, litigasi: 1 });
     expect(d.agingNotInWorksheet).toBe(0);
     expect(d.aging).toMatchObject({ count: 2, totalOpen: 2050000, avgDays: 15 });
     expect(d.monthly).toEqual([{ month: "2026-08", invoice: 1, done: 0, avgLama: null }, { month: "2026-09", invoice: 2, done: 1, avgLama: 7 }]);

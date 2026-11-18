@@ -47,8 +47,8 @@ const KK_COLS: LCol<WorksheetRow>[] = [
   { k: "gr", l: "GR", badge: { Done: OK, Pending: WAIT } },
   { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
   { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 200 },
-  // Tanda LTKP / Litigasi dari tombol (Fase 82), terpisah dari Keterangan.
-  { k: "tanda", l: "Tanda", badge: { LTKP: WAIT, Litigasi: BAD, Normal: "bg-surface-2 text-fg-2" } },
+  // Tanda Tolakan / LTKP / Litigasi dari tombol (Fase 82), terpisah dari Keterangan.
+  { k: "tanda", l: "Tanda", badge: { Tolakan: "bg-accent/15 text-accent", LTKP: WAIT, Litigasi: BAD, Normal: "bg-surface-2 text-fg-2" } },
   // Kuitansi Date (Kwitansi pertama invoice ini) = Tgl Tukar Faktur di Daftar Tagihan (metode "Kwitansi EDI").
   { k: "tf_date", l: "Kuitansi Date", d: true },
   { k: "jadwal_bayar", l: "Jadwal Bayar", d: true },
@@ -140,7 +140,7 @@ export function Mitra10View() {
   // Filter Keterangan = isi teks apa adanya; jumlah per Tanda untuk tombol filter (dari baris Kertas Kerja saat ini).
   const ketOpts = useMemo(() => ketOptions(kkRows), [kkRows]);
   const tandaCounts = useMemo(() => {
-    const n: Record<Tanda, number> = { Normal: 0, LTKP: 0, Litigasi: 0 };
+    const n: Record<Tanda, number> = { Normal: 0, Tolakan: 0, LTKP: 0, Litigasi: 0 };
     for (const r of kkRows) n[r.tanda]++;
     return n;
   }, [kkRows]);
@@ -237,6 +237,7 @@ export function Mitra10View() {
             actions={(sel, clear, info) => (
               <span className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1" role="group" aria-label="Tandai invoice terpilih">
+                  <button type="button" className={`${btnGhost} !text-accent`} onClick={() => flag(sel, clear, "tolakan")}>Tandai Tolakan</button>
                   <button type="button" className={`${btnGhost} !text-warning`} onClick={() => flag(sel, clear, "ltkp")}>Tandai LTKP</button>
                   <button type="button" className={`${btnGhost} !text-danger`} onClick={() => flag(sel, clear, "litigasi")}>Tandai Litigasi</button>
                   <button type="button" className={btnGhost} onClick={() => flag(sel, clear, null)}>Jadikan Normal</button>

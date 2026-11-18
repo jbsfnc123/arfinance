@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { applyFlags, flagErrorMessage, flagOf, tandaOf, type RowFlag } from "./row-flags";
 
-describe("tanda LTKP / Litigasi", () => {
+describe("tanda Tolakan / LTKP / Litigasi", () => {
   it("nilai server ↔ label tampilan; tanpa tanda = Normal", () => {
-    expect([tandaOf("ltkp"), tandaOf("litigasi"), tandaOf(null), tandaOf(undefined)]).toEqual(["LTKP", "Litigasi", "Normal", "Normal"]);
-    expect([flagOf("LTKP"), flagOf("Litigasi"), flagOf("Normal")]).toEqual(["ltkp", "litigasi", null]);
+    expect([tandaOf("tolakan"), tandaOf("ltkp"), tandaOf("litigasi"), tandaOf(null), tandaOf(undefined)]).toEqual(["Tolakan", "LTKP", "Litigasi", "Normal", "Normal"]);
+    expect([flagOf("Tolakan"), flagOf("LTKP"), flagOf("Litigasi"), flagOf("Normal")]).toEqual(["tolakan", "ltkp", "litigasi", null]);
   });
   it("tandai banyak sekaligus, baris lain tetap, Normal = tanda dihapus", () => {
     const list: RowFlag[] = [{ id: 1, flag: "litigasi" }, { id: 5, flag: "ltkp" }];

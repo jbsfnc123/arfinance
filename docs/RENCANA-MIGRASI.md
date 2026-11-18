@@ -892,6 +892,9 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   (`tanda-filter.tsx`, state filter LocalTable yang sama), aksi baris tercentang Tandai LTKP / Tandai Litigasi / Jadikan
   Normal. Filter Keterangan kini isi teks apa adanya (`ketKategori` dihapus). Dashboard Mitra10 menghitung LTKP / Litigasi
   dari tanda; RKM (tanpa tanda) tetap dari isi Keterangan persis.
+- Fase 82b: tanda ketiga **Tolakan** (migrasi `20261118130000_row_flags_tolakan.sql`: check constraint & validasi
+  `row_flags_set`), urutan Tolakan · LTKP · Litigasi; pengisian awal Keterangan yang mengandung "tolakan" (9 baris).
+  Dashboard Mitra10: "Tolakan / LTKP / Litigasi".
 
 ## Monitor Surat Jalan (Fase 45, 2026-09-30)
 - Menu baru **Tukar Faktur › Monitor Surat Jalan** (`tukar.monitor_sj`, `/monitor-surat-jalan`, glyph `fact_check`):

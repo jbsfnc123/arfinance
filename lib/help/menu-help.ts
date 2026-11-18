@@ -68,7 +68,7 @@ export const MENU_HELP: MenuHelp[] = [
     "Kertas Kerja menampilkan kolom Kuitansi Date (tanggal Kwitansi pertama invoice). Jadwal Bayar disembunyikan bawaan — tampilkan lewat tombol kolom tersembunyi di atas tabel.",
     "Upload 4 Jadwal Bayar: Excel dengan header NO KW, SPP, NILAI KW, TGL TUKAR FAKTUR, JADWAL TRANSFER, Notes. No KW yang sudah ada diperbarui; Jadwal Bayar invoice di KW tersebut ikut terisi (satu field dengan Daftar Tagihan).",
     "Siap TF = GR sudah Done, Tukar Faktur masih Pending.",
-    "Tanda LTKP / Litigasi: centang invoice di Kertas Kerja lalu klik Tandai LTKP, Tandai Litigasi, atau Jadikan Normal (bisa banyak sekaligus). Tombol Semua / Normal / LTKP / Litigasi menyaring tabel; Dashboard menghitung LTKP / Litigasi dari tanda ini. Filter Keterangan hanya menyaring isi teks Keterangan.",
+    "Tanda Tolakan / LTKP / Litigasi: centang invoice di Kertas Kerja lalu klik Tandai Tolakan, Tandai LTKP, Tandai Litigasi, atau Jadikan Normal (bisa banyak sekaligus). Tombol Semua / Normal / Tolakan / LTKP / Litigasi menyaring tabel; Dashboard menghitung Tolakan / LTKP / Litigasi dari tanda ini. Filter Keterangan hanya menyaring isi teks Keterangan.",
   ] },
   { href: "/rkm", menu: "Tukar Faktur › RKM Tukar Faktur", text: [
     "Upload Aging: MASTER AGING / Blank_A4 (cukup sekali, di sini atau di Pusat Upload). RKM membaca baris dengan Tax Name terpilih; No SJ baru otomatis masuk Kertas Kerja dan invoice yang hilang dari aging berstatus Lunas.",

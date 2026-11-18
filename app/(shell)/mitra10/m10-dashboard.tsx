@@ -67,7 +67,7 @@ export function M10Dashboard({ m, showJadwal = true, stateKey }: { m: DashSource
             ["Siap tukar faktur (GR Done, TF Pending)", s.siapTukar],
             ["Tukar faktur Done", `${s.tfDone} (${pct(s.tfDone, s.outstanding)})`],
             ["Selisih tidak nol (TF Done)", s.selisihNonZero],
-            ["LTKP / Litigasi", `${s.ltkp} / ${s.litigasi}`],
+            [stateKey === "mitra10" ? "Tolakan / LTKP / Litigasi" : "LTKP / Litigasi", stateKey === "mitra10" ? `${s.tolakan} / ${s.ltkp} / ${s.litigasi}` : `${s.ltkp} / ${s.litigasi}`],
             ["Receiving perlu dicek (Check)", d.grCheck],
             ["Invoice aging belum masuk Kertas Kerja", d.agingNotInWorksheet],
           ]} />

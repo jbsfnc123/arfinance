@@ -150,7 +150,7 @@ export function m10Dashboard(
   const month = opt.month && months.includes(opt.month) ? opt.month : months[months.length - 1] ?? opt.today.slice(0, 7);
   const cur = opt.today.slice(0, 7), prev = addMonth(cur, -1);
   const out = w.filter((r) => r.status === "Outstanding");
-  // LTKP/Litigasi: Mitra10 dari tanda (row_flags, Fase 82); modul tanpa tanda (RKM) tetap dari isi Keterangan persis.
+  // Tolakan/LTKP/Litigasi: Mitra10 dari tanda (row_flags, Fase 82); modul tanpa tanda (RKM) tetap dari isi Keterangan persis.
   const kt = (r: DashRow) => (r.tanda ? r.tanda.toUpperCase() : (r.keterangan ?? "").trim().toUpperCase());
 
   const wsSj = new Set(w.map((r) => up(r.no_sj)));
@@ -190,6 +190,7 @@ export function m10Dashboard(
       siapTukar: count(out.filter((r) => r.gr === "Done" && r.tukar_faktur === "Pending")),
       tfDone: count(w.filter((r) => r.tukar_faktur === "Done")),
       selisihNonZero: count(w.filter((r) => r.tukar_faktur === "Done" && r.selisih !== 0)),
+      tolakan: count(w.filter((r) => kt(r) === "TOLAKAN")),
       ltkp: count(w.filter((r) => kt(r) === "LTKP")),
       litigasi: count(w.filter((r) => kt(r) === "LITIGASI")),
       pendingPrev: count(w.filter((r) => r.tukar_faktur === "Pending" && r.invoice_date?.slice(0, 7) === prev)),

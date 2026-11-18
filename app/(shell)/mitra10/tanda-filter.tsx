@@ -3,7 +3,7 @@
 import { useViewState } from "@/lib/ui/view-state";
 import { TANDA, type Tanda } from "@/lib/modules/row-flags";
 
-// Tombol filter Tanda (Semua · Normal · LTKP · Litigasi) di Kertas Kerja Mitra10 (Fase 82).
+// Tombol filter Tanda (Semua · Normal · Tolakan · LTKP · Litigasi) di Kertas Kerja Mitra10 (Fase 82).
 // Menulis/membaca state filter LocalTable yang sama (`table:<stateKey>:f`.tanda) — sinkron dengan dropdown & Reset tabel.
 // LocalTable-nya wajib diberi `stateKey` yang sama dan filter `{ k: "tanda" }` terdaftar (filter tak terdaftar diabaikan).
 export function TandaFilter({ stateKey, counts }: { stateKey: string; counts: Record<Tanda, number> }) {
@@ -16,8 +16,9 @@ export function TandaFilter({ stateKey, counts }: { stateKey: string; counts: Re
   }
   const total = TANDA.reduce((s, t) => s + counts[t], 0);
   const opts: { v: Tanda | ""; l: string; n: number; on: string }[] = [
-    { v: "", l: "Semua", n: total, on: "bg-accent/15 text-accent" },
-    { v: "Normal", l: "Normal", n: counts.Normal, on: "bg-accent/15 text-accent" },
+    { v: "", l: "Semua", n: total, on: "bg-surface-2 text-fg" },
+    { v: "Normal", l: "Normal", n: counts.Normal, on: "bg-surface-2 text-fg" },
+    { v: "Tolakan", l: "Tolakan", n: counts.Tolakan, on: "bg-accent/15 text-accent" },
     { v: "LTKP", l: "LTKP", n: counts.LTKP, on: "bg-warning/20 text-warning" },
     { v: "Litigasi", l: "Litigasi", n: counts.Litigasi, on: "bg-danger/20 text-danger" },
   ];
