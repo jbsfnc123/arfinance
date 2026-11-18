@@ -3,6 +3,7 @@ import { num } from "@/lib/local/pack";
 import type { AgingLine, Gr, Kwitansi, M10Promise, Schedule, Worksheet } from "@/lib/local/datasets";
 import { remarkKey } from "@/lib/modules/remarks";
 import { bpShort } from "@/lib/modules/bp";
+import { tandaOf, type RowFlagValue, type Tanda } from "@/lib/modules/row-flags";
 
 // Rumus workbook "VBA Mitra10 Tukar Faktur.xlsm" dihitung di browser (dulu view SQL yang
 // timeout). Semua lookup memakai Map → O(n) untuk ribuan baris.
@@ -17,16 +18,18 @@ export const usernameOf = (paymentGroup: string | null | undefined) => {
   return s ? s.slice(-8) : "kosong";
 };
 
-/** Kategori Keterangan untuk filter Kertas Kerja — aturan sama dengan hitungan LTKP/Litigasi di Dashboard (isi persis, tanpa beda huruf). */
-export type KetKategori = "Litigasi" | "LTKP" | "Lainnya" | "Kosong";
-export const KET_KATEGORI: KetKategori[] = ["Litigasi", "LTKP", "Lainnya", "Kosong"];
-export function ketKategori(s: string | null | undefined): KetKategori {
-  const t = (s ?? "").trim().toUpperCase();
-  return !t ? "Kosong" : t === "LITIGASI" ? "Litigasi" : t === "LTKP" ? "LTKP" : "Lainnya";
+/** Nilai filter Keterangan Kertas Kerja (Fase 82): isi teks apa adanya — tidak ditafsirkan sebagai LTKP/Litigasi. */
+export const KET_KOSONG = "(Kosong)";
+export const ketIsi = (s: string | null | undefined) => (s ?? "").trim() || KET_KOSONG;
+/** Opsi filter Keterangan: "(Kosong)" lebih dulu, lalu isi unik urut abjad. */
+export function ketOptions(rows: { ket_isi: string }[]) {
+  const set = new Set(rows.map((r) => r.ket_isi));
+  const rest = [...set].filter((v) => v !== KET_KOSONG).sort((a, b) => a.localeCompare(b, "id"));
+  return set.has(KET_KOSONG) ? [KET_KOSONG, ...rest] : rest;
 }
 
 export type WorksheetRow = Worksheet & {
-  username: string; bp_short: string; keterangan: string | null; ket_kat: KetKategori; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
+  username: string; bp_short: string; keterangan: string | null; ket_isi: string; tanda: Tanda; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
   status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null; tf_date: string | null;
 };
 export type GrRow = Gr & { po_aging: string; check_status: "Done" | "Check" };
@@ -60,7 +63,7 @@ export function currentM10Worksheet(worksheet: Worksheet[], aging: AgingLine[]):
 // remarks = Keterangan invoice bersama (Collection / Mitra10 / Hold Faktur Pajak).
 // promises = Jadwal Bayar terpadu per invoice (sama dengan Daftar Tagihan & Dashboard Collection, Fase 58); bila belum
 // ada, jatuh ke Jadwal Bayar KW pertama invoice (data upload Mitra10).
-export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[]; aging: AgingLine[]; remarks?: Map<string, string>; promises?: M10Promise[] }) {
+export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: Kwitansi[]; schedule: Schedule[]; aging: AgingLine[]; remarks?: Map<string, string>; promises?: M10Promise[]; flags?: ReadonlyMap<number, RowFlagValue> }) {
   const aging = input.aging; // sudah difilter Tax Name
   const agingInv = new Map<string, number>();       // Invoice No → Open Amt (baris pertama)
   const agingSjPo = new Map<string, string | null>(); // No SJ → No PO (baris pertama)
@@ -88,7 +91,9 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
       username: usernameOf(w.payment_group),
       bp_short: bpShort(w.business_partner),
       keterangan: input.remarks?.get(remarkKey(w.no_sj, w.invoice_no)) || null,
-      ket_kat: ketKategori(input.remarks?.get(remarkKey(w.no_sj, w.invoice_no))),
+      ket_isi: ketIsi(input.remarks?.get(remarkKey(w.no_sj, w.invoice_no))),
+      // Tanda LTKP/Litigasi dari tombol (row_flags), bukan dari Keterangan.
+      tanda: tandaOf(input.flags?.get(w.id)),
       gr: grSj.has(w.no_sj) ? "Done" : "Pending",
       tukar_faktur: total > 10000 ? "Done" : "Pending",
       selisih: num(w.open_amt) - total,
@@ -115,7 +120,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
 
 // ── Dashboard (port m10_dashboard) ──────────────────────────────
 // Generik untuk semua modul tukar faktur (Mitra10, RKM): cukup baris Kertas Kerja dengan kolom di bawah.
-export type DashRow = Pick<WorksheetRow, "no_sj" | "invoice_date" | "open_amt" | "keterangan" | "gr" | "tukar_faktur" | "selisih" | "status" | "jadwal_bayar" | "lama_tf"> & { invoice_no?: string | null };
+export type DashRow = Pick<WorksheetRow, "no_sj" | "invoice_date" | "open_amt" | "keterangan" | "gr" | "tukar_faktur" | "selisih" | "status" | "jadwal_bayar" | "lama_tf"> & { invoice_no?: string | null; tanda?: Tanda };
 export type DashInput = { worksheet: DashRow[]; gr: { check_status: string }[] };
 export type Stat = { invoice: number; done: number; avgLama: number | null };
 export type M10Dashboard = {
@@ -145,7 +150,8 @@ export function m10Dashboard(
   const month = opt.month && months.includes(opt.month) ? opt.month : months[months.length - 1] ?? opt.today.slice(0, 7);
   const cur = opt.today.slice(0, 7), prev = addMonth(cur, -1);
   const out = w.filter((r) => r.status === "Outstanding");
-  const kt = (s: string | null) => (s ?? "").trim().toUpperCase();
+  // LTKP/Litigasi: Mitra10 dari tanda (row_flags, Fase 82); modul tanpa tanda (RKM) tetap dari isi Keterangan persis.
+  const kt = (r: DashRow) => (r.tanda ? r.tanda.toUpperCase() : (r.keterangan ?? "").trim().toUpperCase());
 
   const wsSj = new Set(w.map((r) => up(r.no_sj)));
   const days = aging.map((a) => a.days).filter((d): d is number => d !== null && d !== undefined);
@@ -184,8 +190,8 @@ export function m10Dashboard(
       siapTukar: count(out.filter((r) => r.gr === "Done" && r.tukar_faktur === "Pending")),
       tfDone: count(w.filter((r) => r.tukar_faktur === "Done")),
       selisihNonZero: count(w.filter((r) => r.tukar_faktur === "Done" && r.selisih !== 0)),
-      ltkp: count(w.filter((r) => kt(r.keterangan) === "LTKP")),
-      litigasi: count(w.filter((r) => kt(r.keterangan) === "LITIGASI")),
+      ltkp: count(w.filter((r) => kt(r) === "LTKP")),
+      litigasi: count(w.filter((r) => kt(r) === "LITIGASI")),
       pendingPrev: count(w.filter((r) => r.tukar_faktur === "Pending" && r.invoice_date?.slice(0, 7) === prev)),
       pendingCur: count(w.filter((r) => r.tukar_faktur === "Pending" && r.invoice_date?.slice(0, 7) === cur)),
     },

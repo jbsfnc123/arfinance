@@ -880,6 +880,19 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   `lib/ui/badge-contrast.test.ts` menghitung dari token globals.css. Badge di baris tanpa warna & tabel lain tidak
   diubah (di tema terang tetap ±3,9–4,0:1, keterbatasan lama).
 
+## Tanda LTKP / Litigasi Kertas Kerja Mitra10 (Fase 82, 2026-11-18)
+- Migrasi `20261118120000_row_flags.sql` (rollback `supabase/rollback/20261118120000_row_flags_down.sql`): tabel
+  `row_flags(module m10|rkm, worksheet_id, flag ltkp|litigasi, updated_by, updated_at, PK (module, worksheet_id))`, Normal =
+  tanpa baris; RLS baca per `has_menu`, tanpa policy tulis; trigger `bump_version('row_flags')`; RPC `pack_row_flags(p_module)`
+  dan `row_flags_set(p_module, p_ids, p_flag|null)` (atomik, maks. 5000, cek hak menu & id worksheet).
+- Pengisian awal (keputusan user): Keterangan lama yang MENGANDUNG "litigasi" → litigasi, selain itu yang mengandung
+  "ltkp" → ltkp (61 baris: 54 Litigasi, 7 LTKP). Teks Keterangan tidak diubah.
+- Browser: dataset `m10Flags`, hook `lib/ui/use-row-flags.ts` (pola use-row-marks). `computeM10` → kolom `tanda`
+  (Normal/LTKP/Litigasi) & `ket_isi`. Kertas Kerja: kolom Tanda, tombol filter Semua/Normal/LTKP/Litigasi
+  (`tanda-filter.tsx`, state filter LocalTable yang sama), aksi baris tercentang Tandai LTKP / Tandai Litigasi / Jadikan
+  Normal. Filter Keterangan kini isi teks apa adanya (`ketKategori` dihapus). Dashboard Mitra10 menghitung LTKP / Litigasi
+  dari tanda; RKM (tanpa tanda) tetap dari isi Keterangan persis.
+
 ## Monitor Surat Jalan (Fase 45, 2026-09-30)
 - Menu baru **Tukar Faktur › Monitor Surat Jalan** (`tukar.monitor_sj`, `/monitor-surat-jalan`, glyph `fact_check`):
   Dashboard / Kertas Kerja / Upload & Setting, pola & gaya mengikuti Mitra10 Tukar Faktur. Tidak ada akses default untuk

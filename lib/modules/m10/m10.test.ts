@@ -40,15 +40,11 @@ describe("mitra10", () => {
   });
 });
 
-describe("kategori Keterangan (filter Kertas Kerja)", () => {
-  it("Litigasi / LTKP / Lainnya / Kosong — isi persis tanpa beda huruf, seperti hitungan Dashboard", async () => {
-    const { ketKategori } = await import("./compute");
-    expect(ketKategori(" litigasi ")).toBe("Litigasi");
-    expect(ketKategori("LTKP")).toBe("LTKP");
-    expect(ketKategori("ltkp")).toBe("LTKP");
-    expect(ketKategori("Sudah konfirmasi toko")).toBe("Lainnya");
-    expect(ketKategori("")).toBe("Kosong");
-    expect(ketKategori("   ")).toBe("Kosong");
-    expect(ketKategori(null)).toBe("Kosong");
+describe("filter Keterangan (Kertas Kerja) — isi teks apa adanya (Fase 82)", () => {
+  it("tidak menafsirkan LTKP/Litigasi; kosong = (Kosong) dan tampil lebih dulu", async () => {
+    const { ketIsi, ketOptions } = await import("./compute");
+    expect([ketIsi(" Litigasi-Done "), ketIsi("ltkp"), ketIsi("   "), ketIsi(null)]).toEqual(["Litigasi-Done", "ltkp", "(Kosong)", "(Kosong)"]);
+    expect(ketOptions([{ ket_isi: "new inbox" }, { ket_isi: "(Kosong)" }, { ket_isi: "Litigasi" }, { ket_isi: "new inbox" }]))
+      .toEqual(["(Kosong)", "Litigasi", "new inbox"]);
   });
 });

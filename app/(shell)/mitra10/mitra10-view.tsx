@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { optimistic } from "@/lib/local/store";
 import { LocalTable, type LCol } from "@/lib/local/table";
 import type { Gr, Kwitansi, Schedule } from "@/lib/local/datasets";
-import { invoicesByUsername, KET_KATEGORI, type GrRow, type KwRow, type WorksheetRow } from "@/lib/modules/m10/compute";
+import { invoicesByUsername, ketOptions, type GrRow, type KwRow, type WorksheetRow } from "@/lib/modules/m10/compute";
+import { TANDA, type RowFlagValue, type Tanda } from "@/lib/modules/row-flags";
+import { TandaFilter } from "./tanda-filter";
 import { Tabs } from "@/components/tabs";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
@@ -45,6 +47,8 @@ const KK_COLS: LCol<WorksheetRow>[] = [
   { k: "gr", l: "GR", badge: { Done: OK, Pending: WAIT } },
   { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
   { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 200 },
+  // Tanda LTKP / Litigasi dari tombol (Fase 82), terpisah dari Keterangan.
+  { k: "tanda", l: "Tanda", badge: { LTKP: WAIT, Litigasi: BAD, Normal: "bg-surface-2 text-fg-2" } },
   // Kuitansi Date (Kwitansi pertama invoice ini) = Tgl Tukar Faktur di Daftar Tagihan (metode "Kwitansi EDI").
   { k: "tf_date", l: "Kuitansi Date", d: true },
   { k: "jadwal_bayar", l: "Jadwal Bayar", d: true },
@@ -133,6 +137,14 @@ export function Mitra10View() {
   const grRows = useMemo(() => (c?.gr ?? []).filter((r) => grRange.inRange(parseDate(r.gr_date))), [c, grRange.from, grRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
   const kwRows = useMemo(() => (c?.kwitansi ?? []).filter((r) => kwRange.inRange(r.kuitansi_date)), [c, kwRange.from, kwRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
   const jadwalRows = useMemo(() => m.schedule.filter((r) => jadwalRange.inRange(r.jadwal_transfer)), [m.schedule, jadwalRange.from, jadwalRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Filter Keterangan = isi teks apa adanya; jumlah per Tanda untuk tombol filter (dari baris Kertas Kerja saat ini).
+  const ketOpts = useMemo(() => ketOptions(kkRows), [kkRows]);
+  const tandaCounts = useMemo(() => {
+    const n: Record<Tanda, number> = { Normal: 0, LTKP: 0, Litigasi: 0 };
+    for (const r of kkRows) n[r.tanda]++;
+    return n;
+  }, [kkRows]);
+  const flag = (sel: WorksheetRow[], clear: () => void, f: RowFlagValue | null) => { void m.flags.setFlags(sel.map((r) => r.id), f); clear(); };
   // KPI di samping judul: invoice yang sedang tampil di tabel Kertas Kerja (ikut cari/filter), per Username.
   const [shown, setShown] = useState<WorksheetRow[]>([]);
   const kpi = useMemo(() => invoicesByUsername(shown), [shown]);
@@ -196,16 +208,18 @@ export function Mitra10View() {
         {tab === "kk" && (
           <LocalTable title="Kertas Kerja" stateKey={KK_KEY} hideKey="m10-kk-v2" defaultHidden={["jadwal_bayar"]} rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             onRowsChange={setShown}
-            search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan"]}
+            search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan", "tanda"]}
             filters={[
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
               { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },
-              { k: "ket_kat", l: "Keterangan", options: KET_KATEGORI },
+              { k: "tanda", l: "Tanda", options: TANDA },
+              { k: "ket_isi", l: "Keterangan", options: ketOpts },
             ]}
             onEdit={(r, _k, v) => setKeterangan([r], String(v ?? ""))}
             toolbar={(
               <span className="flex flex-wrap items-center gap-2 text-sm">
                 <SiapTfButton stateKey={KK_KEY} />
+                <TandaFilter stateKey={KK_KEY} counts={tandaCounts} />
                 <span className="text-fg-2">Invoice Date</span>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} !w-auto`} />
                 <span className="text-fg-2">s/d</span>
@@ -222,8 +236,13 @@ export function Mitra10View() {
             rowMark={(r) => marks.map.get(r.id)}
             actions={(sel, clear, info) => (
               <span className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1" role="group" aria-label="Tandai invoice terpilih">
+                  <button type="button" className={`${btnGhost} !text-warning`} onClick={() => flag(sel, clear, "ltkp")}>Tandai LTKP</button>
+                  <button type="button" className={`${btnGhost} !text-danger`} onClick={() => flag(sel, clear, "litigasi")}>Tandai Litigasi</button>
+                  <button type="button" className={btnGhost} onClick={() => flag(sel, clear, null)}>Jadikan Normal</button>
+                </span>
                 <input list="m10-ket" value={ket} onChange={(e) => setKet(e.target.value)} placeholder="Keterangan (kosong = hapus)" className={`${inputCls} !w-56`} />
-                <datalist id="m10-ket"><option value="LTKP" /><option value="Litigasi" /><option value="new inbox" /></datalist>
+                <datalist id="m10-ket"><option value="new inbox" /></datalist>
                 <button type="button" className={btnGhost} onClick={() => { setKeterangan(sel, ket); clear(); }}>Simpan untuk {sel.length}</button>
                 <RowMarkButton ids={sel.map((r) => r.id)} hidden={info.hidden} marks={marks.map}
                   onApply={(color) => void marks.setMarks(sel.map((r) => r.id), color)} />

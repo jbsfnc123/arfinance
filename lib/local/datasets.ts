@@ -2,6 +2,7 @@ import { unpack, type Packed } from "./pack";
 import type { SjAging, SjReceipt, SjReceiver } from "@/lib/modules/sj/compute";
 import type { DatasetKey } from "@/lib/cache/versions";
 import type { RowMark } from "@/lib/modules/row-marks";
+import type { RowFlag } from "@/lib/modules/row-flags";
 
 // Definisi dataset lokal: RPC paket, token versi penentu, dan bentuk hasil setelah di-unpack.
 
@@ -63,6 +64,8 @@ export type Datasets = {
   // Penanda warna baris Kertas Kerja (row_marks, migrasi 0040) per modul.
   m10Marks: { marks: RowMark[] };
   rkmMarks: { marks: RowMark[] };
+  // Tanda LTKP / Litigasi Kertas Kerja Mitra10 (row_flags, Fase 82).
+  m10Flags: { flags: RowFlag[] };
   // Receive Date SJ (Receiver aktif) untuk kolom Daftar Tagihan (migrasi 0047).
   sjReceive: { rows: { sj_key: string; receive_date: string }[] };
   emailCustomer: EmailData;
@@ -105,6 +108,7 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string
   payhist: { rpc: "pack_erp_recent", deps: ["erp"], decode: (r) => ({ ...decodeErp(r), counts: (r.counts as Record<string, number>) ?? undefined }) },
   m10Marks: { rpc: "pack_row_marks", args: { p_module: "m10" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
   rkmMarks: { rpc: "pack_row_marks", args: { p_module: "rkm" }, deps: ["row_marks"], decode: (r) => ({ marks: unpack<RowMark>(r as Packed) }) },
+  m10Flags: { rpc: "pack_row_flags", args: { p_module: "m10" }, deps: ["row_flags"], decode: (r) => ({ flags: unpack<RowFlag>(r as Packed) }) },
   emailCustomer: { rpc: "pack_email_customer", deps: ["email_customer", "aging", "erp"], decode: (r) => tables(r, ["groups", "customers", "emails", "lookup", "cbdMarks", "topSales", "uploads", "sent"]) as Datasets["emailCustomer"] },
   sjReceive: { rpc: "pack_sj_receive", deps: ["sj"], decode: (r) => ({ rows: unpack<{ sj_key: string; receive_date: string }>(r as Packed) }) },
   sj: { rpc: "pack_sj", deps: ["sj", "aging"], decode: (r) => ({

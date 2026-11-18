@@ -4,6 +4,7 @@ import { arInvoices, collectionRows, computeSpvSummary, filterOf, type ArInvoice
 import { enrichRow } from "@/lib/modules/collection/view-model";
 import { collectionAllocation } from "@/lib/modules/collection/allocation";
 import { currentM10Worksheet, computeM10, m10AgingLines, m10Usernames, scopeM10 } from "@/lib/modules/m10/compute";
+import type { RowFlagValue } from "@/lib/modules/row-flags";
 import { computeRkm, rkmAgingLines, rkmCabangs, scopeRkm } from "@/lib/modules/rkm/compute";
 
 // Hasil hitungan berat dibagi ANTAR halaman: dihitung sekali per versi data (identitas objek
@@ -22,7 +23,8 @@ export const spvSummaryOf = memoize((month: string, today: string, targets: Data
 
 export const m10LinesOf = memoize((lines: AgingLine[], taxName: string) => m10AgingLines(lines, taxName));
 
-export const m10Of = memoize((m10: Datasets["m10"], aging: AgingLine[], remarks: Map<string, string>) => computeM10({ ...m10, worksheet: currentM10Worksheet(m10.worksheet, aging), aging, remarks }));
+export const m10Of = memoize((m10: Datasets["m10"], aging: AgingLine[], remarks: Map<string, string>, flags?: ReadonlyMap<number, RowFlagValue>) =>
+  computeM10({ ...m10, worksheet: currentM10Worksheet(m10.worksheet, aging), aging, remarks, flags }));
 
 // Alokasi (pembayaran ERP) per hari untuk satu collection & bulan (Daftar Tagihan).
 export const collectionAllocationOf = memoize((month: string, collection: string, erp: Datasets["erp"], targets: Datasets["targets"], agingAll: AgingLine[]) =>
