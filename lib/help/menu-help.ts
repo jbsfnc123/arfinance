@@ -69,6 +69,7 @@ export const MENU_HELP: MenuHelp[] = [
     "Upload 4 Jadwal Bayar: Excel dengan header NO KW, SPP, NILAI KW, TGL TUKAR FAKTUR, JADWAL TRANSFER, Notes. No KW yang sudah ada diperbarui; Jadwal Bayar invoice di KW tersebut ikut terisi (satu field dengan Daftar Tagihan).",
     "Siap TF = GR sudah Done, Tukar Faktur masih Pending.",
     "Tanda Tolakan / LTKP / Litigasi: centang invoice di Kertas Kerja lalu klik Tandai Tolakan, Tandai LTKP, Tandai Litigasi, atau Jadikan Normal (bisa banyak sekaligus). Tombol Semua / Normal / Tolakan / LTKP / Litigasi menyaring tabel; Dashboard menghitung Tolakan / LTKP / Litigasi dari tanda ini. Filter Keterangan hanya menyaring isi teks Keterangan.",
+    "Tanda tersambung dengan Arsip / Task Complete Cek Selisih Harga lewat No PO: menandai invoice yang No PO-nya ada di sana ikut mengubah tanda PO itu dan semua invoice lain dengan No PO sama — begitu juga sebaliknya.",
   ] },
   { href: "/rkm", menu: "Tukar Faktur › RKM Tukar Faktur", text: [
     "Upload Aging: MASTER AGING / Blank_A4 (cukup sekali, di sini atau di Pusat Upload). RKM membaca baris dengan Tax Name terpilih; No SJ baru otomatis masuk Kertas Kerja dan invoice yang hilang dari aging berstatus Lunas.",
@@ -117,7 +118,8 @@ export const MENU_HELP: MenuHelp[] = [
     "Upload PO: kategori menentukan tipe file & kolom — Mitra10: CSV, No PO di kolom A, Total IDR di kolom U; RKM: Excel, No PO (Docnum) kolom A, Total kolom E. Boleh lebih dari 1 file. Rekonsiliasi diproses di browser dengan SO lokal dan hasilnya tetap tersimpan di browser sampai dihapus/logout.",
     "PO berstatus Selisih otomatis masuk Arsip — hanya No PO yang belum ada di Arsip / Task Complete; PO yang sudah ada tidak ditambahkan lagi. Kolom Arsip: Baru masuk Arsip, Sudah di Arsip, atau Sudah Selesai.",
     "Database hanya menyimpan Arsip & Task Complete.",
-    "Arsip: baris kuning = Tindakan Koreksi / Keterangan belum diisi.",
+    "Arsip & Task Complete: centang PO lalu Tandai Tolakan / LTKP / Litigasi / Jadikan Normal, isi Keterangan (Simpan untuk N, atau klik sel Keterangan), Tandai Completed (Arsip) / Kembalikan ke Arsip (Task Complete), atau Hapus. Tombol Semua / Normal / Tolakan / LTKP / Litigasi menyaring tabel.",
+    "Tanda tersambung dua arah dengan Mitra10 Tukar Faktur lewat No PO: menandai PO di sini ikut menandai semua invoice Mitra10 dengan No PO itu (termasuk invoice yang muncul kemudian), dan menandai invoice di Mitra10 ikut mengubah tanda PO-nya di sini. Keterangan tidak ikut. Menghapus PO di sini tidak menghapus tanda invoice Mitra10.",
   ] },
   { href: "/marketplace", menu: "Rekonsiliasi › Marketplace", text: [
     "Laporan yang didukung: Laporan Penghasilan Shopee (sheet Summary + Penghasilan), Riwayat Saldo Shopee (Transaction Report), Laporan TikTok (Laporan + Detail pesanan).",

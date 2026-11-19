@@ -3,7 +3,7 @@
 import { useViewState } from "@/lib/ui/view-state";
 import { TANDA, type Tanda } from "@/lib/modules/row-flags";
 
-// Tombol filter Tanda (Semua · Normal · Tolakan · LTKP · Litigasi) di Kertas Kerja Mitra10 (Fase 82).
+// Tombol filter Tanda (Semua · Normal · Tolakan · LTKP · Litigasi) — Kertas Kerja Mitra10 (Fase 82) & Arsip/Task Complete Cek Harga (Fase 84).
 // Menulis/membaca state filter LocalTable yang sama (`table:<stateKey>:f`.tanda) — sinkron dengan dropdown & Reset tabel.
 // LocalTable-nya wajib diberi `stateKey` yang sama dan filter `{ k: "tanda" }` terdaftar (filter tak terdaftar diabaikan).
 export function TandaFilter({ stateKey, counts }: { stateKey: string; counts: Record<Tanda, number> }) {

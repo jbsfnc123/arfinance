@@ -7,7 +7,7 @@ import { LocalTable, type LCol } from "@/lib/local/table";
 import type { Gr, Kwitansi, Schedule } from "@/lib/local/datasets";
 import { invoicesByUsername, ketOptions, type GrRow, type KwRow, type WorksheetRow } from "@/lib/modules/m10/compute";
 import { TANDA, type RowFlagValue, type Tanda } from "@/lib/modules/row-flags";
-import { TandaFilter } from "./tanda-filter";
+import { TandaFilter } from "@/components/tanda-filter";
 import { Tabs } from "@/components/tabs";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";

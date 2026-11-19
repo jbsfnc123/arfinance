@@ -906,6 +906,20 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
 - Tabel `so_master` + RPC `so_master_load`/`get_so_pivot` TIDAK di-drop (keputusan user) — kosong & tidak dipakai
   aplikasi. SO dikeluarkan dari checklist upload (tidak lagi tercatat di import_log).
 
+## Cek Selisih Harga: Arsip & Task Complete bertanda, sinkron dua arah dengan Mitra10 (Fase 84, 2026-11-20)
+- Arsip & Task Complete (`cases-view.tsx`) = LocalTable pola Kertas Kerja Mitra10: centang → Tandai Tolakan / LTKP /
+  Litigasi / Jadikan Normal, Keterangan (sel atau "Simpan untuk N"), Tandai Completed / Kembalikan ke Arsip, Hapus.
+  Tombol filter Tanda (`components/tanda-filter.tsx`, dipakai juga Mitra10). Form klik-baris, Aksi (termasuk "Internal")
+  & Tindakan Koreksi dihapus dari UI; kolom `aksi`/`tindakan` dibiarkan di DB (usang).
+- Migrasi `20261120100000_cekharga_tanda.sql`: kolom `po_so_cases.tanda` (tolakan|ltkp|litigasi|null), diisi dari aksi
+  lama lalu dari tanda Mitra10 terbaru per PO. Relasi `upper(trim(m10_worksheet.no_po)) = po_customer`.
+  `private.sync_po_tanda(pos, flag)` = satu-satunya jalur sinkron (tanda PO + row_flags m10 semua invoice PO itu).
+  RPC `po_so_cases_set_tanda`, `po_so_cases_delete` (tanda Mitra10 dibiarkan); `row_flags_set` (m10) ikut menyinkronkan
+  PO yang ada di Cek Harga (`synced_pos`); `po_so_cases_archive` mewarisi tanda Mitra10; trigger statement-level pada
+  `m10_worksheet` (insert / update no_po) memberi tanda PO ke invoice baru (`on conflict do nothing`). Insert/update/
+  delete langsung ke `po_so_cases` dicabut; hanya update (keterangan, status, completed_at) yang boleh langsung.
+  Rollback: `supabase/rollback/20261120100000_cekharga_tanda_down.sql`.
+
 ## Monitor Surat Jalan (Fase 45, 2026-09-30)
 - Menu baru **Tukar Faktur › Monitor Surat Jalan** (`tukar.monitor_sj`, `/monitor-surat-jalan`, glyph `fact_check`):
   Dashboard / Kertas Kerja / Upload & Setting, pola & gaya mengikuti Mitra10 Tukar Faktur. Tidak ada akses default untuk

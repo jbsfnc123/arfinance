@@ -517,6 +517,7 @@ export type Database = {
           aksi: string | null
           tindakan: string | null
           keterangan: string | null
+          tanda: string | null
           status: string
           archived_at: string
           completed_at: string | null
@@ -538,9 +539,8 @@ export type Database = {
           keterangan?: string | null
           status?: string
         }
+        // Fase 84: hanya kolom ini yang boleh diubah langsung; tanda lewat RPC po_so_cases_set_tanda.
         Update: {
-          aksi?: string | null
-          tindakan?: string | null
           keterangan?: string | null
           status?: string
           completed_at?: string | null
@@ -1120,6 +1120,8 @@ export type Database = {
         Returns: { invoices: number; kolektor: string; lokasi: number; tanggal: string }[]
       }
       schedule_replace: { Args: { p_file_name: string; p_rows: Json }; Returns: number }
+      po_so_cases_set_tanda: { Args: { p_ids: number[]; p_flag: string | null }; Returns: { cases: number; invoices: number } }
+      po_so_cases_delete: { Args: { p_ids: number[] }; Returns: { deleted: number } }
       so_master_load: { Args: { p_rows: Json; p_reset: boolean; p_file_name: string }; Returns: number }
       get_so_pivot: {
         Args: { p_keys: string[] }
