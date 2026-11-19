@@ -896,6 +896,16 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   `row_flags_set`), urutan Tolakan · LTKP · Litigasi; pengisian awal Keterangan yang mengandung "tolakan" (9 baris).
   Dashboard Mitra10: "Tolakan / LTKP / Litigasi".
 
+## Cek Selisih Harga: SO & rekonsiliasi lokal, arsip otomatis (Fase 83, 2026-11-19)
+- SO (Upload SO) & hasil rekonsiliasi hanya di browser: IndexedDB `arw-local` (`lib/local/kv.ts`, hook
+  `app/(shell)/cek-harga/use-local.ts`), dikosongkan saat logout (`kvClear` di shell-chrome). Pivot SO lokal
+  `soPivotLocal`/`poClean` (port `get_so_pivot`). Data MASTER = LocalTable atas SO lokal.
+- Selisih otomatis masuk Arsip lewat RPC `po_so_cases_archive(p_rows)` (migrasi `20261119100000_cekharga_local.sql`):
+  `on conflict (po_customer) do nothing` → hanya No PO yang belum ada di Arsip/Task Complete; kolom Arsip di hasil:
+  Baru masuk Arsip / Sudah di Arsip / Sudah Selesai. Tombol manual "Pindahkan ke Arsip" dihapus.
+- Tabel `so_master` + RPC `so_master_load`/`get_so_pivot` TIDAK di-drop (keputusan user) — kosong & tidak dipakai
+  aplikasi. SO dikeluarkan dari checklist upload (tidak lagi tercatat di import_log).
+
 ## Monitor Surat Jalan (Fase 45, 2026-09-30)
 - Menu baru **Tukar Faktur › Monitor Surat Jalan** (`tukar.monitor_sj`, `/monitor-surat-jalan`, glyph `fact_check`):
   Dashboard / Kertas Kerja / Upload & Setting, pola & gaya mengikuti Mitra10 Tukar Faktur. Tidak ada akses default untuk

@@ -123,6 +123,31 @@ export function aggregatePo(files: unknown[][][], category: PoCategory) {
   return pivot;
 }
 
+// ── Pivot SO lokal (Fase 83: SO tidak lagi disimpan di server) ───
+/** No PO bersih untuk pencocokan: huruf besar, tanpa akhiran -REV / -REVn (sama dengan so_master_load lama). */
+export const poClean = (no: string | null | undefined) => (no ?? "").trim().toUpperCase().replace(/-REV\d*$/, "");
+const isRev = (no: string | null | undefined) => /-REV\d*$/.test((no ?? "").trim().toUpperCase());
+
+/** Port get_so_pivot: total Grand Total per No PO bersih; data lain dari baris pertama; Manual PO bila ada baris -REV. */
+export function soPivotLocal(rows: readonly SoRow[]): SoPivot[] {
+  const out = new Map<string, SoPivot>();
+  for (const r of rows) {
+    const po = poClean(r.no_po_customer);
+    if (!po) continue;
+    const cur = out.get(po);
+    if (cur) {
+      cur.total += Number(r.grand_total) || 0;
+      cur.is_manual ||= isRev(r.no_po_customer);
+    } else {
+      out.set(po, {
+        po, total: Number(r.grand_total) || 0, document_no: r.document_no, date_po: r.date_po, business_partner: r.business_partner,
+        price_list: r.price_list, document_status: r.document_status, is_manual: isRev(r.no_po_customer),
+      });
+    }
+  }
+  return [...out.values()];
+}
+
 // ── Rekonsiliasi ─────────────────────────────────────────────────
 export type SoPivot = {
   po: string; total: number; document_no: string; date_po: string; business_partner: string;

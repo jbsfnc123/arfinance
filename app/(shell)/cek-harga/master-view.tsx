@@ -1,82 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Tables } from "@/lib/database.types";
-import { btnGhost, card, emptyTd, inputCls, td, th } from "@/components/ui";
-import { TableBox } from "@/components/table-box";
-import { useViewState } from "@/lib/ui/view-state";
-import { Icon } from "@/components/icons";
+import { useMemo } from "react";
+import { LocalTable, type LCol } from "@/lib/local/table";
+import type { SoRow } from "@/lib/modules/cekharga/cekharga";
+import type { CekHargaLocal } from "./use-local";
 
-const PAGE = 50;
+const COLS: LCol<SoRow & { i: number }>[] = [
+  { k: "document_no", l: "Document No" }, { k: "date_po", l: "Date PO" }, { k: "no_po_customer", l: "No PO Customer" },
+  { k: "business_partner", l: "Business Partner", w: 260 }, { k: "price_list", l: "Price List" }, { k: "document_status", l: "Document Status" },
+  { k: "grand_total", l: "Grand Total", n: true },
+];
 
-// Tabel MASTER (SO) dengan pencarian & halaman — dicari di server, bukan di browser.
-export function MasterView() {
-  const supabase = useMemo(() => createClient(), []);
-  const [rows, setRows] = useState<Tables<"so_master">[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(0);
-  const [q, setQ] = useViewState("cekharga:master:q", "");
-  const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const t = setTimeout(() => { setQuery(q.trim()); setPage(0); }, 300);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  useEffect(() => {
-    let req = supabase.from("so_master").select("*", { count: "exact" }).order("id").range(page * PAGE, page * PAGE + PAGE - 1);
-    if (query) {
-      const s = query.replace(/[%,()]/g, " ");
-      req = req.or(`document_no.ilike.%${s}%,no_po_customer.ilike.%${s}%,business_partner.ilike.%${s}%,document_status.ilike.%${s}%`);
-    }
-    req.then(({ data, count }) => {
-      setRows(data ?? []);
-      setTotal(count ?? 0);
-    });
-  }, [page, query, supabase]);
-
-  const pages = Math.max(1, Math.ceil(total / PAGE));
-
+// Data MASTER (Fase 83): SO yang tersimpan di browser ini — cari, urut, Excel dari LocalTable.
+export function MasterView({ local }: { local: CekHargaLocal }) {
+  const so = local.so;
+  const rows = useMemo(() => (so?.rows ?? []).map((r, i) => ({ ...r, i })), [so]);
   return (
-    <section className={`${card} overflow-hidden`}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 text-sm">
-        <span>{total.toLocaleString("id-ID")} baris SO</span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari Document No, No PO, BP, status…" className={`${inputCls} ml-auto !w-72`} />
-        <button type="button" className={btnGhost} disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Halaman sebelumnya">
-          <Icon name="chevron_left" size={20} />
-        </button>
-        <span className="text-xs text-fg-2">{page + 1} / {pages}</span>
-        <button type="button" className={btnGhost} disabled={page + 1 >= pages} onClick={() => setPage(page + 1)} aria-label="Halaman berikutnya">
-          <Icon name="chevron_right" size={20} />
-        </button>
-      </div>
-      <div>
-        <TableBox bare>
-          <table className="w-full text-sm">
-            <thead>
-              <tr>
-                {["Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status"].map((h) => <th key={h} className={th}>{h}</th>)}
-                <th className={`${th} text-right`}>Grand Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t border-line">
-                  <td className={td}>{r.document_no}</td>
-                  <td className={td}>{r.date_po}</td>
-                  <td className={td}>{r.no_po_customer}</td>
-                  <td className={`${td} max-w-64 truncate`} title={r.business_partner ?? ""}>{r.business_partner}</td>
-                  <td className={td}>{r.price_list}</td>
-                  <td className={td}>{r.document_status}</td>
-                  <td className={`${td} text-right`}>{Number(r.grand_total).toLocaleString("id-ID")}</td>
-                </tr>
-              ))}
-              {rows.length === 0 && <tr><td className={emptyTd} colSpan={7}>Belum ada data MASTER. Upload SO terlebih dahulu.</td></tr>}
-            </tbody>
-          </table>
-        </TableBox>
-      </div>
-    </section>
+    <LocalTable title="Data MASTER (SO lokal)" stateKey="cekharga-master" rows={rows} cols={COLS} rowKey={(r) => r.i}
+      loading={!local.loaded} search={["document_no", "no_po_customer", "business_partner", "document_status", "price_list"]}
+      emptyText="Belum ada SO di browser ini. Upload SO terlebih dahulu." />
   );
 }

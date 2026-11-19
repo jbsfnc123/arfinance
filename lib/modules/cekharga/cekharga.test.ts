@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregatePo, parseCsv, parseSo, reconcile } from "./cekharga";
+import { aggregatePo, parseCsv, parseSo, poClean, reconcile, soPivotLocal, type SoRow } from "./cekharga";
 
 describe("parseSo", () => {
   const header = ["Error Msg", "Document No", "Date PO", "no_po", "Business Partner ", "Price List", "Document Status", "Grand Total"];
@@ -50,5 +50,28 @@ describe("reconcile", () => {
       ["PO-X", "NOT_FOUND", 0, false],
       ["PO-OK", "OK", 0.5, false],
     ]);
+  });
+});
+
+describe("pivot SO lokal (Fase 83)", () => {
+  const so = (o: Partial<SoRow>): SoRow => ({ document_no: "SO", date_po: "01/11/2026", no_po_customer: "", business_partner: "BP", price_list: "PL", document_status: "Completed", grand_total: 0, ...o });
+  const rows = [
+    so({ document_no: "SO-1", no_po_customer: " po-a ", grand_total: 1000 }),
+    so({ document_no: "SO-2", no_po_customer: "PO-A-REV1", grand_total: 500, business_partner: "Lain" }),
+    so({ document_no: "SO-3", no_po_customer: "PO-B", grand_total: 2000 }),
+    so({ document_no: "SO-4", no_po_customer: "PO-C", grand_total: 300 }),
+    so({ document_no: "SO-5", no_po_customer: "  ", grand_total: 999 }),
+  ];
+  it("-REV digabung ke PO asal, total dijumlah, data dari baris pertama, PO kosong diabaikan", () => {
+    expect(poClean("po-x-rev12")).toBe("PO-X");
+    const p = soPivotLocal(rows);
+    expect(p.map((x) => [x.po, x.total, x.document_no, x.business_partner, x.is_manual])).toEqual([
+      ["PO-A", 1500, "SO-1", "BP", true], ["PO-B", 2000, "SO-3", "BP", false], ["PO-C", 300, "SO-4", "BP", false],
+    ]);
+  });
+  it("rekonsiliasi lokal: selisih, OK, SO tidak ditemukan", () => {
+    const po = aggregatePo([[["PO", ...Array(19).fill(""), "Total"], ["po-a", ...Array(19).fill(""), "1.400"], ["PO-B", ...Array(19).fill(""), "2000"], ["PO-Z", ...Array(19).fill(""), "10"]]], "MITRA10");
+    const r = reconcile(po, soPivotLocal(rows));
+    expect(r.map((x) => [x.po_customer, x.status, x.selisih])).toEqual([["PO-A", "SELISIH", -100], ["PO-Z", "NOT_FOUND", 0], ["PO-B", "OK", 0]]);
   });
 });

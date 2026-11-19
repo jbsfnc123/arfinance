@@ -113,8 +113,10 @@ export const MENU_HELP: MenuHelp[] = [
     "Sumber penjualan CBD: tombol Upload CBD Sales — file ERP Payment/Receipt; dipakai AR Receipt (Prepaid) & (Prepaid-ESPAY), tanggal = Transaction Date, dokumen Reversed diabaikan, Value = teks setelah \"_\" terakhir di Business Partner. Hanya tanda (Value + tanggal) yang disimpan, tanpa nominal.",
   ] },
   { href: "/cek-harga", menu: "Rekonsiliasi › Cek Selisih Harga PO/SO", text: [
-    "Upload SO: file Excel SO dari ERP (tab Sheet0). Kolom: Document No, Date PO, No PO Customer (atau no_po), Business Partner, Price List, Document Status, Grand Total. Data MASTER lama diganti seluruhnya. Filter awalan Business Partner: pisahkan koma, kosongkan = semua. Filter Document Status: persis, kosongkan = semua.",
-    "Upload PO: kategori menentukan tipe file & kolom — Mitra10: CSV, No PO di kolom A, Total IDR di kolom U; RKM: Excel, No PO (Docnum) kolom A, Total kolom E. Boleh lebih dari 1 file.",
+    "Upload SO: file Excel SO dari ERP (tab Sheet0). Kolom: Document No, Date PO, No PO Customer (atau no_po), Business Partner, Price List, Document Status, Grand Total. SO hanya disimpan di browser ini (tidak dikirim ke server), menggantikan SO sebelumnya, dan terhapus saat logout. Tab Data MASTER menampilkan SO lokal ini. Filter awalan Business Partner: pisahkan koma, kosongkan = semua. Filter Document Status: persis, kosongkan = semua.",
+    "Upload PO: kategori menentukan tipe file & kolom — Mitra10: CSV, No PO di kolom A, Total IDR di kolom U; RKM: Excel, No PO (Docnum) kolom A, Total kolom E. Boleh lebih dari 1 file. Rekonsiliasi diproses di browser dengan SO lokal dan hasilnya tetap tersimpan di browser sampai dihapus/logout.",
+    "PO berstatus Selisih otomatis masuk Arsip — hanya No PO yang belum ada di Arsip / Task Complete; PO yang sudah ada tidak ditambahkan lagi. Kolom Arsip: Baru masuk Arsip, Sudah di Arsip, atau Sudah Selesai.",
+    "Database hanya menyimpan Arsip & Task Complete.",
     "Arsip: baris kuning = Tindakan Koreksi / Keterangan belum diisi.",
   ] },
   { href: "/marketplace", menu: "Rekonsiliasi › Marketplace", text: [

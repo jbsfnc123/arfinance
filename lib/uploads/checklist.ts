@@ -7,7 +7,7 @@ import { todayJakarta } from "@/lib/parsers/date";
 export type Period = "day" | "month";
 export type FileKey =
   | "aging" | "erp_invoice" | "erp_payment" | "target" | "mutasi" | "jadwal_kolektor"
-  | "m10_gr" | "m10_kw" | "m10_jadwal" | "rkm_gr" | "rkm_kw" | "so_master" | "marketplace";
+  | "m10_gr" | "m10_kw" | "m10_jadwal" | "rkm_gr" | "rkm_kw" | "marketplace";
 
 export type FileDef = {
   label: string;
@@ -30,7 +30,6 @@ export const FILES: Record<FileKey, FileDef> = {
   m10_jadwal: { label: "Jadwal Bayar", match: { module: "mitra10", kind: "jadwal" }, period: "day", where: { label: "Mitra10 → Upload & Setting", href: "/mitra10" } },
   rkm_gr: { label: "GR RKM", match: { module: "rkm", kind: "gr" }, period: "day", where: { label: "RKM → Upload & Setting", href: "/rkm" } },
   rkm_kw: { label: "Kwitansi RKM", match: { module: "rkm", kind: "kwitansi" }, period: "day", where: { label: "RKM → Upload & Setting", href: "/rkm" } },
-  so_master: { label: "SO Master", match: { module: "cek_harga", kind: "so_master" }, period: "day", where: { label: "Cek Selisih Harga", href: "/cek-harga" } },
   marketplace: { label: "Laporan Marketplace", match: { module: "marketplace", kind: "report" }, period: "day", where: { label: "Marketplace", href: "/marketplace" } },
 };
 
@@ -42,7 +41,6 @@ export const CHECKLIST: { menu: string; files: FileKey[] }[] = [
   { menu: "Tukar Faktur – Laporan & Jadwal Kolektor", files: ["jadwal_kolektor"] },
   { menu: "Mitra10 Tukar Faktur", files: ["aging", "m10_gr", "m10_kw", "m10_jadwal"] },
   { menu: "RKM Tukar Faktur", files: ["aging", "rkm_gr", "rkm_kw"] },
-  { menu: "Cek Selisih Harga PO/SO", files: ["so_master"] },
   { menu: "Marketplace", files: ["marketplace"] },
 ];
 

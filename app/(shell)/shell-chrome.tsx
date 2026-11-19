@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { NavGroup } from "@/lib/menu";
 import { idbClear } from "@/lib/cache/idb";
+import { kvClear } from "@/lib/local/kv";
 import { reloadLoaded } from "@/lib/local/store";
 import { clearViewState, ensureViewOwner } from "@/lib/ui/view-state";
 import { ToastProvider, useToast } from "@/components/toast";
@@ -90,6 +91,7 @@ function ShellFrame({ title, icon, portalHref, menu, homeLocked, consultantEnabl
     e.preventDefault();
     const form = e.currentTarget;
     await idbClear(); // data tidak tertinggal di browser komputer bersama
+    await kvClear();  // data kerja lokal (mis. SO & rekonsiliasi Cek Selisih Harga)
     clearViewState();
     form.submit();
   }
