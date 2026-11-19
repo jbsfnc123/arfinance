@@ -14,7 +14,7 @@ const NAME = { m10: "m10Flags" } as const;
 type Mod = keyof typeof NAME & RowFlagModule;
 const latest: Record<Mod, number> = { m10: 0 };
 
-type Rpc = (fn: string, args: Record<string, unknown>) => Promise<{ error: { code?: string; message?: string } | null }>;
+type Rpc = (fn: string, args: Record<string, unknown>) => Promise<{ data?: unknown; error: { code?: string; message?: string } | null }>;
 
 export async function commitFlags(opts: {
   module: Mod; ids: number[]; flag: RowFlagValue | null; rpc: Rpc;
@@ -26,8 +26,9 @@ export async function commitFlags(opts: {
   const mine = ++latest[module];
   patchLocal(name, (d) => ({ flags: applyFlags(d.flags, ids, flag) }));
   let error: { code?: string; message?: string } | null;
+  let data: unknown = null;
   try {
-    ({ error } = await rpc("row_flags_set", { p_module: module, p_ids: ids, p_flag: flag }));
+    ({ data, error } = await rpc("row_flags_set", { p_module: module, p_ids: ids, p_flag: flag }));
   } catch (e) {
     error = { message: (e as Error).message };
   }
@@ -37,7 +38,10 @@ export async function commitFlags(opts: {
     notify(flagErrorMessage(error), "danger");
     return false;
   }
-  notify(flag ? `Ditandai ${tandaOf(flag)} untuk ${ids.length} baris` : `${ids.length} baris dikembalikan ke Normal`, "success");
+  // Fase 84: PO yang ada di Cek Selisih Harga ikut berubah (+ invoice lain dengan No PO sama) — di server.
+  const synced = Number((data as { synced_pos?: number } | null)?.synced_pos ?? 0);
+  const base = flag ? `Ditandai ${tandaOf(flag)} untuk ${ids.length} baris` : `${ids.length} baris dikembalikan ke Normal`;
+  notify(synced ? `${base} · juga diterapkan ke ${synced} PO di Cek Selisih Harga` : base, "success");
   void ensure(name, { force: true });
   return true;
 }

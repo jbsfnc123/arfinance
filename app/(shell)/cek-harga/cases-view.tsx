@@ -1,133 +1,148 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAll } from "@/lib/supabase/fetch-all";
-import type { Tables } from "@/lib/database.types";
 import { fmtTimestamp } from "@/lib/format";
 import { useToast } from "@/components/toast";
-import { btnGhost, btnPrimary, card, emptyTd, inputCls, td, th } from "@/components/ui";
-import { TableBox } from "@/components/table-box";
-import { useViewState } from "@/lib/ui/view-state";
+import { btnGhost, inputCls } from "@/components/ui";
+import { TandaFilter } from "@/components/tanda-filter";
+import { LocalTable, type LCol } from "@/lib/local/table";
+import { ketOptions } from "@/lib/modules/m10/compute";
+import { TANDA, tandaOf, type RowFlagValue } from "@/lib/modules/row-flags";
+import { caseRow, countTanda, type CaseRecord, type CaseRow } from "@/lib/modules/cekharga/cases";
 
-type Case = Tables<"po_so_cases">;
-const AKSI = ["Litigasi", "LTKP", "Internal"];
-const money = (n: number) => Number(n).toLocaleString("id-ID", { maximumFractionDigits: 2 });
+// Arsip & Task Complete (Fase 84) — pola Kertas Kerja Mitra10: centang baris → Tandai Tolakan/LTKP/Litigasi/Normal,
+// isi Keterangan, Tandai Completed / Kembalikan ke Arsip, Hapus. Tanda tersinkron dua arah dengan invoice Mitra10
+// ber-No PO sama (di server: po_so_cases_set_tanda ↔ row_flags_set).
 
-// Port tab ARSIP & TASK_COMPLETE: baris kuning bila Tindakan Koreksi/Keterangan belum diisi;
-// klik baris untuk mengisi Aksi, Tindakan, Keterangan → Simpan / Complete.
+const WAIT = "bg-warning/20 text-warning";
+const BAD = "bg-danger/20 text-danger";
+const SELECT = "id,po_customer,document_no,date_po,business_partner,price_list,document_status,total_po,total_so,selisih,keterangan,tanda,status,archived_at,completed_at";
+
 export function CasesView({ status, version, onChange }: { status: "archived" | "completed"; version: number; onChange: () => void }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
-  const [rows, setRows] = useState<Case[]>([]);
-  const [open, setOpen] = useState<number | null>(null);
-  const [draft, setDraft] = useState({ aksi: "Litigasi", tindakan: "", keterangan: "" });
-  const [busy, setBusy] = useState(false);
-  const [q, setQ] = useViewState(`cekharga:${status}:q`, "");
+  const [rows, setRows] = useState<CaseRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [ket, setKet] = useState("");
+  const stateKey = status === "archived" ? "cekharga-arsip" : "cekharga-done";
+
+  const fetchRows = useCallback(async () => {
+    const { data, error } = await fetchAll((a, b) => supabase.from("po_so_cases").select(SELECT).eq("status", status)
+      .order(status === "archived" ? "archived_at" : "completed_at", { ascending: false }).order("id").range(a, b));
+    if (error) toast(`Gagal memuat: ${error.message}`, "danger");
+    return ((data ?? []) as unknown as CaseRecord[]).map(caseRow);
+  }, [status, supabase, toast]);
+  const load = async () => setRows(await fetchRows());
 
   useEffect(() => {
-    fetchAll((a, b) => supabase.from("po_so_cases").select("*").eq("status", status)
-      .order(status === "archived" ? "archived_at" : "completed_at", { ascending: false }).order("id").range(a, b))
-      .then(({ data, error }) => {
-        if (error) toast(`Gagal memuat: ${error.message}`, "danger");
-        setRows(data ?? []);
+    let alive = true;
+    fetchRows().then((rs) => {
+      if (!alive) return;
+      setRows(rs);
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [fetchRows, version]);
+
+  // Perubahan tampil seketika; gagal → muat ulang dari server + pesan.
+  async function run(patch: (rs: CaseRow[]) => CaseRow[], call: () => PromiseLike<{ error: { message: string } | null; data?: unknown }>, ok: (data: unknown) => string, refreshTabs = false) {
+    setRows(patch);
+    const { data, error } = await call();
+    if (error) {
+      toast(`Gagal menyimpan: ${error.message}`, "danger", 8000);
+      await load();
+      return;
+    }
+    toast(ok(data), "success");
+    if (refreshTabs) onChange();
+  }
+
+  const ids = (sel: CaseRow[]) => sel.map((r) => r.id);
+  const inSel = (sel: CaseRow[]) => { const s = new Set(ids(sel)); return (r: CaseRow) => s.has(r.id); };
+
+  function flag(sel: CaseRow[], clear: () => void, f: RowFlagValue | null) {
+    const has = inSel(sel);
+    clear();
+    void run((rs) => rs.map((r) => (has(r) ? { ...r, flag: f, tanda: tandaOf(f) } : r)),
+      () => supabase.rpc("po_so_cases_set_tanda", { p_ids: ids(sel), p_flag: f }),
+      (d) => {
+        const inv = (d as { invoices?: number } | null)?.invoices ?? 0;
+        const what = f ? `ditandai ${tandaOf(f)}` : "dikembalikan ke Normal";
+        return `${sel.length} PO ${what}${inv ? ` · ${inv} invoice Mitra10 ikut diperbarui` : ""}.`;
       });
-  }, [status, version, supabase, toast]);
-
-  function toggle(c: Case) {
-    if (open === c.id) return setOpen(null);
-    setOpen(c.id);
-    setDraft({ aksi: c.aksi ?? "Litigasi", tindakan: c.tindakan ?? "", keterangan: c.keterangan ?? "" });
   }
 
-  async function save(c: Case, complete: boolean) {
-    setBusy(true);
-    const patch = {
-      aksi: draft.aksi, tindakan: draft.tindakan.trim(), keterangan: draft.keterangan.trim(),
-      ...(complete ? { status: "completed", completed_at: new Date().toISOString() } : {}),
-    };
-    const { error } = await supabase.from("po_so_cases").update(patch).eq("id", c.id);
-    setBusy(false);
-    if (error) return toast(`Gagal menyimpan: ${error.message}`, "danger");
-    toast(complete ? `PO ${c.po_customer} selesai & dipindahkan ke Task Complete.` : `Perubahan PO ${c.po_customer} disimpan.`, "success");
-    setOpen(null);
-    if (complete) setRows(rows.filter((r) => r.id !== c.id));
-    else setRows(rows.map((r) => (r.id === c.id ? { ...r, ...patch } : r)));
-    onChange();
+  function setKeterangan(sel: CaseRow[], text: string) {
+    const has = inSel(sel);
+    const v = text.trim() || null;
+    void run((rs) => rs.map((r) => (has(r) ? caseRow({ ...r, tanda: r.flag, keterangan: v }) : r)),
+      () => supabase.from("po_so_cases").update({ keterangan: v }).in("id", ids(sel)),
+      () => (v ? `Keterangan disimpan untuk ${sel.length} PO.` : `Keterangan dihapus untuk ${sel.length} PO.`));
   }
 
-  const shown = rows.filter((r) => `${r.po_customer} ${r.document_no} ${r.business_partner}`.toLowerCase().includes(q.toLowerCase()));
+  function move(sel: CaseRow[], clear: () => void) {
+    const has = inSel(sel);
+    const toDone = status === "archived";
+    clear();
+    void run((rs) => rs.filter((r) => !has(r)),
+      () => supabase.from("po_so_cases")
+        .update(toDone ? { status: "completed", completed_at: new Date().toISOString() } : { status: "archived", completed_at: null })
+        .in("id", ids(sel)),
+      () => (toDone ? `${sel.length} PO dipindahkan ke Task Complete.` : `${sel.length} PO dikembalikan ke Arsip.`), true);
+  }
+
+  function remove(sel: CaseRow[]) {
+    const has = inSel(sel);
+    void run((rs) => rs.filter((r) => !has(r)),
+      () => supabase.rpc("po_so_cases_delete", { p_ids: ids(sel) }),
+      () => `${sel.length} PO dihapus dari ${status === "archived" ? "Arsip" : "Task Complete"}.`, true);
+  }
+
+  const cols = useMemo<LCol<CaseRow>[]>(() => [
+    { k: "document_no", l: "Document No" }, { k: "date_po", l: "Date PO" }, { k: "po_customer", l: "No PO Customer" },
+    { k: "business_partner", l: "Business Partner", w: 220 }, { k: "price_list", l: "Price List" },
+    { k: "document_status", l: "Document Status" },
+    { k: "total_po", l: "Total PO", n: true }, { k: "total_so", l: "Total SO", n: true }, { k: "selisih", l: "Selisih", n: true },
+    { k: "tanda", l: "Tanda", badge: { Tolakan: "bg-accent/15 text-accent", LTKP: WAIT, Litigasi: BAD, Normal: "bg-surface-2 text-fg-2" } },
+    { k: "keterangan", l: "Keterangan", edit: "text", w: 220 },
+    status === "archived"
+      ? { k: "archived_at", l: "Diarsipkan", render: (r) => fmtTimestamp(r.archived_at), text: (r) => fmtTimestamp(r.archived_at) }
+      : { k: "completed_at", l: "Selesai", render: (r) => fmtTimestamp(r.completed_at), text: (r) => fmtTimestamp(r.completed_at) },
+  ], [status]);
+
+  const counts = useMemo(() => countTanda(rows), [rows]);
+  const ketOpts = useMemo(() => ketOptions(rows), [rows]);
 
   return (
-    <section className={`${card} overflow-hidden`}>
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="text-sm">{shown.length} PO</span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari PO, SO, BP…" className={`${inputCls} ml-auto !w-60`} />
-      </div>
-      <div>
-        <TableBox bare>
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-surface">
-              <tr>
-                {["Document No", "Date PO", "No PO Customer", "Business Partner", "Price List", "Document Status"].map((h) => <th key={h} className={th}>{h}</th>)}
-                {["Total PO", "Total SO", "Selisih"].map((h) => <th key={h} className={`${th} text-right`}>{h}</th>)}
-                {status === "completed" && <><th className={th}>Aksi</th><th className={th}>Tindakan Koreksi</th><th className={th}>Keterangan</th><th className={th}>Selesai</th></>}
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((c) => {
-                const incomplete = !c.tindakan?.trim() || !c.keterangan?.trim();
-                return (
-                  <Fragment key={c.id}>
-                    <tr onClick={() => status === "archived" && toggle(c)}
-                      className={`border-t border-line ${status === "archived" ? "cursor-pointer hover:bg-surface-2" : ""} ${status === "archived" && incomplete ? "bg-warning/10" : ""}`}>
-                      <td className={td}>{c.document_no}</td>
-                      <td className={td}>{c.date_po}</td>
-                      <td className={td}>{c.po_customer}</td>
-                      <td className={`${td} max-w-56 truncate`} title={c.business_partner ?? ""}>{c.business_partner}</td>
-                      <td className={td}>{c.price_list}</td>
-                      <td className={td}>{c.document_status}</td>
-                      <td className={`${td} text-right`}>{money(c.total_po)}</td>
-                      <td className={`${td} text-right`}>{money(c.total_so)}</td>
-                      <td className={`${td} text-right`}>{money(c.selisih)}</td>
-                      {status === "completed" && (
-                        <>
-                          <td className={td}>{c.aksi}</td>
-                          <td className={`${td} max-w-56 truncate`} title={c.tindakan ?? ""}>{c.tindakan}</td>
-                          <td className={`${td} max-w-56 truncate`} title={c.keterangan ?? ""}>{c.keterangan}</td>
-                          <td className={td}>{fmtTimestamp(c.completed_at)}</td>
-                        </>
-                      )}
-                    </tr>
-                    {open === c.id && (
-                      <tr className="bg-surface-2/50">
-                        <td colSpan={9} className="px-3 py-3">
-                          <div className="flex flex-wrap items-end gap-3">
-                            <label className="text-xs text-fg-2">Aksi
-                              <select value={draft.aksi} onChange={(e) => setDraft({ ...draft, aksi: e.target.value })} className={`${inputCls} mt-1 !w-36`}>
-                                {AKSI.map((a) => <option key={a}>{a}</option>)}
-                              </select>
-                            </label>
-                            <label className="min-w-56 flex-1 text-xs text-fg-2">Tindakan Koreksi
-                              <input value={draft.tindakan} onChange={(e) => setDraft({ ...draft, tindakan: e.target.value })} className={`${inputCls} mt-1`} />
-                            </label>
-                            <label className="min-w-56 flex-1 text-xs text-fg-2">Keterangan
-                              <input value={draft.keterangan} onChange={(e) => setDraft({ ...draft, keterangan: e.target.value })} className={`${inputCls} mt-1`} />
-                            </label>
-                            <button type="button" className={btnGhost} disabled={busy} onClick={() => save(c, false)}>Simpan</button>
-                            <button type="button" className={btnPrimary} disabled={busy} onClick={() => save(c, true)}>Complete</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-              {shown.length === 0 && <tr><td className={emptyTd} colSpan={13}>{status === "archived" ? "Belum ada data di arsip." : "Belum ada task complete."}</td></tr>}
-            </tbody>
-          </table>
-        </TableBox>
-      </div>
-    </section>
+    <LocalTable title={status === "archived" ? "Arsip" : "Task Complete"} stateKey={stateKey} hideKey={stateKey}
+      rows={rows} cols={cols} rowKey={(r) => r.id} loading={loading}
+      emptyText={status === "archived" ? "Belum ada PO di Arsip." : "Belum ada PO di Task Complete."}
+      search={["po_customer", "document_no", "business_partner", "keterangan", "tanda", "price_list"]}
+      filters={[
+        { k: "tanda", l: "Tanda", options: TANDA },
+        { k: "ket_isi", l: "Keterangan", options: ketOpts },
+      ]}
+      onEdit={(r, _k, v) => setKeterangan([r], String(v ?? ""))}
+      toolbar={<TandaFilter stateKey={stateKey} counts={counts} />}
+      selectable
+      onDelete={remove}
+      actions={(sel, clear) => (
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1" role="group" aria-label="Tandai PO terpilih">
+            <button type="button" className={`${btnGhost} !text-accent`} onClick={() => flag(sel, clear, "tolakan")}>Tandai Tolakan</button>
+            <button type="button" className={`${btnGhost} !text-warning`} onClick={() => flag(sel, clear, "ltkp")}>Tandai LTKP</button>
+            <button type="button" className={`${btnGhost} !text-danger`} onClick={() => flag(sel, clear, "litigasi")}>Tandai Litigasi</button>
+            <button type="button" className={btnGhost} onClick={() => flag(sel, clear, null)}>Jadikan Normal</button>
+          </span>
+          <input value={ket} onChange={(e) => setKet(e.target.value)} placeholder="Keterangan (kosong = hapus)"
+            aria-label="Keterangan untuk PO terpilih" className={`${inputCls} !w-56`} />
+          <button type="button" className={btnGhost} onClick={() => { setKeterangan(sel, ket); clear(); }}>Simpan untuk {sel.length}</button>
+          <button type="button" className={`${btnGhost} !text-success`} onClick={() => move(sel, clear)}>
+            {status === "archived" ? "Tandai Completed" : "Kembalikan ke Arsip"}
+          </button>
+        </span>
+      )} />
   );
 }
