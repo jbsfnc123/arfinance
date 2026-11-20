@@ -9,7 +9,7 @@ import type { Database } from "@/lib/database.types";
 import { detectKind, parseAging, parseErp, type Sheet } from "@/lib/uploads/parse";
 import { runUpload } from "@/lib/uploads/run";
 import { parseMasterCsv, type ScheduleRow } from "@/lib/modules/tukar/schedule";
-import { docRows, parseSjCsv, receiptCandidates } from "@/lib/modules/sj/parse";
+import { chunkReport, docRows, parseSjCsv, receiptCandidates, sumReport, type SjReportResult } from "@/lib/modules/sj/parse";
 import { activeSet } from "@/lib/modules/sj/compute";
 import { parseGrCsv, parseKwCsv } from "@/lib/modules/m10/parse";
 import { todayJakarta } from "@/lib/parsers/date";
@@ -49,7 +49,7 @@ export function inspectSchedule(text: string, today: string) {
   return { rows, skipped, delimiter, dates, otherDates: dates.filter((d) => d !== today) };
 }
 
-const MAX_SJ_ROWS = 60_000; // batas server per upload
+const MAX_SJ_ROWS = 300_000; // dikirim per potongan SJ_CHUNK (batas server 60.000 per panggilan)
 export function inspectSj(text: string) {
   const parsed = parseSjCsv(text);
   if (parsed.rows.length > MAX_SJ_ROWS) throw new Error(`File berisi ${parsed.rows.length} baris; maksimal ${MAX_SJ_ROWS} per upload.`);
@@ -94,7 +94,6 @@ export const pushSchedule = (ctx: RunContext, file: string, rows: ScheduleRow[])
   return Number(data);
 });
 
-type SjResult = { docs: number; docsNew: number; sent: number; saved: number; existing: number; notRecognized: number; badDate: number };
 /**
  * Fase 85 — Laporan Serah Terima By Shipment Date: semua SJ/… di file masuk daftar Monitor Surat Jalan (sj_docs) +
  * penerimaan (per SJ baris pertama dengan Receiver aktif & Receive Date valid) lewat satu RPC atomik sj_report_apply.
@@ -107,10 +106,17 @@ export const pushSj = (ctx: RunContext, file: string, parsed: ReturnType<typeof 
   if (!recognized.size) throw new Error("daftar Receiver aktif kosong (cek akses menu Monitor Surat Jalan untuk Bot ERP)");
   const rows = receiptCandidates(parsed, recognized).map(({ sj_key, sj_no, receive_date, receiver }) => ({ sj_key, sj_no, receive_date, receiver }));
   const docs = docRows(parsed);
-  if (!rows.length && !docs.length) return { candidates: 0, result: null as SjResult | null };
-  const { data, error } = await c.rpc("sj_report_apply" as never, { p_file_name: path.basename(file), p_docs: docs, p_receipts: rows } as never);
-  if (error) throw new Error(`sj_report_apply: ${error.message}`);
-  return { candidates: rows.length, result: data as SjResult };
+  if (!rows.length && !docs.length) return { candidates: 0, result: null as SjReportResult | null };
+  // Per potongan (upsert & insert-only → mengulang aman bila satu potongan gagal).
+  const parts = chunkReport(docs, rows);
+  const out: SjReportResult[] = [];
+  for (const [i, part] of parts.entries()) {
+    const name = parts.length > 1 ? `${path.basename(file)} (${i + 1}/${parts.length})` : path.basename(file);
+    const { data, error } = await c.rpc("sj_report_apply" as never, { p_file_name: name, p_docs: part.docs, p_receipts: part.receipts } as never);
+    if (error) throw new Error(`sj_report_apply potongan ${i + 1}/${parts.length}: ${error.message.slice(0, 200)}`);
+    out.push(data as SjReportResult);
+  }
+  return { candidates: rows.length, result: sumReport(out) };
 });
 
 // ── Mitra10 (EDI): sama dengan halaman Mitra10 › Upload (app/(shell)/mitra10/m10-upload.tsx) ──────────────

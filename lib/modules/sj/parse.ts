@@ -143,3 +143,18 @@ export function docRows(parsed: Pick<SjParseResult, "rows">): SjDoc[] {
   }
   return [...out.values()];
 }
+
+/** Hasil sj_report_apply (per potongan; dijumlahkan dengan sumReport). */
+export type SjReportResult = { docs: number; docsNew: number; sent: number; saved: number; existing: number; notRecognized: number; badDate: number };
+export const SJ_CHUNK = 5000; // per panggilan RPC: laporan 60 hari ±40 ribu SJ → satu panggilan besar bisa timeout (Fase 85b)
+
+/** Pecah dokumen & penerimaan menjadi potongan kecil (masing-masing ≤ size) agar tiap RPC cepat; urutan dipertahankan. */
+export function chunkReport<D, R>(docs: readonly D[], receipts: readonly R[], size = SJ_CHUNK): { docs: D[]; receipts: R[] }[] {
+  const n = Math.max(1, Math.ceil(Math.max(docs.length, receipts.length) / size));
+  return Array.from({ length: n }, (_, i) => ({ docs: docs.slice(i * size, (i + 1) * size), receipts: receipts.slice(i * size, (i + 1) * size) }));
+}
+export function sumReport(rs: readonly SjReportResult[]): SjReportResult {
+  const z: SjReportResult = { docs: 0, docsNew: 0, sent: 0, saved: 0, existing: 0, notRecognized: 0, badDate: 0 };
+  for (const r of rs) for (const k of Object.keys(z) as (keyof SjReportResult)[]) z[k] += Number(r[k] ?? 0);
+  return z;
+}

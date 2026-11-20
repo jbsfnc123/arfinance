@@ -157,3 +157,14 @@ describe("dokumen SJ dari laporan (Fase 85)", () => {
     ]);
   });
 });
+
+describe("potongan kiriman (Fase 85b)", () => {
+  it("dokumen & penerimaan dipecah per ukuran, urutan tetap; hasil dijumlahkan", async () => {
+    const { chunkReport, sumReport } = await import("./parse");
+    const parts = chunkReport([1, 2, 3, 4, 5], ["a", "b"], 2);
+    expect(parts).toEqual([{ docs: [1, 2], receipts: ["a", "b"] }, { docs: [3, 4], receipts: [] }, { docs: [5], receipts: [] }]);
+    expect(chunkReport([], [], 2)).toEqual([{ docs: [], receipts: [] }]);
+    const z = { docs: 0, docsNew: 0, sent: 0, saved: 0, existing: 0, notRecognized: 0, badDate: 0 };
+    expect(sumReport([{ ...z, docs: 2, saved: 1 }, { ...z, docs: 3, saved: 4 }])).toMatchObject({ docs: 5, saved: 5 });
+  });
+});

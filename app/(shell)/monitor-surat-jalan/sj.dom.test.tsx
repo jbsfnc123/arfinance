@@ -171,7 +171,7 @@ describe("Monitor Surat Jalan — upload", () => {
     await pickFile();
     await act(async () => { btn("Simpan 4 SJ")!.click(); });
     await flush();
-    expect(text()).toContain("Upload gagal, tidak ada data yang tersimpan: koneksi terputus");
+    expect(text()).toContain("Upload gagal: koneksi terputus");
     expect(text()).not.toContain("Hasil upload");
     expect(btn("Simpan 4 SJ")!.disabled).toBe(false);
   });
