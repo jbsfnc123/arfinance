@@ -1,7 +1,7 @@
 // Halaman satu job (Jaspersoft / EDI unduh): parameter, jalankan, log, file hasil.
 import { useMemo, useState } from "react";
 import { btnGhost, inputCls, segGroup, segItem, toggleChip } from "@/components/ui";
-import { DEFAULT_PARAMS, jobInfo, monthEndCutoffs } from "~/shared/catalog";
+import { DEFAULT_PARAMS, jobInfo, monthEndCutoffs, SJ_MAX_DAYS } from "~/shared/catalog";
 import type { JobId, JobParams } from "~/shared/types";
 import { useApp } from "../store";
 import { Card, Confirm, Field, FileList, PageHeader, Switch } from "../parts/common";
@@ -58,8 +58,8 @@ export function JobPage({ id }: { id: JobId }) {
           )}
           {id === "jasper.sj" && (
             <Field label="Rentang hari (termasuk hari ini)" className="w-48">
-              <input className={inputCls} type="number" min={1} max={31} value={saved.days ?? 7}
-                onChange={(e) => setSaved({ days: Math.min(31, Math.max(1, Number(e.target.value) || 7)) })} />
+              <input className={inputCls} type="number" min={1} max={SJ_MAX_DAYS} value={saved.days ?? 60}
+                onChange={(e) => setSaved({ days: Math.min(SJ_MAX_DAYS, Math.max(1, Number(e.target.value) || 60)) })} />
             </Field>
           )}
           {id === "edi.invoice-inbox" && (

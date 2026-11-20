@@ -7,7 +7,7 @@ Semua bot berjalan di PC ini. Kredensial dan file unduhan tidak meninggalkan PC;
 |---|---|---|---|
 | Jaspersoft | Aging Detail | Excel | `aging_commit` (Snapshot Aging / Daftar Tagihan) |
 | | Send Invoice To Customer (Senin s/d hari ini) | CSV | `schedule_replace` (jadwal kurir diganti) |
-| | Serah Terima Surat Jalan (7 hari) | CSV | `sj_receipts_apply` (insert-only) |
+| | Serah Terima Surat Jalan By Shipment Date (NEW), 60 hari (maks. 92) | CSV | `sj_report_apply` (daftar SJ + Receive Date insert-only; tanpa Aging) |
 | | Invoice & Payment Date Comparison (bulan berjalan) | Excel | upload `erp` (bawaan: **nonaktif**) |
 | EDI Mitra 10 | GR Report Detail (multi-akun, 30 hari) | CSV per akun | Mitra10 "Upload CSV GR": `m10_gr_add` (insert-only) |
 | | Download Kwitansi (multi-akun, bulan berjalan) | CSV per akun | Mitra10 "Import Kwitansi": `m10_kw_add`, Username = akun EDI (insert-only) |
@@ -22,7 +22,7 @@ Akun Bot ERP butuh menu `set.update`, `tukar.upload`, `tukar.monitor_sj`, `rek.m
   **paralel** (bawaan) atau berurutan. Pada mode paralel, tiap task memakai browser context sendiri (login, cookie, dan
   folder unduhan terpisah). Galat satu task tidak menghentikan task lain; Hentikan menghentikan semuanya.
   Default tanggal (`defaultDates`, sama untuk runner & UI): Send Invoice Senin s/d hari ini · GR 30 hari terakhir ·
-  Kwitansi bulan ini · Invoice by Date tanggal 1 s/d hari ini · SJ 7 hari.
+  Kwitansi bulan ini · Invoice by Date tanggal 1 s/d hari ini · SJ 60 hari (Tanggal SJ).
 - **Uji Coba** hanya mengunduh dan membaca file, tanpa kirim dan tanpa unggah. Untuk Upload Faktur, Uji Coba hanya mencari dan memverifikasi di Draft.
 - **Rangkaian & Jadwal**: urutan job dan jadwal hari/jam didaftarkan ke Task Scheduler (`\ARBot\AR Bot - <id>`, tanpa admin). Jadwal tetap berjalan walau aplikasi tertutup dan mengejar jadwal yang terlewat. Upload Faktur tidak boleh masuk rangkaian.
 - **Pengaturan › Impor dari aplikasi lama**: membaca `.env` / `accounts.json` Assistent Mando dan `automation/erp-bot/.env` sekali, saat tombol diklik.

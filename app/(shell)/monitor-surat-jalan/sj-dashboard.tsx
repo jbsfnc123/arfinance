@@ -51,13 +51,13 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
       <p className="text-sm text-fg-2">{periodText(s)}</p>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Kpi label="SJ di Aging" value={n(sum.total)} />
+        <Kpi label="SJ dipantau" value={n(sum.total)} />
         <Kpi label={STATUS_DONE} value={n(sum.done)} sub={pct1(sum.pct)} />
         <Kpi label={STATUS_OPEN} value={n(sum.open)} sub={sum.total ? pct1(100 - (sum.pct ?? 0)) : "—"}
           onClick={sum.open ? () => openKk({ quick: "open" }) : undefined} />
         <Kpi label="Rata-rata waktu penerimaan" value={fmtAvg(sum.avg)} strong
           sub={`${n(sum.sample)} SJ dihitung${sum.excluded ? ` · ${n(sum.excluded)} dikecualikan (tanggal bermasalah)` : ""}`} />
-        <Kpi label="Belum diterima terlama" value={oldest ? `${n(oldest.umur!)} hari` : "—"} sub={oldest ? `${oldest.sj_no} · ${fmtDate(oldest.invoice_date)}` : "Tidak ada"}
+        <Kpi label="Belum diterima terlama" value={oldest ? `${n(oldest.umur!)} hari` : "—"} sub={oldest ? `${oldest.sj_no} · ${fmtDate(oldest.tanggal_sj)}` : "Tidak ada"}
           onClick={oldest ? () => openKk({ focus: oldest.sj_key }) : undefined} />
       </div>
 
@@ -68,7 +68,7 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
         </div>
         <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Line k="Masalah tanggal (negatif / masa depan)" v={sum.quality.dateIssues} />
-          <Line k="Invoice Date kosong" v={sum.quality.noInvoiceDate} />
+          <Line k="Tanggal SJ kosong" v={sum.quality.noTanggalSj} />
           <Line k="Receiver tidak aktif lagi" v={sum.quality.inactive} />
           <Line k="Penerimaan tersimpan (semua periode)" v={s.ds.data?.receipts.length ?? 0} />
         </dl>
@@ -76,7 +76,7 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <section className={`${card} p-4`}>
-          <h2 className="text-sm font-medium">Tren {trend[0]?.weekly ? "mingguan" : "harian"} per Invoice Date</h2>
+          <h2 className="text-sm font-medium">Tren {trend[0]?.weekly ? "mingguan" : "harian"} per Tanggal SJ</h2>
           {trend.length ? <Chart height={280} option={trendOpt} /> : <p className="py-10 text-center text-sm text-fg-2">Tidak ada SJ pada periode ini.</p>}
         </section>
         <section className={`${card} p-4`}>
@@ -90,20 +90,20 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className={`${card} overflow-hidden`}>
-          <h2 className="px-4 pt-3 text-sm font-medium">Per Marketing</h2>
+          <h2 className="px-4 pt-3 text-sm font-medium">Per Locator</h2>
           <TableBox bare fill={false} maxHeight="max-h-[50vh]" className="mt-2">
             <table className="w-full text-sm tabular-nums">
-              <thead><tr className="border-b border-line"><th className={th}>Marketing</th><th className={`${th} text-right`}>SJ</th><th className={`${th} text-right`}>Sudah</th><th className={`${th} text-right`}>Belum</th><th className={`${th} text-right`}>% Sudah</th><th className={`${th} text-right`}>Rata-rata</th></tr></thead>
+              <thead><tr className="border-b border-line"><th className={th}>Locator</th><th className={`${th} text-right`}>SJ</th><th className={`${th} text-right`}>Sudah</th><th className={`${th} text-right`}>Belum</th><th className={`${th} text-right`}>% Sudah</th><th className={`${th} text-right`}>Rata-rata</th></tr></thead>
               <tbody>
-                {sum.byMarketing.map((m) => (
-                  <tr key={m.marketing} className="border-b border-line/50">
-                    <td className={td}>{m.marketing}</td><td className={`${td} text-right`}>{n(m.total)}</td><td className={`${td} text-right`}>{n(m.done)}</td>
+                {sum.byLocator.map((m) => (
+                  <tr key={m.locator} className="border-b border-line/50">
+                    <td className={td}>{m.locator}</td><td className={`${td} text-right`}>{n(m.total)}</td><td className={`${td} text-right`}>{n(m.done)}</td>
                     <td className={`${td} text-right`}>{n(m.open)}</td><td className={`${td} text-right`}>{pct1(m.pct)}</td><td className={`${td} text-right`}>{fmtAvg(m.avg)}</td>
                   </tr>
                 ))}
-                {!sum.byMarketing.length && <tr><td className={emptyTd} colSpan={6}>Tidak ada SJ pada periode ini.</td></tr>}
+                {!sum.byLocator.length && <tr><td className={emptyTd} colSpan={6}>Tidak ada SJ pada periode ini.</td></tr>}
               </tbody>
-              {sum.byMarketing.length > 0 && (
+              {sum.byLocator.length > 0 && (
                 <tfoot><tr className="font-medium"><td className={td}>Semua</td><td className={`${td} text-right`}>{n(sum.total)}</td><td className={`${td} text-right`}>{n(sum.done)}</td>
                   <td className={`${td} text-right`}>{n(sum.open)}</td><td className={`${td} text-right`}>{pct1(sum.pct)}</td><td className={`${td} text-right`}>{fmtAvg(sum.avg)}</td></tr></tfoot>
               )}

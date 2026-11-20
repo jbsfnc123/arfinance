@@ -7,27 +7,29 @@ import { TableBox } from "@/components/table-box";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, emptyTd, inputCls, td, th } from "@/components/ui";
 import { fmtDate, fmtTimestamp } from "@/lib/format";
-import { parseSjCsv, receiptCandidates, SJ_HEADERS, type SjCandidate, type SjParseResult } from "@/lib/modules/sj/parse";
+import { docRows, parseSjCsv, receiptCandidates, SJ_HEADERS, type SjCandidate, type SjDoc, type SjParseResult } from "@/lib/modules/sj/parse";
 import { activeSet, normName, receiverImpact, type SjReceiver } from "@/lib/modules/sj/compute";
 import type { SjState } from "./use-sj";
 
 const MAX_ROWS = 60000; // batas server per upload
-const REQUIRED = new Set(["SJ No.", "Receive Date", "Receiver"]);
+const REQUIRED = new Set(["SJ No.", "Tanggal SJ", "Receive Date", "Receiver"]);
+const USED = new Set(["Area", "Business Partner", "Locator", "Send Date"]); // disimpan per SJ bila ada
 const n = (v: number) => v.toLocaleString("id-ID");
 
 type Parsed = SjParseResult & { file: File };
-type Result = { sent: number; saved: number; existing: number; notInAging: number; notRecognized: number; badDate: number; file: string };
+type Result = { docs: number; docsNew: number; sent: number; saved: number; existing: number; notRecognized: number; badDate: number; file: string };
 
-/** Pratinjau: kandidat penerimaan dibagi menurut relasi aging & data tersimpan (perkiraan; hasil final dari server). */
-export function previewCandidates(cands: readonly SjCandidate[], agingKeys: ReadonlySet<string>, receiptKeys: ReadonlySet<string>) {
-  const inAging = cands.filter((c) => agingKeys.has(c.sj_key));
-  const toSave = inAging.filter((c) => !receiptKeys.has(c.sj_key));
-  return { inAging: inAging.length, notInAging: cands.length - inAging.length, existing: inAging.length - toSave.length, toSave };
+/** Pratinjau (perkiraan; hasil final dari server): SJ baru vs sudah dipantau, penerimaan baru vs sudah tersimpan. Tanpa Aging. */
+export function previewCandidates(docs: readonly SjDoc[], cands: readonly SjCandidate[], docKeys: ReadonlySet<string>, receiptKeys: ReadonlySet<string>) {
+  const toSave = cands.filter((c) => !receiptKeys.has(c.sj_key));
+  const docsNew = docs.filter((d) => !docKeys.has(d.sj_key)).length;
+  return { docs: docs.length, docsNew, existing: cands.length - toSave.length, toSave };
 }
 
-// Upload & Setting: file → parse di browser → kandidat (per SJ: baris pertama dengan Receiver diakui & Receive Date valid)
-// → pratinjau relasi aging → satu RPC atomik. Server menyaring ulang (aging terbaru, Receiver aktif, tanggal) dan tidak
-// menimpa Receive Date yang sudah ada. Kontrol tulis hanya untuk Controller/Super Admin (server tetap menolak).
+// Upload & Setting (Fase 85): Laporan Serah Terima Surat Jalan By Shipment Date (CSV) → parse di browser → dokumen per SJ
+// (SJ/…) + kandidat penerimaan (per SJ: baris pertama dengan Receiver diakui & Receive Date valid) → satu RPC atomik
+// sj_report_apply. Server menyaring ulang (Receiver aktif, tanggal) dan tidak menimpa Receive Date yang sudah ada.
+// Tidak bergantung pada Aging. Kontrol tulis hanya untuk Controller/Super Admin (server tetap menolak).
 export function SjUpload({ s }: { s: SjState }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
@@ -38,7 +40,7 @@ export function SjUpload({ s }: { s: SjState }) {
   const [importErr, setImportErr] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
   const can = s.canManage;
-  const ready = !!s.ds.data; // sebelum data termuat: hak akses, aging & daftar Receiver belum diketahui
+  const ready = !!s.ds.data; // sebelum data termuat: hak akses, SJ tersimpan & daftar Receiver belum diketahui
 
   async function pick(file: File | undefined) {
     setParsed(null); setParseErr(null); setResult(null); setImportErr(null);
@@ -55,21 +57,22 @@ export function SjUpload({ s }: { s: SjState }) {
   }
 
   const cands = useMemo(() => (parsed && ready ? receiptCandidates(parsed, s.recognized) : null), [parsed, ready, s.recognized]);
-  const prev = useMemo(() => (cands ? previewCandidates(cands, s.agingKeys, s.receiptKeys) : null), [cands, s.agingKeys, s.receiptKeys]);
+  const docs = useMemo(() => (parsed ? docRows(parsed) : null), [parsed]);
+  const prev = useMemo(() => (cands && docs ? previewCandidates(docs, cands, s.docKeys, s.receiptKeys) : null), [cands, docs, s.docKeys, s.receiptKeys]);
 
   async function runImport() {
-    if (!parsed || !can || !prev) return;
+    if (!parsed || !can || !prev || !docs) return;
     setBusy("import"); setImportErr(null);
     try {
-      // Hanya kandidat yang cocok aging & belum punya Receive Date yang dikirim; server tetap memeriksa ulang.
+      // Semua SJ di file (daftar dipantau) + penerimaan yang belum tersimpan; server tetap memeriksa ulang.
       const rows = prev.toSave.map(({ sj_key, sj_no, receive_date, receiver }) => ({ sj_key, sj_no, receive_date, receiver }));
-      const { data, error } = await supabase.rpc("sj_receipts_apply" as never, { p_file_name: parsed.file.name, p_rows: rows } as never);
+      const { data, error } = await supabase.rpc("sj_report_apply" as never, { p_file_name: parsed.file.name, p_docs: docs, p_receipts: rows } as never);
       if (error) throw new Error(error.message);
       const r = data as Omit<Result, "file">;
       setResult({ ...r, file: parsed.file.name });
       setParsed(null); setInputKey((k) => k + 1);
       await s.ds.reload();
-      toast(`Upload selesai: ${n(r.saved)} SJ mendapat Receive Date.`, "success", 8000);
+      toast(`Upload selesai: ${n(r.docs)} SJ (${n(r.docsNew)} baru) · ${n(r.saved)} Receive Date baru.`, "success", 8000);
     } catch (e) {
       setImportErr((e as Error).message);
     } finally { setBusy(null); }
@@ -113,8 +116,8 @@ export function SjUpload({ s }: { s: SjState }) {
             <span className="text-xs text-fg-2">{(parsed.file.size / 1024 / 1024).toLocaleString("id-ID", { maximumFractionDigits: 1 })} MB</span>
             <div className="ml-auto flex gap-2">
               <button type="button" className={btnGhost} disabled={busy !== null} onClick={() => { setParsed(null); setInputKey((k) => k + 1); }}>Batal</button>
-              <button type="button" className={btnPrimary} disabled={!ready || !can || busy !== null || !prev?.toSave.length} onClick={() => void runImport()}>
-                {busy === "import" ? "Menyimpan…" : `Simpan ${n(prev?.toSave.length ?? 0)} Receive Date`}
+              <button type="button" className={btnPrimary} disabled={!ready || !can || busy !== null || !(prev?.docs || prev?.toSave.length)} onClick={() => void runImport()}>
+                {busy === "import" ? "Menyimpan…" : `Simpan ${n(prev?.docs ?? 0)} SJ · ${n(prev?.toSave.length ?? 0)} Receive Date`}
               </button>
             </div>
           </div>
@@ -125,12 +128,12 @@ export function SjUpload({ s }: { s: SjState }) {
           )}
           <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
             <Stat k="Baris data dibaca" v={n(parsed.stats.records)} />
-            <Stat k="SJ unik di file" v={n(parsed.stats.uniqueSj)} />
+            <Stat k="Nomor unik di file" v={n(parsed.stats.uniqueSj)} />
+            <Stat k="SJ dipantau (SJ/…)" v={prev ? n(prev.docs) : "…"} />
+            <Stat k="· SJ baru" v={prev ? n(prev.docsNew) : "…"} />
             <Stat k="SJ dengan penerimaan diakui" v={cands ? n(cands.length) : "…"} />
-            <Stat k="· cocok Aging terbaru" v={prev ? n(prev.inAging) : "…"} />
-            <Stat k="· tidak ada di Aging (dilewati)" v={prev ? n(prev.notInAging) : "…"} />
             <Stat k="· sudah punya Receive Date (dilewati)" v={prev ? n(prev.existing) : "…"} />
-            <Stat k="Akan disimpan" v={prev ? n(prev.toSave.length) : "…"} />
+            <Stat k="Receive Date akan disimpan" v={prev ? n(prev.toSave.length) : "…"} />
             <Stat k="Baris bermasalah (No. SJ kosong / kolom)" v={n(parsed.bad.length)} />
             <Stat k="Baris dengan masalah tanggal" v={n(parsed.stats.dateIssues)} />
           </dl>
@@ -147,7 +150,7 @@ export function SjUpload({ s }: { s: SjState }) {
                         <tr key={h} className="border-b border-line/50">
                           <td className={td}>{h}</td>
                           <td className={`${td} ${found ? "" : REQUIRED.has(h) ? "text-danger" : "text-fg-2"}`}>
-                            {REQUIRED.has(h) ? (found ? "Ditemukan · dipakai" : "Tidak ada (wajib)") : found ? "Ditemukan · tidak disimpan" : "Tidak ada"}
+                            {REQUIRED.has(h) ? (found ? "Ditemukan · dipakai" : "Tidak ada (wajib)") : found ? (USED.has(h) ? "Ditemukan · dipakai" : "Ditemukan · tidak disimpan") : "Tidak ada"}
                           </td>
                         </tr>
                       );
@@ -190,10 +193,11 @@ export function SjUpload({ s }: { s: SjState }) {
         <section className={`${card} p-4`} role="status" aria-label="Hasil upload">
           <h2 className="font-medium">Hasil upload (dikonfirmasi server): {result.file}</h2>
           <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
-            <Stat k="SJ dikirim" v={n(result.sent)} />
+            <Stat k="SJ diperbarui" v={n(result.docs)} />
+            <Stat k="· SJ baru" v={n(result.docsNew)} />
+            <Stat k="Penerimaan dikirim" v={n(result.sent)} />
             <Stat k="Receive Date disimpan" v={n(result.saved)} />
             <Stat k="Sudah ada, tidak ditimpa" v={n(result.existing)} />
-            <Stat k="Tidak ada di Aging" v={n(result.notInAging)} />
             <Stat k="Receiver tidak diakui" v={n(result.notRecognized)} />
             <Stat k="Tanggal tidak valid" v={n(result.badDate)} />
           </dl>
@@ -269,8 +273,8 @@ function ReceiverSettings({ s }: { s: SjState }) {
     const next: SjReceiver[] = pending.id === null
       ? [...receivers, { id: -1, name: pending.name, active: pending.active }]
       : receivers.map((r) => (r.id === pending.id ? { ...r, name: pending.name, active: pending.active } : r));
-    return receiverImpact(s.ds.data.receipts, s.agingKeys, s.recognized, activeSet(next));
-  }, [pending, receivers, s.ds.data, s.agingKeys, s.recognized]);
+    return receiverImpact(s.ds.data.receipts, s.docKeys, s.recognized, activeSet(next));
+  }, [pending, receivers, s.ds.data, s.docKeys, s.recognized]);
 
   async function confirm() {
     if (!pending) return;

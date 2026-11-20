@@ -1,5 +1,5 @@
 import { unpack, type Packed } from "./pack";
-import type { SjAging, SjReceipt, SjReceiver } from "@/lib/modules/sj/compute";
+import type { SjDocRec, SjReceipt, SjReceiver } from "@/lib/modules/sj/compute";
 import type { DatasetKey } from "@/lib/cache/versions";
 import type { RowMark } from "@/lib/modules/row-marks";
 import type { RowFlag } from "@/lib/modules/row-flags";
@@ -69,9 +69,9 @@ export type Datasets = {
   // Receive Date SJ (Receiver aktif) untuk kolom Daftar Tagihan (migrasi 0047).
   sjReceive: { rows: { sj_key: string; receive_date: string }[] };
   emailCustomer: EmailData;
-  // Monitor Surat Jalan (migrasi 0045): SJ aging terbaru, penerimaan tersimpan, daftar Receiver, riwayat upload & perubahan.
-  sj: { aging: SjAging[]; receipts: SjReceipt[]; receivers: SjReceiver[]; log: SjLog[]; uploads: SjUpload[];
-    agingAt: { month: string; at: string } | null; canManage: boolean };
+  // Monitor Surat Jalan (Fase 85): SJ dari laporan Serah Terima (bukan Aging), penerimaan tersimpan, daftar Receiver, riwayat.
+  sj: { docs: SjDocRec[]; receipts: SjReceipt[]; receivers: SjReceiver[]; log: SjLog[]; uploads: SjUpload[];
+    docsAt: { file: string; at: string } | null; canManage: boolean };
 };
 export type DatasetName = keyof Datasets;
 
@@ -111,7 +111,7 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string
   m10Flags: { rpc: "pack_row_flags", args: { p_module: "m10" }, deps: ["row_flags"], decode: (r) => ({ flags: unpack<RowFlag>(r as Packed) }) },
   emailCustomer: { rpc: "pack_email_customer", deps: ["email_customer", "aging", "erp"], decode: (r) => tables(r, ["groups", "customers", "emails", "lookup", "cbdMarks", "topSales", "uploads", "sent"]) as Datasets["emailCustomer"] },
   sjReceive: { rpc: "pack_sj_receive", deps: ["sj"], decode: (r) => ({ rows: unpack<{ sj_key: string; receive_date: string }>(r as Packed) }) },
-  sj: { rpc: "pack_sj", deps: ["sj", "aging"], decode: (r) => ({
-    ...(tables(r, ["aging", "receipts", "receivers", "log", "uploads"]) as Omit<Datasets["sj"], "canManage" | "agingAt">),
-    agingAt: (r.agingAt as Datasets["sj"]["agingAt"]) ?? null, canManage: r.canManage === true }) },
+  sj: { rpc: "pack_sj", deps: ["sj"], decode: (r) => ({
+    ...(tables(r, ["docs", "receipts", "receivers", "log", "uploads"]) as Omit<Datasets["sj"], "canManage" | "docsAt">),
+    docsAt: (r.docsAt as Datasets["sj"]["docsAt"]) ?? null, canManage: r.canManage === true }) },
 };

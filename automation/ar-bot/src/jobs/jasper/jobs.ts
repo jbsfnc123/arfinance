@@ -10,6 +10,7 @@ import {
   inspectAging, inspectErp, inspectSchedule, inspectSj, markPushed, num, pushAging, pushErp, pushSchedule, pushSj, readSheets, rp, sha256, unchanged,
 } from "../arw";
 import { finalize, JasperSession } from "./session";
+import { SJ_MAX_DAYS } from "~/shared/catalog";
 
 export type JobOut = Partial<JobResult>;
 
@@ -143,13 +144,16 @@ export async function sendInvoiceJob(ctx: RunContext, p: JobParams): Promise<Job
   return { files: [file], rows: s.rows.length, summary: `${summary} · jadwal diganti`, pushed: true };
 }
 
+/** Fase 85: laporan berdasarkan Tanggal SJ (shipment) — Monitor Surat Jalan tidak lagi bergantung pada Aging. */
+export const SJ_REPORT = "Laporan Serah Terima Surat Jalan By Shipment Date (NEW)";
+
 export async function sjJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const js = jasperOf(ctx);
   const today = todayJakarta();
-  const days = Math.min(31, Math.max(1, p.days ?? 7));
+  const days = Math.min(SJ_MAX_DAYS, Math.max(1, p.days ?? 60));
   const def = defaultDates("jasper.sj", today, days)!;
   const from = p.start || def.start, to = p.end || def.end;
-  await js.openReport("Laporan Serah Terima Surat Jalan By Send Date");
+  await js.openReport(SJ_REPORT);
   await js.setDate("StartDate", from, "Start Date");
   await js.setDate("EndDate", to, "End Date");
   await js.waitForLoading();
@@ -168,12 +172,12 @@ export async function sjJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const { candidates, result: r } = await pushSj(ctx, file, parsed);
   markPushed("jasper.sj", sha);
   if (!r) {
-    ctx.info("AR Workspace: tidak ada SJ dengan Receiver diakui & Receive Date valid — tidak ada yang dikirim.");
+    ctx.info("AR Workspace: tidak ada SJ/… maupun penerimaan yang bisa dikirim.");
     return { files: [file], rows: parsed.stats.records, summary: `${summary} · 0 dikirim`, pushed: true };
   }
-  ctx.log("ok", `AR Workspace: ${num(candidates)} SJ dikirim → ${num(r.saved)} Receive Date baru · ${num(r.existing)} sudah ada · ` +
-    `${num(r.notInAging)} tidak ada di Aging · ${num(r.notRecognized)} Receiver tidak diakui · ${num(r.badDate)} tanggal tidak valid`);
-  return { files: [file], rows: parsed.stats.records, summary: `${summary} · ${num(r.saved)} Receive Date baru`, pushed: true };
+  ctx.log("ok", `AR Workspace: ${num(r.docs)} SJ dipantau diperbarui (${num(r.docsNew)} baru) · ${num(candidates)} penerimaan dikirim → ` +
+    `${num(r.saved)} Receive Date baru · ${num(r.existing)} sudah ada · ${num(r.notRecognized)} Receiver tidak diakui · ${num(r.badDate)} tanggal tidak valid`);
+  return { files: [file], rows: parsed.stats.records, summary: `${summary} · ${num(r.docsNew)} SJ baru · ${num(r.saved)} Receive Date baru`, pushed: true };
 }
 
 export async function invoiceByDateJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
