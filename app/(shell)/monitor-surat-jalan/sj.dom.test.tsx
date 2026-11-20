@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
-// Monitor Surat Jalan (Fase 46): daftar = SJ aging terbaru; upload hanya mengirim SJ yang cocok aging & belum punya
-// Receive Date (baris pertama dengan Receiver diakui); kontrol tulis per peran; rata-rata "—"; gagal = tidak ada hasil palsu.
+// Monitor Surat Jalan (Fase 85): daftar = SJ dari laporan Serah Terima (TIDAK bergantung pada Aging); upload mengirim semua
+// SJ/… di file + penerimaan yang belum tersimpan (baris pertama dengan Receiver diakui); kontrol tulis per peran;
+// rata-rata "—"; gagal = tidak ada hasil palsu.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { Datasets } from "@/lib/local/datasets";
-import type { SjAging, SjReceipt } from "@/lib/modules/sj/compute";
+import type { SjDocRec, SjReceipt } from "@/lib/modules/sj/compute";
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count, getItemKey }: { count: number; getItemKey: (i: number) => string | number }) => ({
@@ -22,14 +23,15 @@ vi.mock("@/lib/parsers/date", async (orig) => ({ ...(await orig<typeof import("@
 import { SjView } from "./sj-view";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-const ag = (sj_key: string, invoice_date: string): SjAging => ({ sj_key, invoice_date, invoice_no: `INV-${sj_key}`, business_partner: "Toko A", area: "Jakarta", invoices: 1 });
+const ag = (sj_key: string, tanggal_sj: string, o: Partial<SjDocRec> = {}): SjDocRec =>
+  ({ sj_key, sj_no: sj_key, tanggal_sj, business_partner: "Toko A", area: "Jakarta", locator: "TRA-JKT D5", send_date: null, ...o });
 const rc = (sj_key: string, receive_date: string, receiver: string): SjReceipt => ({ sj_key, sj_no: sj_key, receive_date, receiver, file_name: "a.csv", recorded_at: "2026-09-30T01:00:00Z" });
 const base = (o: Partial<Datasets["sj"]> = {}): Datasets["sj"] => ({
-  aging: [ag("SJ/1", "2026-09-01"), ag("SJ/2", "2026-09-03"), ag("TEST/3", "2026-09-05")],
+  docs: [ag("SJ/1", "2026-09-01"), ag("SJ/2", "2026-09-03"), ag("SJ/3", "2026-09-05")],
   receipts: [rc("SJ/1", "2026-09-04", "Wienda Aswar")],
   receivers: [{ id: 1, name: "Bintang Anugia Arragi", active: true }, { id: 2, name: "Wienda Aswar", active: true }],
   log: [], uploads: [{ at: "2026-09-30T02:00:00Z", file_name: "lama.csv", rows: 1, uploader: "Mando" }],
-  agingAt: { month: "2026-09", at: "2026-09-30T01:00:00Z" }, canManage: false, ...o,
+  docsAt: { file: "lama.csv", at: "2026-09-30T02:00:00Z" }, canManage: false, ...o,
 });
 
 let host: HTMLDivElement, root: Root;
@@ -41,54 +43,54 @@ const flush = () => act(async () => { for (let i = 0; i < 10; i++) await Promise
 const btn = (start: string) => [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.startsWith(start));
 
 describe("Monitor Surat Jalan — tampilan", () => {
-  it("Dashboard dari SJ aging: KPI = baris Kertas Kerja, durasi dari Invoice Date, periode tampil", () => {
+  it("Dashboard dari SJ laporan: KPI = baris Kertas Kerja, durasi dari Tanggal SJ, periode tampil, tanpa Aging", () => {
     h.data = base();
     act(() => root.render(<SjView />));
-    expect(text()).toContain("Periode Invoice Date: 01/09/2026 – 30/09/2026 (bulan terbaru)");
-    expect(text()).toContain("SJ di Aging3");
-    expect(text()).toContain("3,0 hari"); // SJ/1: Invoice 1 Sep → Receive 4 Sep
-    expect(text()).toContain("Aging September 2026");
+    expect(text()).toContain("Periode Tanggal SJ: 01/09/2026 – 30/09/2026 (bulan terbaru)");
+    expect(text()).toContain("SJ dipantau3");
+    expect(text()).toContain("3,0 hari"); // SJ/1: Tanggal SJ 1 Sep → Receive 4 Sep
+    expect(text()).not.toMatch(/Aging/);
     tab("Kertas Kerja");
     expect(host.querySelectorAll("tbody tr[data-index]").length).toBe(3);
     expect(text()).toContain("Sudah diterima");
     expect(text()).toContain("Belum diterima");
   });
 
-  it("Kertas Kerja: kolom default sesuai permintaan; filter Marketing & Payment Group (tanpa Area) mengubah KPI", () => {
-    h.data = base({ aging: [
-      { ...ag("SJ/1", "2026-09-01"), marketing: "01-Trad", payment_group: "PG1" },
-      { ...ag("SJ/2", "2026-09-03"), marketing: "02-Modern", payment_group: "PG2" },
-      { ...ag("TEST/3", "2026-09-05"), marketing: "02-Modern", payment_group: "PG3" },
+  it("Kertas Kerja: kolom default; filter Area & Locator (dinamis) mengubah KPI; tanpa Marketing/Payment Group", () => {
+    h.data = base({ docs: [
+      ag("SJ/1", "2026-09-01", { area: "Bandung", locator: "TRA-BDG D1" }),
+      ag("SJ/2", "2026-09-03", { locator: "TRA-JKT D2" }),
+      ag("SJ/3", "2026-09-05"),
     ] });
     act(() => root.render(<SjView />));
-    expect(host.querySelector("select[aria-label='Area']")).toBeNull();
-    const mk = host.querySelector<HTMLSelectElement>("select[aria-label='Marketing']")!;
-    expect([...mk.options].map((o) => o.textContent)).toEqual(["Marketing: semua (2)", "01-Trad (1)", "02-Modern (2)"]);
-    act(() => { mk.value = "02-Modern"; mk.dispatchEvent(new Event("change", { bubbles: true })); });
-    expect(text()).toContain("SJ di Aging2");
-    const pg = host.querySelector<HTMLSelectElement>("select[aria-label='Payment Group']")!;
-    expect([...pg.options].map((o) => o.value)).toEqual(["", "PG2", "PG3"]); // dinamis: hanya PG milik 02-Modern
-    expect(text()).toContain("Per Marketing");
-    expect(text()).not.toContain("10 SJ belum diterima terlama");
+    expect(host.querySelector("select[aria-label='Marketing']")).toBeNull();
+    expect(host.querySelector("select[aria-label='Payment Group']")).toBeNull();
+    const area = host.querySelector<HTMLSelectElement>("select[aria-label='Area']")!;
+    expect([...area.options].map((o) => o.textContent)).toEqual(["Area: semua (2)", "Bandung (1)", "Jakarta (2)"]);
+    act(() => { area.value = "Jakarta"; area.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(text()).toContain("SJ dipantau2");
+    const loc = host.querySelector<HTMLSelectElement>("select[aria-label='Locator']")!;
+    expect([...loc.options].map((o) => o.value)).toEqual(["", "TRA-JKT D2", "TRA-JKT D5"]); // dinamis: hanya Locator Jakarta
+    expect(text()).toContain("Per Locator");
     tab("Kertas Kerja");
     const heads = [...host.querySelectorAll("thead th")].map((t) => t.textContent?.trim()).filter(Boolean);
-    expect(heads.slice(0, 7).join("|")).toMatch(/^SJ No\..*Invoice No.*Invoice Date.*Business Partner.*Status.*Receiver.*Receive Date/);
-    expect(heads.some((h2) => /^(Area|Marketing|Payment Group|Penanda)/.test(h2!))).toBe(false);
+    expect(heads.slice(0, 7).join("|")).toMatch(/^SJ No\..*Tanggal SJ.*Business Partner.*Area.*Status.*Receiver.*Receive Date/);
+    expect(heads.some((h2) => /^(Invoice|Marketing|Payment Group|Penanda)/.test(h2!))).toBe(false);
   });
 
-  it("tanpa penerimaan: rata-rata '—' dan ajakan upload, bukan angka 0", () => {
+  it("tanpa penerimaan: rata-rata '—', bukan angka 0", () => {
     h.data = base({ receipts: [], canManage: true });
     act(() => root.render(<SjView />));
-    expect(text()).toContain("Belum ada data penerimaan");
     const kpi = [...host.querySelectorAll("div")].find((d) => d.firstElementChild?.textContent === "Rata-rata waktu penerimaan");
     expect(kpi?.textContent).toContain("—");
     expect(kpi?.textContent).not.toContain("0 hari");
   });
 
-  it("aging kosong: pesan jelas", () => {
-    h.data = base({ aging: [], receipts: [] });
+  it("belum ada laporan: pesan jelas (bukan soal Aging)", () => {
+    h.data = base({ docs: [], receipts: [], canManage: true });
     act(() => root.render(<SjView />));
-    expect(text()).toContain("Aging belum ada");
+    expect(text()).toContain("Belum ada laporan Serah Terima");
+    expect(text()).not.toMatch(/Aging/);
   });
 
   it("non-Controller: upload & pengaturan Receiver nonaktif dengan penjelasan", () => {
@@ -118,8 +120,9 @@ describe("Monitor Surat Jalan — upload", () => {
     L("sj/2", "-", "-"),
     L("SJ/2", "06 Sep 2026", "Marselia Angelia"),         // tidak diakui
     L("SJ/2", "07 Sep 2026", "Wienda Aswar"),             // ← disimpan
-    L("TEST/3", "08 Sep 2026", "Bintang Anugia Arragi"),  // ← disimpan
-    L("SJ/99", "08 Sep 2026", "Wienda Aswar"),            // tidak ada di aging
+    L("SJ/3", "08 Sep 2026", "Bintang Anugia Arragi"),    // ← disimpan
+    L("SJ/99", "08 Sep 2026", "Wienda Aswar"),            // SJ baru (tidak perlu ada di Aging) ← disimpan
+    L("MR/7", "08 Sep 2026", "Wienda Aswar"),             // bukan SJ/… → tidak masuk daftar dipantau
   ].join("\n");
   const pickFile = async () => {
     const input = host.querySelector<HTMLInputElement>("input[type=file]")!;
@@ -128,28 +131,35 @@ describe("Monitor Surat Jalan — upload", () => {
     await flush();
   };
 
-  it("pratinjau relasi aging → kirim hanya SJ aging tanpa Receive Date; hasil dari server", async () => {
+  it("pratinjau SJ baru & penerimaan → sj_report_apply (dokumen + penerimaan, tanpa Aging); hasil dari server", async () => {
     h.data = base({ canManage: true });
-    h.rpc.mockResolvedValue({ data: { sent: 2, saved: 2, existing: 0, notInAging: 0, notRecognized: 0, badDate: 0 }, error: null });
+    h.rpc.mockResolvedValue({ data: { docs: 4, docsNew: 1, sent: 3, saved: 3, existing: 0, notRecognized: 0, badDate: 0 }, error: null });
     act(() => root.render(<SjView />));
     tab("Upload & Setting");
     await pickFile();
-    expect(text()).toContain("SJ dengan penerimaan diakui4");
-    expect(text()).toContain("· tidak ada di Aging (dilewati)1");
+    expect(text()).toContain("SJ dipantau (SJ/…)4");
+    expect(text()).toContain("· SJ baru1");
+    expect(text()).toContain("SJ dengan penerimaan diakui5");
     expect(text()).toContain("· sudah punya Receive Date (dilewati)1");
-    expect(text()).toContain("Akan disimpan2");
+    expect(text()).toContain("Receive Date akan disimpan4");
     expect(text()).toContain("Marselia Angelia — 1 baris");
-    await act(async () => { btn("Simpan 2 Receive Date")!.click(); });
+    expect(text()).not.toMatch(/Aging/);
+    await act(async () => { btn("Simpan 4 SJ · 4 Receive Date")!.click(); });
     await flush();
     const [fn, args] = h.rpc.mock.calls[0];
-    expect(fn).toBe("sj_receipts_apply");
+    expect(fn).toBe("sj_report_apply");
     expect(args.p_file_name).toBe("uji.csv");
-    expect(args.p_rows).toEqual([
+    expect(args.p_docs.map((d: { sj_key: string }) => d.sj_key)).toEqual(["SJ/1", "SJ/2", "SJ/3", "SJ/99"]);
+    expect(args.p_docs[0]).toMatchObject({ tanggal_sj: "2026-09-01", area: "Jakarta", business_partner: "Toko A", locator: "L1", send_date: "2026-09-02" });
+    expect(args.p_receipts).toEqual([
       { sj_key: "SJ/2", sj_no: "SJ/2", receive_date: "2026-09-07", receiver: "Wienda Aswar" },
-      { sj_key: "TEST/3", sj_no: "TEST/3", receive_date: "2026-09-08", receiver: "Bintang Anugia Arragi" },
+      { sj_key: "SJ/3", sj_no: "SJ/3", receive_date: "2026-09-08", receiver: "Bintang Anugia Arragi" },
+      { sj_key: "SJ/99", sj_no: "SJ/99", receive_date: "2026-09-08", receiver: "Wienda Aswar" },
+      { sj_key: "MR/7", sj_no: "MR/7", receive_date: "2026-09-08", receiver: "Wienda Aswar" },
     ]);
     expect(text()).toContain("Hasil upload (dikonfirmasi server)");
-    expect(text()).toContain("Receive Date disimpan2");
+    expect(text()).toContain("Receive Date disimpan3");
+    expect(text()).toContain("· SJ baru1");
     expect(h.reload).toHaveBeenCalled();
   });
 
@@ -159,11 +169,11 @@ describe("Monitor Surat Jalan — upload", () => {
     act(() => root.render(<SjView />));
     tab("Upload & Setting");
     await pickFile();
-    await act(async () => { btn("Simpan 2")!.click(); });
+    await act(async () => { btn("Simpan 4 SJ")!.click(); });
     await flush();
     expect(text()).toContain("Upload gagal, tidak ada data yang tersimpan: koneksi terputus");
     expect(text()).not.toContain("Hasil upload");
-    expect(btn("Simpan 2")!.disabled).toBe(false);
+    expect(btn("Simpan 4 SJ")!.disabled).toBe(false);
   });
 
   it("Receiver: duplikat ternormalisasi ditolak; pratinjau dampak (menonaktifkan Wienda mengubah 1 SJ)", async () => {

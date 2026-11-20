@@ -5,7 +5,8 @@
 // group "arsip"  = data riwayat berbasis umur: hanya baris SEBELUM tanggal batas (cutoff) yang menjadi kandidat.
 
 export type CleanupGroup = "aging" | "teknis" | "arsip";
-export type CleanupCategory = { key: string; label: string; desc: string; group: CleanupGroup; usesCutoff: boolean; risk?: string };
+// hidden = tetap dikenal server (kunci sama dengan SQL) tetapi tidak ditawarkan di layar Pembersihan.
+export type CleanupCategory = { key: string; label: string; desc: string; group: CleanupGroup; usesCutoff: boolean; risk?: string; hidden?: boolean };
 
 export const CLEANUP_CATEGORIES: readonly CleanupCategory[] = [
   { key: "keterangan", group: "aging", usesCutoff: false, label: "Keterangan invoice",
@@ -20,7 +21,8 @@ export const CLEANUP_CATEGORIES: readonly CleanupCategory[] = [
     desc: "Catatan (Reminder, No Respon, Case, Administratif) untuk invoice yang sudah lunas." },
   { key: "janji_bayar", group: "aging", usesCutoff: false, label: "Jadwal bayar", desc: "Jadwal bayar untuk invoice yang sudah lunas." },
   { key: "hold_faktur", group: "aging", usesCutoff: false, label: "Hold faktur pajak", desc: "Hold faktur pajak untuk invoice yang sudah lunas." },
-  { key: "penerimaan_sj", group: "aging", usesCutoff: false, label: "Penerimaan SJ (Monitor SJ)",
+  // Fase 85: Monitor Surat Jalan tidak bergantung pada Aging → penerimaan SJ tidak lagi dibersihkan berdasarkan Aging.
+  { key: "penerimaan_sj", group: "aging", usesCutoff: false, label: "Penerimaan SJ (Monitor SJ)", hidden: true,
     desc: "Receive Date & Receiver Monitor Surat Jalan untuk No SJ yang tidak ada lagi di Aging terbaru." },
   { key: "staging_upload", group: "teknis", usesCutoff: false, label: "Upload terbengkalai",
     desc: "Upload (Aging/ERP/Target) yang gagal atau ditinggal > 1 hari dan tidak pernah tersimpan. Aman dihapus." },

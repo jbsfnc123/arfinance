@@ -9,7 +9,7 @@ import type { Database } from "@/lib/database.types";
 import { detectKind, parseAging, parseErp, type Sheet } from "@/lib/uploads/parse";
 import { runUpload } from "@/lib/uploads/run";
 import { parseMasterCsv, type ScheduleRow } from "@/lib/modules/tukar/schedule";
-import { parseSjCsv, receiptCandidates } from "@/lib/modules/sj/parse";
+import { docRows, parseSjCsv, receiptCandidates } from "@/lib/modules/sj/parse";
 import { activeSet } from "@/lib/modules/sj/compute";
 import { parseGrCsv, parseKwCsv } from "@/lib/modules/m10/parse";
 import { todayJakarta } from "@/lib/parsers/date";
@@ -94,16 +94,22 @@ export const pushSchedule = (ctx: RunContext, file: string, rows: ScheduleRow[])
   return Number(data);
 });
 
-type SjResult = { sent: number; saved: number; existing: number; notInAging: number; notRecognized: number; badDate: number };
+type SjResult = { docs: number; docsNew: number; sent: number; saved: number; existing: number; notRecognized: number; badDate: number };
+/**
+ * Fase 85 — Laporan Serah Terima By Shipment Date: semua SJ/… di file masuk daftar Monitor Surat Jalan (sj_docs) +
+ * penerimaan (per SJ baris pertama dengan Receiver aktif & Receive Date valid) lewat satu RPC atomik sj_report_apply.
+ * Tidak bergantung pada Aging.
+ */
 export const pushSj = (ctx: RunContext, file: string, parsed: ReturnType<typeof inspectSj>) => withBot(ctx, async (c) => {
   const { data: receivers, error: e1 } = await c.from("sj_receivers" as never).select("id, name, active");
   if (e1) throw new Error(`daftar Receiver: ${e1.message}`);
   const recognized = activeSet((receivers ?? []) as { id: number; name: string; active: boolean }[]);
   if (!recognized.size) throw new Error("daftar Receiver aktif kosong (cek akses menu Monitor Surat Jalan untuk Bot ERP)");
   const rows = receiptCandidates(parsed, recognized).map(({ sj_key, sj_no, receive_date, receiver }) => ({ sj_key, sj_no, receive_date, receiver }));
-  if (!rows.length) return { candidates: 0, result: null as SjResult | null };
-  const { data, error } = await c.rpc("sj_receipts_apply" as never, { p_file_name: path.basename(file), p_rows: rows } as never);
-  if (error) throw new Error(`sj_receipts_apply: ${error.message}`);
+  const docs = docRows(parsed);
+  if (!rows.length && !docs.length) return { candidates: 0, result: null as SjResult | null };
+  const { data, error } = await c.rpc("sj_report_apply" as never, { p_file_name: path.basename(file), p_docs: docs, p_receipts: rows } as never);
+  if (error) throw new Error(`sj_report_apply: ${error.message}`);
   return { candidates: rows.length, result: data as SjResult };
 });
 

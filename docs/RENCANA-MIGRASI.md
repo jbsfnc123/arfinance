@@ -1039,3 +1039,15 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   (2 nomor ganda untuk BP yang sama), 82 BP, 15 Kode BP.
 - Catatan: 2 upload ERP terbengkalai (28.060 baris, ±28 MB staging, 30/09/2026) tampil di kategori "Upload terbengkalai"
   untuk dihapus Super Admin bila sudah tidak diperlukan.
+
+## Monitor Surat Jalan lepas dari Aging; laporan By Shipment Date (Fase 85, 2026-11-20)
+- AR Bot `jasper.sj` memakai *Laporan Serah Terima Surat Jalan By Shipment Date (NEW)* (filter Tanggal SJ; input
+  StartDate/EndDate & 18 kolom sama dengan laporan lama; berisi juga MR/… retur). Bawaan 60 hari, maks. 92 per run.
+- Migrasi `20261120130000_sj_by_shipment.sql` (tanpa DROP/DELETE): tabel `sj_docs` (satu baris per SJ/… dari laporan:
+  Tanggal SJ, Area, BP, Locator, Send Date paling awal), `private.sj_receipts_insert` (aturan penerimaan bersama, TANPA
+  filter Aging), RPC `sj_report_apply(file, docs, receipts)` (atomik), `sj_receipts_apply` tanpa Aging (notInAging = 0,
+  kompatibel bot lama), `pack_sj` → `docs` + `docsAt` (tanpa aging/agingAt). `sj_aging_keys/info` dibiarkan, tidak dipakai.
+- Monitor: daftar = `sj_docs`; tanggal awal durasi = Tanggal SJ; filter periode Tanggal SJ + Area + **Locator** (laporan
+  tidak punya kolom Branch); tabel Per Area & Per Locator; KPI "SJ dipantau". Dataset `sj` tidak lagi bergantung pada
+  versi `aging`. Pembersihan Data: kategori `penerimaan_sj` (berbasis Aging) disembunyikan (`hidden`).
+- Daftar Tagihan (Receive Date SJ, `pack_sj_receive`) tidak berubah.

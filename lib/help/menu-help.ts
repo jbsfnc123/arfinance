@@ -77,12 +77,12 @@ export const MENU_HELP: MenuHelp[] = [
     "Upload Kwitansi: Excel portal RKM (No. GRPO, No. Pengiriman, No. Faktur Pajak, Jumlah Faktur Pajak, Pembuat, Tanggal Input, dst.). SJ yang ada di sini = Tukar Faktur Done. Mengganti seluruh isi Kwitansi.",
   ] },
   { href: "/monitor-surat-jalan", menu: "Tukar Faktur › Monitor Surat Jalan", text: [
-    "SJ di Aging = No SJ unik dari Aging terbaru (No SJ gabungan dipecah). Bila kosong: upload Aging dulu di Pusat Upload.",
-    "Rata-rata waktu penerimaan = Receive Date tersimpan (Receiver yang diakui) − Invoice Date di Aging (hari kalender), satu nilai per SJ; durasi negatif & tanggal masa depan tidak dihitung. Umur belum diterima = hari ini − Invoice Date.",
-    "Upload: file CSV LaporanSerahTerimaSuratJalan (pemisah koma, maks. 60.000 baris). Yang disimpan per SJ hanya Receive Date & Receiver.",
-    "Aturan upload: hanya SJ yang ada di Aging terbaru yang disimpan; per SJ dipakai baris pertama dengan Receiver diakui & Receive Date valid; hanya mengisi SJ yang belum punya Receive Date (data lama tidak ditimpa); SJ yang keluar dari Aging masuk daftar Pembersihan Data; upload bersifat utuh (gagal = tidak ada yang tersimpan, aman diulang).",
+    "Daftar SJ = semua SJ (nomor berawalan SJ/) yang pernah muncul di Laporan Serah Terima Surat Jalan By Shipment Date (NEW). Tidak bergantung pada Aging: SJ tidak hilang walau invoicenya sudah lunas atau tidak ada di Aging.",
+    "Rata-rata waktu penerimaan = Receive Date tersimpan (Receiver yang diakui) − Tanggal SJ (hari kalender), satu nilai per SJ; durasi negatif & tanggal masa depan tidak dihitung. Umur belum diterima = hari ini − Tanggal SJ. Filter: periode Tanggal SJ, Area, Locator.",
+    "Upload: file CSV Laporan Serah Terima Surat Jalan By Shipment Date (pemisah koma, maks. 60.000 baris). Per SJ disimpan Tanggal SJ, Area, Business Partner, Locator, Send Date, serta Receive Date & Receiver.",
+    "Aturan upload: per SJ dipakai baris pertama dengan Receiver diakui & Receive Date valid; hanya mengisi SJ yang belum punya Receive Date (data lama tidak ditimpa); upload bersifat utuh (gagal = tidak ada yang tersimpan, aman diulang).",
     "Receiver yang diakui: hanya baris dengan Receiver aktif di daftar yang disimpan (tanpa beda huruf besar/kecil & spasi). Menonaktifkan Receiver membuat SJ yang diterimanya kembali \"Belum diterima\"; menambah Receiver berlaku untuk upload berikutnya; data tersimpan tidak diubah; perubahan dicatat di jejak perubahan.",
-    "Bot ERP meng-upload laporan serah terima 7 hari terakhir setiap hari kerja.",
+    "AR Bot meng-upload Laporan Serah Terima By Shipment Date 60 hari terakhir (Tanggal SJ) setiap hari kerja.",
   ] },
   { href: "/faktur/pengajuan", menu: "Faktur Pajak › Pengajuan Pembatalan & Revisi", text: [
     "Satu pengajuan bisa berisi beberapa invoice. Request, alasan, dan keterangan terbawa ke invoice berikutnya.",

@@ -17,6 +17,9 @@ export type JobInfo = {
   nav?: string;
 };
 
+/** Serah Terima SJ (laporan By Shipment Date, Fase 85): maksimal hari ke belakang per run. */
+export const SJ_MAX_DAYS = 92;
+
 export const JOBS: readonly JobInfo[] = [
   { id: "jasper.aging", group: "jasper", label: "Aging Detail", short: "Aging", icon: "receipt_long", pushable: true, format: "Excel" },
   { id: "jasper.send-invoice", group: "jasper", label: "Send Invoice To Customer", short: "Jadwal TF", icon: "local_shipping", pushable: true, format: "CSV" },
@@ -34,7 +37,7 @@ export const jobInfo = (id: JobId) => JOBS.find((j) => j.id === id)!;
 export const DEFAULT_PARAMS: Record<JobId, JobParams> = {
   "jasper.aging": { push: true },
   "jasper.send-invoice": { push: true },
-  "jasper.sj": { push: true, days: 7 },
+  "jasper.sj": { push: true, days: 60 },
   "jasper.invoice-by-date": { push: false },
   "edi.gr": { push: true },
   "edi.kwitansi": { push: true },
@@ -161,7 +164,7 @@ export function defaultDates(id: JobId, today: string, days = 7): { start: strin
   switch (id) {
     case "jasper.send-invoice": return weekToDate(today);
     case "jasper.invoice-by-date": return { start: `${today.slice(0, 7)}-01`, end: today };
-    case "jasper.sj": return { start: addDays(today, -(Math.min(31, Math.max(1, days)) - 1)), end: today };
+    case "jasper.sj": return { start: addDays(today, -(Math.min(SJ_MAX_DAYS, Math.max(1, days)) - 1)), end: today };
     case "edi.gr": return { start: addDays(today, -30), end: today };
     case "edi.kwitansi": return { start: `${today.slice(0, 7)}-01`, end: today };
     default: return null;

@@ -13,12 +13,11 @@ const WAIT = "bg-warning/20 text-warning";
 
 const COLS: LCol<SjRow>[] = [
   { k: "sj_no", l: "SJ No." },
-  { k: "invoice_no", l: "Invoice No", text: (r) => (r.invoices > 1 ? `${r.invoice_no ?? ""} (+${r.invoices - 1})` : r.invoice_no ?? "") },
-  { k: "invoice_date", l: "Invoice Date", d: true },
+  { k: "tanggal_sj", l: "Tanggal SJ", d: true },
   { k: "business_partner", l: "Business Partner", w: 240 },
   { k: "area", l: "Area" },
-  { k: "marketing", l: "Marketing" },
-  { k: "payment_group", l: "Payment Group" },
+  { k: "locator", l: "Locator" },
+  { k: "send_date", l: "Send Date", d: true },
   { k: "status", l: "Status", badge: { [STATUS_DONE]: OK, [STATUS_OPEN]: WAIT } },
   { k: "receiver", l: "Receiver" },
   { k: "receive_date", l: "Receive Date", d: true },
@@ -30,7 +29,7 @@ const QUICK: { k: Quick; l: string }[] = [
   { k: "", l: "Semua" }, { k: "open", l: STATUS_OPEN }, { k: "cek", l: "Data perlu diperiksa" },
 ];
 
-// Kertas Kerja: satu baris per No SJ di Aging terbaru (filter sama dengan Dashboard). Ekspor Excel bawaan LocalTable.
+// Kertas Kerja: satu baris per SJ dari laporan Serah Terima (filter sama dengan Dashboard). Ekspor Excel bawaan LocalTable.
 export function SjWorksheet({ s, quick, setQuick, focus, setFocus }: {
   s: SjState; quick: Quick; setQuick: (q: Quick) => void; focus: string; setFocus: (k: string) => void;
 }) {
@@ -46,7 +45,7 @@ export function SjWorksheet({ s, quick, setQuick, focus, setFocus }: {
     <div className="space-y-3">
       {focused ? (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="rounded-full bg-pill px-2.5 py-0.5 text-xs text-pill-fg">Filter SJ: {focused.sj_no} · Invoice Date {fmtDate(focused.invoice_date)}</span>
+          <span className="rounded-full bg-pill px-2.5 py-0.5 text-xs text-pill-fg">Filter SJ: {focused.sj_no} · Tanggal SJ {fmtDate(focused.tanggal_sj)}</span>
           <button type="button" className={btnGhost} onClick={() => setFocus("")}>Hapus filter SJ</button>
         </div>
       ) : (
@@ -62,9 +61,9 @@ export function SjWorksheet({ s, quick, setQuick, focus, setFocus }: {
           </div>
         </>
       )}
-      <LocalTable title="Kertas Kerja Surat Jalan" hideKey="sj-kk3" stateKey="sj-kk3" defaultHidden={["area", "marketing", "payment_group", "durasi", "umur", "flag_text"]} rows={rows} cols={COLS} rowKey={(r) => r.sj_key}
-        loading={s.loading} defaultSort={{ k: "invoice_date", dir: -1 }}
-        search={["sj_no", "invoice_no", "business_partner", "area", "marketing", "payment_group", "receiver", "flag_text"]}
+      <LocalTable title="Kertas Kerja Surat Jalan" hideKey="sj-kk4" stateKey="sj-kk4" defaultHidden={["locator", "send_date", "durasi", "umur", "flag_text"]} rows={rows} cols={COLS} rowKey={(r) => r.sj_key}
+        loading={s.loading} defaultSort={{ k: "tanggal_sj", dir: -1 }}
+        search={["sj_no", "business_partner", "area", "locator", "receiver", "flag_text"]}
         filters={[
           { k: "status", l: "Status", options: [STATUS_DONE, STATUS_OPEN] },
           { k: "receiver", l: "Receiver", options: receivers },

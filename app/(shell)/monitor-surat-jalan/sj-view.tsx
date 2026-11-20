@@ -3,7 +3,7 @@
 import { Tabs } from "@/components/tabs";
 import { EmptyState } from "@/components/empty-state";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
-import { fmtDate, fmtTimestamp, monthLabel } from "@/lib/format";
+import { fmtDate, fmtTimestamp } from "@/lib/format";
 import { useViewState } from "@/lib/ui/view-state";
 import { useSj, type SjState } from "./use-sj";
 import { SjDashboard } from "./sj-dashboard";
@@ -18,15 +18,14 @@ const TABS = [
 type Tab = (typeof TABS)[number]["key"];
 export type Quick = "" | "open" | "cek";
 
-// Monitor Surat Jalan (Fase 46): penerimaan dokumen SJ untuk semua No SJ di Aging terbaru. Receive Date & Receiver diisi
-// dari "Laporan Serah Terima Surat Jalan" (CSV). Semua angka dihitung di browser (lib/modules/sj/compute.ts).
+// Monitor Surat Jalan: penerimaan dokumen SJ untuk semua SJ di "Laporan Serah Terima Surat Jalan By Shipment Date (NEW)"
+// (Fase 85 — tidak bergantung pada Aging). Daftar SJ, Receive Date & Receiver diisi dari laporan itu (AR Bot / upload CSV). Semua angka dihitung di browser (lib/modules/sj/compute.ts).
 export function SjView() {
   const s = useSj();
   const [tab, setTab] = useViewState<Tab>("sj:tab", "dash");
   const [quick, setQuick] = useViewState<Quick>("sj:kk:quick", "");
   const [focus, setFocus] = useViewState<string>("sj:kk:focus", "");
-  const noAging = !s.loading && !s.error && !!s.ds.data && s.ds.data.aging.length === 0;
-  const noReceipts = !s.loading && !s.error && !!s.ds.data && s.ds.data.aging.length > 0 && s.ds.data.receipts.length === 0;
+  const noDocs = !s.loading && !s.error && !!s.ds.data && s.ds.data.docs.length === 0;
 
   // Dashboard → Kertas Kerja dengan filter yang sesuai (SJ tertentu / belum diterima / perlu diperiksa).
   const openKk = (o: { quick?: Quick; focus?: string }) => { setQuick(o.quick ?? ""); setFocus(o.focus ?? ""); setTab("kk"); };
@@ -37,7 +36,6 @@ export function SjView() {
         <h1 className="text-[22px] font-semibold tracking-tight">Monitor Surat Jalan</h1>
         <span className="text-xs text-fg-2">
           {s.lastUpload ? `Upload terakhir ${fmtTimestamp(s.lastUpload.at)} · ${s.lastUpload.file_name}` : "Belum ada upload"}
-          {s.agingAt && ` · Aging ${monthLabel(s.agingAt.month)} (diperbarui ${fmtTimestamp(s.agingAt.at)})`}
         </span>
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
@@ -48,15 +46,12 @@ export function SjView() {
             <p className="mt-1 text-[13px] text-fg-2">{s.error.message}</p>
             <button type="button" className={`${btnGhost} mt-3`} onClick={() => void s.ds.reload()}>Coba lagi</button>
           </section>
-        ) : noAging && tab !== "upload" ? (
-          <section className={card}>
-            <EmptyState icon="fact_check" title="Aging belum ada" />
-          </section>
         ) : (
           <>
-            {noReceipts && tab !== "upload" && (
+            {noDocs && tab !== "upload" && (
               <div className={`${card} mb-4 flex flex-wrap items-center gap-3 px-4 py-3 text-[13px]`} role="note">
-                <span>Belum ada data penerimaan — semua SJ aging berstatus <b>Belum diterima</b>.</span>
+                <EmptyState icon="fact_check" title="Belum ada laporan Serah Terima" />
+                <span>Daftar SJ diisi dari Laporan Serah Terima Surat Jalan By Shipment Date (AR Bot setiap hari, atau upload CSV).</span>
                 {s.canManage
                   ? <button type="button" className={btnPrimary} onClick={() => setTab("upload")}>Upload Laporan Serah Terima</button>
                   : <span className="text-fg-2">Upload dilakukan oleh Controller/Super Admin.</span>}
@@ -72,24 +67,24 @@ export function SjView() {
   );
 }
 
-/** Filter periode Invoice Date (Aging) + Marketing + Payment Group (dinamis) — dipakai bersama Dashboard & Kertas Kerja. */
+/** Filter periode Tanggal SJ + Area + Locator (dinamis, dari laporan Serah Terima) — dipakai bersama Dashboard & Kertas Kerja. */
 export function PeriodFilter({ s }: { s: SjState }) {
   const f = s.filter;
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="text-fg-2">Invoice Date</span>
-      <input type="date" aria-label="Invoice Date dari" value={f.from} max={f.to || undefined}
+      <span className="text-fg-2">Tanggal SJ</span>
+      <input type="date" aria-label="Tanggal SJ dari" value={f.from} max={f.to || undefined}
         onChange={(e) => s.setPeriod(e.target.value, f.to)} className={`${inputCls} !w-auto`} />
       <span className="text-fg-2">s/d</span>
-      <input type="date" aria-label="Invoice Date sampai" value={f.to} min={f.from || undefined}
+      <input type="date" aria-label="Tanggal SJ sampai" value={f.to} min={f.from || undefined}
         onChange={(e) => s.setPeriod(f.from, e.target.value)} className={`${inputCls} !w-auto`} />
-      <select aria-label="Marketing" value={f.marketing} onChange={(e) => s.setMarketing(e.target.value)} className={`${inputCls} !w-auto max-w-64`}>
-        <option value="">Marketing: semua ({s.choices.marketing.length})</option>
-        {s.choices.marketing.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
+      <select aria-label="Area" value={f.area} onChange={(e) => s.setArea(e.target.value)} className={`${inputCls} !w-auto max-w-64`}>
+        <option value="">Area: semua ({s.choices.area.length})</option>
+        {s.choices.area.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
       </select>
-      <select aria-label="Payment Group" value={f.pg} onChange={(e) => s.setPg(e.target.value)} className={`${inputCls} !w-auto max-w-64`}>
-        <option value="">Payment Group: semua ({s.choices.pg.length})</option>
-        {s.choices.pg.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
+      <select aria-label="Locator" value={f.locator} onChange={(e) => s.setLocator(e.target.value)} className={`${inputCls} !w-auto max-w-64`}>
+        <option value="">Locator: semua ({s.choices.locator.length})</option>
+        {s.choices.locator.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
       </select>
       {(f.from || f.to) && <button type="button" className={btnGhost} onClick={() => s.setPeriod("", "")}>Semua periode</button>}
       {!s.isDefaultPeriod && <button type="button" className={btnGhost} onClick={s.resetPeriod}>Bulan terbaru</button>}
@@ -101,5 +96,5 @@ export function PeriodFilter({ s }: { s: SjState }) {
 export function periodText(s: SjState) {
   const f = s.filter;
   const p = f.from || f.to ? `${f.from ? fmtDate(f.from) : "awal"} – ${f.to ? fmtDate(f.to) : "akhir"}` : "semua periode";
-  return `Periode Invoice Date: ${p}${s.isDefaultPeriod && (f.from || f.to) ? " (bulan terbaru)" : ""} · Marketing: ${f.marketing || "semua"} · Payment Group: ${f.pg || "semua"}`;
+  return `Periode Tanggal SJ: ${p}${s.isDefaultPeriod && (f.from || f.to) ? " (bulan terbaru)" : ""} · Area: ${f.area || "semua"} · Locator: ${f.locator || "semua"}`;
 }

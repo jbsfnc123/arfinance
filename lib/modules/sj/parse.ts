@@ -1,4 +1,4 @@
-// Parser "Laporan Serah Terima Surat Jalan" (CSV). Bentuk diperiksa dari file contoh: 18 kolom, koma, quoting
+// Parser "Laporan Serah Terima Surat Jalan By Shipment Date (NEW)" (CSV, Fase 85; header sama dengan laporan lama). Bentuk diperiksa dari file contoh: 18 kolom, koma, quoting
 // RFC 4180 (Description bisa multi-baris), UTF-8 (BOM opsional), tanggal "DD Mon YYYY" (bulan Inggris 3 huruf),
 // "-" = kosong. Satu baris = satu kejadian kirim/terima dokumen; SJ No. bisa berulang (riwayat).
 
@@ -6,7 +6,8 @@ export const SJ_HEADERS = [
   "Area", "SJ No.", "Tanggal SJ", "Business Partner", "Locator", "Send Date", "Sender", "Receive Date", "Receiver",
   "Jumlah Hari", "Faktur", "Description", "No. Route", "Shipper 1", "No. Plat", "Driver", "Shipper 2", "Send Receipt Doc No",
 ] as const;
-const REQUIRED = ["SJ No.", "Receive Date", "Receiver"] as const; // Fase 46: hanya SJ No., Receive Date & Receiver yang dipakai
+// Fase 85: Monitor dibangun dari laporan ini (bukan Aging) → Tanggal SJ wajib; Area, Business Partner, Locator, Send Date dipakai bila ada.
+const REQUIRED = ["SJ No.", "Tanggal SJ", "Receive Date", "Receiver"] as const;
 
 /** Nama kolom di database/payload untuk tiap header CSV. */
 export const SJ_FIELD: Record<(typeof SJ_HEADERS)[number], string> = {
@@ -117,5 +118,28 @@ export function receiptCandidates(parsed: Pick<SjParseResult, "rows" | "lines">,
     if (!recognized.has(name.toLowerCase())) return;
     out.set(key, { sj_key: key, sj_no: r.sj_no, receive_date: r.receive_date, receiver: name, line: parsed.lines[i] });
   });
+  return [...out.values()];
+}
+
+/** Dokumen yang dipantau Monitor Surat Jalan: hanya nomor berawalan "SJ/" (laporan juga memuat MR/… retur). */
+export const isSjDoc = (key: string) => key.startsWith("SJ/");
+
+/**
+ * Satu dokumen per SJ dari laporan (Fase 85): field dari baris pertama SJ itu; field kosong diisi dari baris berikutnya;
+ * Send Date = yang paling awal. Hanya SJ/… (lihat isSjDoc).
+ */
+export type SjDoc = { sj_key: string; sj_no: string; tanggal_sj: string | null; area: string | null; business_partner: string | null; locator: string | null; send_date: string | null };
+export function docRows(parsed: Pick<SjParseResult, "rows">): SjDoc[] {
+  const out = new Map<string, SjDoc>();
+  const val = (v: string | null | undefined) => (v === undefined || v === null || blank(v) ? null : v.trim());
+  for (const r of parsed.rows) {
+    const key = r.sj_no.trim().toUpperCase();
+    if (!isSjDoc(key)) continue;
+    const next: SjDoc = { sj_key: key, sj_no: r.sj_no.trim(), tanggal_sj: r.tanggal_sj, area: val(r.area), business_partner: val(r.business_partner), locator: val(r.locator), send_date: r.send_date };
+    const cur = out.get(key);
+    if (!cur) { out.set(key, next); continue; }
+    cur.tanggal_sj ??= next.tanggal_sj; cur.area ??= next.area; cur.business_partner ??= next.business_partner; cur.locator ??= next.locator;
+    if (next.send_date && (!cur.send_date || next.send_date < cur.send_date)) cur.send_date = next.send_date;
+  }
   return [...out.values()];
 }
