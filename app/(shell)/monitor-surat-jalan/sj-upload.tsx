@@ -7,17 +7,17 @@ import { TableBox } from "@/components/table-box";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, emptyTd, inputCls, td, th } from "@/components/ui";
 import { fmtDate, fmtTimestamp } from "@/lib/format";
-import { docRows, parseSjCsv, receiptCandidates, SJ_HEADERS, type SjCandidate, type SjDoc, type SjParseResult } from "@/lib/modules/sj/parse";
+import { chunkReport, docRows, parseSjCsv, receiptCandidates, SJ_HEADERS, sumReport, type SjCandidate, type SjDoc, type SjParseResult, type SjReportResult } from "@/lib/modules/sj/parse";
 import { activeSet, normName, receiverImpact, type SjReceiver } from "@/lib/modules/sj/compute";
 import type { SjState } from "./use-sj";
 
-const MAX_ROWS = 60000; // batas server per upload
+const MAX_ROWS = 300000; // dikirim per potongan (batas server 60.000 per panggilan)
 const REQUIRED = new Set(["SJ No.", "Tanggal SJ", "Receive Date", "Receiver"]);
 const USED = new Set(["Area", "Business Partner", "Locator", "Send Date"]); // disimpan per SJ bila ada
 const n = (v: number) => v.toLocaleString("id-ID");
 
 type Parsed = SjParseResult & { file: File };
-type Result = { docs: number; docsNew: number; sent: number; saved: number; existing: number; notRecognized: number; badDate: number; file: string };
+type Result = SjReportResult & { file: string };
 
 /** Pratinjau (perkiraan; hasil final dari server): SJ baru vs sudah dipantau, penerimaan baru vs sudah tersimpan. Tanpa Aging. */
 export function previewCandidates(docs: readonly SjDoc[], cands: readonly SjCandidate[], docKeys: ReadonlySet<string>, receiptKeys: ReadonlySet<string>) {
@@ -66,9 +66,16 @@ export function SjUpload({ s }: { s: SjState }) {
     try {
       // Semua SJ di file (daftar dipantau) + penerimaan yang belum tersimpan; server tetap memeriksa ulang.
       const rows = prev.toSave.map(({ sj_key, sj_no, receive_date, receiver }) => ({ sj_key, sj_no, receive_date, receiver }));
-      const { data, error } = await supabase.rpc("sj_report_apply" as never, { p_file_name: parsed.file.name, p_docs: docs, p_receipts: rows } as never);
-      if (error) throw new Error(error.message);
-      const r = data as Omit<Result, "file">;
+      // Per potongan agar tiap panggilan cepat; upsert & insert-only → mengulang aman bila satu potongan gagal.
+      const parts = chunkReport(docs, rows);
+      const out: SjReportResult[] = [];
+      for (const [i, part] of parts.entries()) {
+        const name = parts.length > 1 ? `${parsed.file.name} (${i + 1}/${parts.length})` : parsed.file.name;
+        const { data, error } = await supabase.rpc("sj_report_apply" as never, { p_file_name: name, p_docs: part.docs, p_receipts: part.receipts } as never);
+        if (error) throw new Error(parts.length > 1 ? `potongan ${i + 1}/${parts.length}: ${error.message}` : error.message);
+        out.push(data as SjReportResult);
+      }
+      const r = sumReport(out);
       setResult({ ...r, file: parsed.file.name });
       setParsed(null); setInputKey((k) => k + 1);
       await s.ds.reload();
@@ -123,7 +130,7 @@ export function SjUpload({ s }: { s: SjState }) {
           </div>
           {importErr && (
             <p className="rounded-lg bg-danger/10 px-3 py-2 text-[13px]" role="alert">
-              <b className="text-danger">Upload gagal, tidak ada data yang tersimpan:</b> {importErr} — tekan Simpan lagi untuk mengulang.
+              <b className="text-danger">Upload gagal:</b> {importErr} — tekan Simpan lagi untuk mengulang (aman: data yang sudah tersimpan tidak digandakan atau ditimpa).
             </p>
           )}
           <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
