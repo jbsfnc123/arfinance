@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { docRows, parseCsv, parseSjCsv, parseSjDate, receiptCandidates, SJ_HEADERS } from "./parse";
 import {
-  activeSet, buildRows, defaultPeriod, FLAG, filterChoices, filterRows, fmtAvg, receiverImpact, receiverNames, STATUS_DONE, STATUS_OPEN, summarize, trendSeries,
+  activeSet, applyVisibility, bpMonthSummary, buildRows, FLAG, filterChoices, filterRows, hiddenSets, NO_BP, NO_MONTH, receiverImpact, receiverNames,
+  STATUS_DONE, STATUS_OPEN,
   type SjDocRec, type SjReceipt,
 } from "./compute";
 
-// Model Fase 85: daftar = SJ dari laporan Serah Terima (bukan Aging); tanggal awal = Tanggal SJ; filter Area & Locator.
+// Model Fase 85/86: daftar = SJ dari laporan Serah Terima (bukan Aging); tanggal awal = Tanggal SJ; filter Area & Business Partner.
 const TODAY = "2026-09-30";
 const REC = activeSet([{ id: 1, name: "Bintang Anugia Arragi", active: true }, { id: 2, name: "Wienda Aswar", active: true }]);
 const ag = (sj_key: string, tanggal_sj: string | null, o: Partial<SjDocRec> = {}): SjDocRec =>
@@ -45,46 +46,44 @@ describe("baris per SJ dari laporan", () => {
   });
 });
 
-describe("ringkasan", () => {
-  const aging = [ag("A", "2026-09-01"), ag("B", "2026-09-02", { area: "Bandung", locator: "TRA-BDG D1" }), ag("C", "2026-09-03", { locator: "TRA-JKT D5" }), ag("D", "2026-09-10"), ag("E", "2026-09-28")];
-  const rows = buildRows(aging, [rc("A", "2026-09-04", "Wienda Aswar"), rc("B", "2026-09-03", "Bintang Anugia Arragi"), rc("C", "2026-09-01", "Wienda Aswar")], REC, TODAY);
-  it("rata-rata dari durasi valid (negatif dikecualikan), sampel & dikecualikan, total = jumlah baris", () => {
-    const s = summarize(rows);
-    expect([s.total, s.done, s.open, s.avg, s.sample, s.excluded]).toEqual([5, 3, 2, 2, 2, 1]); // (3 + 1) / 2
-    expect(s.byLocator.find((x) => x.locator === "TRA-BDG D1")).toMatchObject({ total: 1, done: 1, open: 0, avg: 1 });
-    expect(s.byLocator.find((x) => x.locator === "(tanpa Locator)")).toMatchObject({ total: 3, done: 1, open: 2, avg: 3 });
-    expect(s.byArea.find((x) => x.area === "Bandung")).toMatchObject({ total: 1, done: 1, avg: 1 });
-    expect(s.oldestOpen?.sj_key).toBe("D");
-    expect(s.ageBuckets.map((b) => b.count)).toEqual([1, 0, 0, 1, 0]); // E 2 hari, D 20 hari
-    expect(s.quality.dateIssues).toBe(1);
+describe("ringkasan, filter & tampilan (Fase 86)", () => {
+  const docs = [
+    ag("A", "2026-09-01"), ag("B", "2026-09-02", { area: "Bandung", business_partner: "Toko B" }),
+    ag("C", "2026-09-03", { business_partner: "Toko C" }), ag("D", "2026-10-10"), ag("E", null, { business_partner: null }),
+  ];
+  const rows = buildRows(docs, [rc("A", "2026-09-04", "Wienda Aswar"), rc("B", "2026-09-03", "Bintang Anugia Arragi"), rc("C", "2026-09-01", "Wienda Aswar")], REC, TODAY);
+  const F = { from: "", to: "", area: "", bp: "" };
+  it("ringkasan per Business Partner per bulan Tanggal SJ: SJ / Sudah / Belum + Total; tanpa tanggal di akhir", () => {
+    const s = bpMonthSummary(rows);
+    expect(s.months).toEqual(["2026-09", "2026-10", NO_MONTH]);
+    expect(s.total).toEqual({ n: 5, done: 3, open: 2 });
+    const a = s.rows.find((r) => r.bp === "Toko A")!;
+    expect([a.total, a.done, a.open, a.pct]).toEqual([2, 1, 1, 50]);
+    expect(a.months).toEqual({ "2026-09": { n: 1, done: 1, open: 0 }, "2026-10": { n: 1, done: 0, open: 1 } });
+    expect(s.rows.find((r) => r.bp === NO_BP)?.months[NO_MONTH]).toEqual({ n: 1, done: 0, open: 1 });
+    expect(s.rows[0].bp).toBe("Toko A"); // urut Total SJ terbanyak
   });
-  it("sampel kosong → '—', bukan 0 hari", () => {
-    expect(fmtAvg(summarize(buildRows([ag("Z", "2026-09-01")], [], REC, TODAY)).avg)).toBe("—");
-    expect(fmtAvg(2)).toBe("2,0 hari");
-  });
-  it("filter periode (Tanggal SJ), Area & Locator dipakai bersama; periode bawaan = bulan Tanggal SJ terbaru", () => {
-    const F = { from: "", to: "", area: "", locator: "" };
-    expect(filterRows(rows, { ...F, from: "2026-09-02", to: "2026-09-10" }).map((r) => r.sj_key)).toEqual(["B", "C", "D"]);
+  it("filter periode (Tanggal SJ), Area & Business Partner dipakai bersama", () => {
+    expect(filterRows(rows, { ...F, from: "2026-09-02", to: "2026-09-30" }).map((r) => r.sj_key)).toEqual(["B", "C"]);
     expect(filterRows(rows, { ...F, area: "Jakarta" }).map((r) => r.sj_key)).toEqual(["A", "C", "D", "E"]);
-    expect(filterRows(rows, { ...F, area: "Jakarta", locator: "TRA-JKT D5" }).map((r) => r.sj_key)).toEqual(["C"]);
-    expect(defaultPeriod(rows, TODAY)).toEqual({ from: "2026-09-01", to: "2026-09-30" });
+    expect(filterRows(rows, { ...F, area: "Jakarta", bp: "Toko A" }).map((r) => r.sj_key)).toEqual(["A", "D"]);
+    expect(filterRows(rows, { ...F, bp: NO_BP }).map((r) => r.sj_key)).toEqual(["E"]);
   });
-  it("opsi filter dinamis: Area mengikuti Locator & periode, dan sebaliknya", () => {
-    const F = { from: "", to: "", area: "", locator: "" };
+  it("opsi filter dinamis: Area mengikuti BP & periode, dan sebaliknya", () => {
     expect(filterChoices(rows, F).area).toEqual([{ value: "Bandung", n: 1 }, { value: "Jakarta", n: 4 }]);
-    expect(filterChoices(rows, { ...F, locator: "TRA-BDG D1" }).area).toEqual([{ value: "Bandung", n: 1 }]);
-    expect(filterChoices(rows, { ...F, area: "Jakarta" }).locator.map((o) => o.value)).toEqual(["TRA-JKT D5"]);
-    expect(filterChoices(rows, { ...F, from: "2026-09-03", to: "2026-09-03", locator: "TRA-BDG D1" }).locator).toEqual([{ value: "TRA-BDG D1", n: 0 }, { value: "TRA-JKT D5", n: 1 }]);
+    expect(filterChoices(rows, { ...F, bp: "Toko B" }).area).toEqual([{ value: "Bandung", n: 1 }]);
+    expect(filterChoices(rows, { ...F, area: "Jakarta" }).bp.map((o) => o.value)).toEqual([NO_BP, "Toko A", "Toko C"]);
+    expect(filterChoices(rows, { ...F, from: "2026-10-01", to: "2026-10-31", bp: "Toko B" }).bp).toEqual([{ value: "Toko A", n: 1 }, { value: "Toko B", n: 0 }]);
   });
-  it("tren harian ≤ 45 hari, selain itu mingguan", () => {
-    expect(trendSeries(summarize(rows).trend).every((t) => !t.weekly)).toBe(true);
-    const long = trendSeries([{ date: "2026-06-03", done: 1, open: 0 }, { date: "2026-09-01", done: 0, open: 1 }]);
-    expect(long.every((t) => t.weekly) && long[0].label === "2026-06-01").toBe(true);
+  it("BP / Area yang tidak dicentang tidak tampil", () => {
+    const h = hiddenSets([{ kind: "bp", value: "Toko C" }, { kind: "area", value: "Bandung" }]);
+    expect(applyVisibility(rows, h).map((r) => r.sj_key)).toEqual(["A", "D", "E"]);
+    expect(applyVisibility(rows, hiddenSets([]))).toHaveLength(5);
   });
   it("dampak Receiver: menonaktifkan Wienda mengubah status SJ dipantau yang diterimanya", () => {
     const after = activeSet([{ id: 1, name: "Bintang Anugia Arragi", active: true }]);
     const receipts = [rc("A", "2026-09-04", "Wienda Aswar"), rc("B", "2026-09-03", "Bintang Anugia Arragi"), rc("X", "2026-09-03", "Wienda Aswar")];
-    expect(receiverImpact(receipts, new Set(aging.map((a) => a.sj_key)), REC, after)).toEqual({ statusChanged: 1 }); // X bukan SJ dipantau
+    expect(receiverImpact(receipts, new Set(docs.map((a) => a.sj_key)), REC, after)).toEqual({ statusChanged: 1 }); // X bukan SJ dipantau
   });
 });
 

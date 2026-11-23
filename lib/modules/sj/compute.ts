@@ -9,7 +9,8 @@
 //   upload DAN saat menampilkan: penerimaan oleh Receiver yang kemudian dinonaktifkan dihitung Belum diterima.
 // - Tanggal awal = Tanggal SJ (laporan). Durasi = Receive Date − Tanggal SJ (hari kalender); negatif / tanggal masa depan →
 //   masalah data, keluar dari rata-rata (tidak dijadikan 0). Umur belum diterima = hari ini (Asia/Jakarta) − Tanggal SJ.
-// - Filter: periode Tanggal SJ + Area + Locator (dari laporan).
+// - Filter: periode Tanggal SJ + Area + Business Partner (Fase 86); BP/Area yang tidak dicentang di Setting tidak tampil.
+// - Dashboard (Fase 86): ringkasan per Business Partner per bulan Tanggal SJ (SJ / Sudah / Belum).
 
 /** Dokumen SJ dari laporan (pack_sj.docs). */
 export type SjDocRec = {
@@ -74,115 +75,71 @@ export function buildRows(
   });
 }
 
+// ── Tampilan (Fase 86): BP / Area yang tidak dicentang di Setting tidak tampil di Dashboard & Kertas Kerja ─────
+export const NO_BP = "(tanpa Business Partner)";
+export const NO_AREA = "(tanpa Area)";
+export const bpOf = (r: { business_partner: string | null }) => r.business_partner?.trim() || NO_BP;
+export const areaOf = (r: { area: string | null }) => r.area?.trim() || NO_AREA;
+export type SjHidden = { bp: ReadonlySet<string>; area: ReadonlySet<string> };
+export function hiddenSets(list: readonly { kind: string; value: string }[] | undefined): SjHidden {
+  const bp = new Set<string>(), area = new Set<string>();
+  for (const h of list ?? []) (h.kind === "area" ? area : bp).add(h.value);
+  return { bp, area };
+}
+export function applyVisibility(rows: readonly SjRow[], hidden: SjHidden): SjRow[] {
+  if (!hidden.bp.size && !hidden.area.size) return rows as SjRow[];
+  return rows.filter((r) => !hidden.bp.has(bpOf(r)) && !hidden.area.has(areaOf(r)));
+}
+
 // ── Filter bersama (Dashboard & Kertas Kerja) ─────────────────────────
-export type SjFilter = { from: string; to: string; area: string; locator: string };
+export type SjFilter = { from: string; to: string; area: string; bp: string };
 const inPeriod = (r: SjRow, f: SjFilter) =>
   (!f.from || (r.tanggal_sj !== null && r.tanggal_sj >= f.from)) && (!f.to || (r.tanggal_sj !== null && r.tanggal_sj <= f.to));
 export function filterRows(rows: readonly SjRow[], f: SjFilter): SjRow[] {
-  return rows.filter((r) => inPeriod(r, f) && (!f.area || r.area === f.area) && (!f.locator || r.locator === f.locator));
+  return rows.filter((r) => inPeriod(r, f) && (!f.area || areaOf(r) === f.area) && (!f.bp || bpOf(r) === f.bp));
 }
 
 /**
- * Opsi filter dinamis: Area dihitung dari baris yang lolos periode + Locator terpilih, dan sebaliknya (dengan jumlah SJ).
+ * Opsi filter dinamis: Area dihitung dari baris yang lolos periode + BP terpilih, dan sebaliknya (dengan jumlah SJ).
  * Pilihan aktif tetap ada walau jumlahnya 0 agar bisa dikosongkan.
  */
 export function filterChoices(rows: readonly SjRow[], f: SjFilter) {
   const count = (pick: (r: SjRow) => string, keep: (r: SjRow) => boolean, active: string) => {
     const m = new Map<string, number>();
-    for (const r of rows) if (inPeriod(r, f) && keep(r)) { const v = pick(r); if (v) m.set(v, (m.get(v) ?? 0) + 1); }
+    for (const r of rows) if (inPeriod(r, f) && keep(r)) { const v = pick(r); m.set(v, (m.get(v) ?? 0) + 1); }
     if (active && !m.has(active)) m.set(active, 0);
     return [...m].sort((a, b) => a[0].localeCompare(b[0], "id")).map(([value, n]) => ({ value, n }));
   };
   return {
-    area: count((r) => r.area ?? "", (r) => !f.locator || r.locator === f.locator, f.area),
-    locator: count((r) => r.locator ?? "", (r) => !f.area || r.area === f.area, f.locator),
+    area: count(areaOf, (r) => !f.bp || bpOf(r) === f.bp, f.area),
+    bp: count(bpOf, (r) => !f.area || areaOf(r) === f.area, f.bp),
   };
 }
 
-/** Periode bawaan: bulan Tanggal SJ terbaru (yang tidak di masa depan). */
-export function defaultPeriod(rows: readonly SjRow[], today: string): { from: string; to: string } {
-  let max = "";
-  for (const r of rows) if (r.tanggal_sj && r.tanggal_sj <= today && r.tanggal_sj > max) max = r.tanggal_sj;
-  if (!max) return { from: "", to: "" };
-  const y = +max.slice(0, 4), m = +max.slice(5, 7);
-  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return { from: `${max.slice(0, 7)}-01`, to: `${max.slice(0, 7)}-${String(last).padStart(2, "0")}` };
-}
+// ── Dashboard (Fase 86): ringkasan per Business Partner per bulan Tanggal SJ ──────────────────────
+export const NO_MONTH = "(tanpa tanggal)";
+export type BpMonthCell = { n: number; done: number; open: number };
+export type BpMonthRow = { bp: string; total: number; done: number; open: number; pct: number; months: Record<string, BpMonthCell> };
 
-export const AGE_BUCKETS = [
-  { label: "0–3 hari", min: 0, max: 3 }, { label: "4–7 hari", min: 4, max: 7 }, { label: "8–14 hari", min: 8, max: 14 },
-  { label: "15–30 hari", min: 15, max: 30 }, { label: "> 30 hari", min: 31, max: Infinity },
-] as const;
-
-export type SjSummary = {
-  total: number; done: number; open: number; pct: number | null;
-  avg: number | null; sample: number; excluded: number; oldestOpen: SjRow | null;
-  quality: { dateIssues: number; noTanggalSj: number; inactive: number };
-  trend: { date: string; done: number; open: number }[];
-  ageBuckets: { label: string; count: number }[];
-  byLocator: { locator: string; total: number; done: number; open: number; pct: number; avg: number | null }[];
-  byArea: { area: string; total: number; done: number; open: number; pct: number; avg: number | null }[];
-};
-
-const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
-const r1 = (v: number | null) => (v === null ? null : Math.round(v * 10) / 10);
-
-/** Rekap per kelompok (Area / Locator): total, sudah, belum, % sudah, rata-rata durasi. Urut total terbesar. */
-function group(rows: readonly SjRow[], key: (r: SjRow) => string) {
-  const m = new Map<string, { total: number; done: number; durs: number[] }>();
+/** Satu baris per BP; kolom per bulan (YYYY-MM, urut naik; SJ tanpa Tanggal SJ → "(tanpa tanggal)" di akhir). */
+export function bpMonthSummary(rows: readonly SjRow[]): { months: string[]; rows: BpMonthRow[]; total: BpMonthCell } {
+  const by = new Map<string, BpMonthRow>();
+  const months = new Set<string>();
+  const total: BpMonthCell = { n: 0, done: 0, open: 0 };
   for (const r of rows) {
-    const k = key(r);
-    const g = m.get(k) ?? { total: 0, done: 0, durs: [] };
-    g.total++; if (r.status === STATUS_DONE) { g.done++; if (r.durasi !== null) g.durs.push(r.durasi); }
-    m.set(k, g);
+    const bp = bpOf(r), m = r.tanggal_sj ? r.tanggal_sj.slice(0, 7) : NO_MONTH;
+    months.add(m);
+    const g = by.get(bp) ?? { bp, total: 0, done: 0, open: 0, pct: 0, months: {} };
+    const c = (g.months[m] ??= { n: 0, done: 0, open: 0 });
+    const done = r.status === STATUS_DONE ? 1 : 0;
+    c.n++; c.done += done; c.open += 1 - done;
+    g.total++; g.done += done; g.open += 1 - done;
+    total.n++; total.done += done; total.open += 1 - done;
+    by.set(bp, g);
   }
-  return [...m].map(([k, g]) => [k, { total: g.total, done: g.done, open: g.total - g.done, pct: (g.done / g.total) * 100, avg: r1(mean(g.durs)) }] as const)
-    .sort((a, b) => b[1].total - a[1].total);
-}
-
-/** Ringkasan dari baris hasil filter yang sama dengan Kertas Kerja. */
-export function summarize(rows: readonly SjRow[]): SjSummary {
-  const done = rows.filter((r) => r.status === STATUS_DONE);
-  const open = rows.filter((r) => r.status === STATUS_OPEN);
-  const durs = done.filter((r) => r.durasi !== null).map((r) => r.durasi!);
-  const trendMap = new Map<string, { done: number; open: number }>();
-  for (const r of rows) {
-    if (!r.tanggal_sj) continue;
-    const t = trendMap.get(r.tanggal_sj) ?? { done: 0, open: 0 };
-    if (r.status === STATUS_DONE) t.done++; else t.open++;
-    trendMap.set(r.tanggal_sj, t);
-  }
-  const openSorted = open.filter((r) => r.umur !== null).sort((a, b) => b.umur! - a.umur! || a.sj_no.localeCompare(b.sj_no));
-  return {
-    total: rows.length, done: done.length, open: open.length, pct: rows.length ? (done.length / rows.length) * 100 : null,
-    avg: r1(mean(durs)), sample: durs.length, excluded: done.length - durs.length, oldestOpen: openSorted[0] ?? null,
-    quality: {
-      dateIssues: rows.filter((r) => r.flags.includes(FLAG.negative) || r.flags.includes(FLAG.future)).length,
-      noTanggalSj: rows.filter((r) => r.flags.includes(FLAG.noTanggalSj)).length,
-      inactive: rows.filter((r) => r.flags.includes(FLAG.inactive)).length,
-    },
-    trend: [...trendMap].sort(([a], [b]) => a.localeCompare(b)).map(([date, t]) => ({ date, ...t })),
-    ageBuckets: AGE_BUCKETS.map((b) => ({ label: b.label, count: open.filter((r) => r.umur !== null && r.umur >= b.min && r.umur <= b.max).length })),
-    byLocator: group(rows, (r) => r.locator || "(tanpa Locator)").map(([locator, a]) => ({ locator, ...a })),
-    byArea: group(rows, (r) => r.area || "(tanpa Area)").map(([area, a]) => ({ area, ...a })),
-  };
-}
-
-/** Tren: harian bila rentang ≤ 45 hari, selain itu per minggu (Senin). Label = tanggal awal kelompok. */
-export function trendSeries(trend: SjSummary["trend"]): { label: string; weekly: boolean; done: number; open: number }[] {
-  if (!trend.length) return [];
-  const weekly = daysBetween(trend[0].date, trend[trend.length - 1].date) > 45;
-  if (!weekly) return trend.map((t) => ({ label: t.date, weekly, done: t.done, open: t.open }));
-  const m = new Map<string, { done: number; open: number }>();
-  for (const t of trend) {
-    const d = new Date(`${t.date}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
-    const k = d.toISOString().slice(0, 10);
-    const g = m.get(k) ?? { done: 0, open: 0 };
-    g.done += t.done; g.open += t.open;
-    m.set(k, g);
-  }
-  return [...m].sort(([a], [b]) => a.localeCompare(b)).map(([label, g]) => ({ label, weekly, ...g }));
+  for (const g of by.values()) g.pct = g.total ? (g.done / g.total) * 100 : 0;
+  const ms = [...months].sort((a, b) => (a === NO_MONTH ? 1 : b === NO_MONTH ? -1 : a.localeCompare(b)));
+  return { months: ms, rows: [...by.values()].sort((a, b) => b.total - a.total || a.bp.localeCompare(b.bp, "id")), total };
 }
 
 /** Dampak perubahan daftar Receiver pada data tersimpan: jumlah SJ dipantau yang berubah status. */
@@ -195,6 +152,3 @@ export function receiverImpact(receipts: readonly SjReceipt[], docKeys: Readonly
   }
   return { statusChanged };
 }
-
-/** Format rata-rata untuk UI: satu desimal, "—" bila sampel kosong (bukan 0 hari). */
-export const fmtAvg = (v: number | null) => (v === null ? "—" : `${v.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hari`);

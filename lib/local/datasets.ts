@@ -71,7 +71,7 @@ export type Datasets = {
   emailCustomer: EmailData;
   // Monitor Surat Jalan (Fase 85): SJ dari laporan Serah Terima (bukan Aging), penerimaan tersimpan, daftar Receiver, riwayat.
   sj: { docs: SjDocRec[]; receipts: SjReceipt[]; receivers: SjReceiver[]; log: SjLog[]; uploads: SjUpload[];
-    docsAt: { file: string; at: string } | null; canManage: boolean };
+    hidden: { kind: "bp" | "area"; value: string }[]; docsAt: { file: string; at: string } | null; canManage: boolean };
 };
 export type DatasetName = keyof Datasets;
 
@@ -112,6 +112,6 @@ export const DATASETS: { [K in DatasetName]: { rpc: string; args?: Record<string
   emailCustomer: { rpc: "pack_email_customer", deps: ["email_customer", "aging", "erp"], decode: (r) => tables(r, ["groups", "customers", "emails", "lookup", "cbdMarks", "topSales", "uploads", "sent"]) as Datasets["emailCustomer"] },
   sjReceive: { rpc: "pack_sj_receive", deps: ["sj"], decode: (r) => ({ rows: unpack<{ sj_key: string; receive_date: string }>(r as Packed) }) },
   sj: { rpc: "pack_sj", deps: ["sj"], decode: (r) => ({
-    ...(tables(r, ["docs", "receipts", "receivers", "log", "uploads"]) as Omit<Datasets["sj"], "canManage" | "docsAt">),
+    ...(tables(r, ["docs", "receipts", "receivers", "hidden", "log", "uploads"]) as Omit<Datasets["sj"], "canManage" | "docsAt">),
     docsAt: (r.docsAt as Datasets["sj"]["docsAt"]) ?? null, canManage: r.canManage === true }) },
 };
