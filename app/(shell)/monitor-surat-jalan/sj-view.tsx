@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { Tabs } from "@/components/tabs";
 import { EmptyState } from "@/components/empty-state";
 import { btnGhost, btnPrimary, card, inputCls } from "@/components/ui";
@@ -67,7 +68,7 @@ export function SjView() {
   );
 }
 
-/** Filter periode Tanggal SJ + Area + Locator (dinamis, dari laporan Serah Terima) — dipakai bersama Dashboard & Kertas Kerja. */
+/** Filter periode Tanggal SJ + Area + Business Partner (dinamis) — dipakai bersama Dashboard & Kertas Kerja. */
 export function PeriodFilter({ s }: { s: SjState }) {
   const f = s.filter;
   return (
@@ -82,19 +83,36 @@ export function PeriodFilter({ s }: { s: SjState }) {
         <option value="">Area: semua ({s.choices.area.length})</option>
         {s.choices.area.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
       </select>
-      <select aria-label="Locator" value={f.locator} onChange={(e) => s.setLocator(e.target.value)} className={`${inputCls} !w-auto max-w-64`}>
-        <option value="">Locator: semua ({s.choices.locator.length})</option>
-        {s.choices.locator.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
-      </select>
+      <BpFilter s={s} />
       {(f.from || f.to) && <button type="button" className={btnGhost} onClick={() => s.setPeriod("", "")}>Semua periode</button>}
-      {!s.isDefaultPeriod && <button type="button" className={btnGhost} onClick={s.resetPeriod}>Bulan terbaru</button>}
     </div>
   );
 }
 
-/** Teks periode aktif (selalu ditampilkan, bukan hanya warna/posisi kontrol). */
+/** Business Partner (±10 ribu): ketik/pilih dari daftar; filter berlaku bila nama cocok persis dengan salah satu opsi. */
+function BpFilter({ s }: { s: SjState }) {
+  const [text, setText] = useState(s.filter.bp);
+  const valid = useMemo(() => new Set(s.choices.bp.map((o) => o.value)), [s.choices.bp]);
+  // Filter diubah dari luar (mis. klik BP di Dashboard / Reset) → teks ikut (pola "state dari prop sebelumnya").
+  const [prev, setPrev] = useState(s.filter.bp);
+  if (prev !== s.filter.bp) { setPrev(s.filter.bp); setText(s.filter.bp); }
+  const apply = (v: string) => { setText(v); if (!v) s.setBp(""); else if (valid.has(v)) s.setBp(v); };
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input list="sj-bp-options" aria-label="Business Partner" value={text} onChange={(e) => apply(e.target.value)}
+        placeholder={`Business Partner: semua (${s.choices.bp.length.toLocaleString("id-ID")})`} className={`${inputCls} !w-72`} />
+      <datalist id="sj-bp-options">
+        {s.choices.bp.map((o) => <option key={o.value} value={o.value}>{`${o.n.toLocaleString("id-ID")} SJ`}</option>)}
+      </datalist>
+      {s.filter.bp && <button type="button" className={btnGhost} aria-label="Hapus filter Business Partner" onClick={() => apply("")}>×</button>}
+      {text && !valid.has(text) && <span className="text-xs text-fg-2">pilih dari daftar</span>}
+    </span>
+  );
+}
+
+/** Teks filter aktif (selalu ditampilkan, bukan hanya warna/posisi kontrol). */
 export function periodText(s: SjState) {
   const f = s.filter;
   const p = f.from || f.to ? `${f.from ? fmtDate(f.from) : "awal"} – ${f.to ? fmtDate(f.to) : "akhir"}` : "semua periode";
-  return `Periode Tanggal SJ: ${p}${s.isDefaultPeriod && (f.from || f.to) ? " (bulan terbaru)" : ""} · Area: ${f.area || "semua"} · Locator: ${f.locator || "semua"}`;
+  return `Periode Tanggal SJ: ${p} · Area: ${f.area || "semua"} · Business Partner: ${f.bp || "semua"}`;
 }

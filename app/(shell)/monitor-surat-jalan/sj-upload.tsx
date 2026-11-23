@@ -10,6 +10,7 @@ import { fmtDate, fmtTimestamp } from "@/lib/format";
 import { chunkReport, docRows, parseSjCsv, receiptCandidates, SJ_HEADERS, sumReport, type SjCandidate, type SjDoc, type SjParseResult, type SjReportResult } from "@/lib/modules/sj/parse";
 import { activeSet, normName, receiverImpact, type SjReceiver } from "@/lib/modules/sj/compute";
 import type { SjState } from "./use-sj";
+import { VisibilitySettings } from "./sj-visibility";
 
 const MAX_ROWS = 300000; // dikirim per potongan (batas server 60.000 per panggilan)
 const REQUIRED = new Set(["SJ No.", "Tanggal SJ", "Receive Date", "Receiver"]);
@@ -115,6 +116,8 @@ export function SjUpload({ s }: { s: SjState }) {
 
         <ReceiverSettings s={s} />
       </div>
+
+      <VisibilitySettings s={s} />
 
       {parsed && (
         <section className={`${card} space-y-3 p-4`} aria-label="Pratinjau upload">

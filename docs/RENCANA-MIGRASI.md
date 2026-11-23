@@ -1051,3 +1051,15 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   tidak punya kolom Branch); tabel Per Area & Per Locator; KPI "SJ dipantau". Dataset `sj` tidak lagi bergantung pada
   versi `aging`. Pembersihan Data: kategori `penerimaan_sj` (berbasis Aging) disembunyikan (`hidden`).
 - Daftar Tagihan (Receive Date SJ, `pack_sj_receive`) tidak berubah.
+
+## Monitor Surat Jalan: Dashboard per BP per bulan, centang BP/Area, filter BP (Fase 86, 2026-11-23)
+- Dashboard ditulis ulang: `bpMonthSummary` (lib/modules/sj/compute.ts) — satu baris per Business Partner, kolom per bulan
+  Tanggal SJ (SJ / Sudah / Belum) + Total & % Sudah (LocalTable: cari, urut, Excel, baris total). Klik BP → Kertas Kerja
+  terfilter. Grafik/KPI lama, Per Area & Per Locator dihapus (`summarize`, `trendSeries`, `AGE_BUCKETS`, `fmtAvg`,
+  `defaultPeriod` dihapus; periode bawaan = semua periode).
+- Filter bersama: periode Tanggal SJ + Area + **Business Partner** (input + datalist, ±10 ribu BP); Locator tidak lagi
+  jadi filter (kolom tetap ada).
+- Migrasi `20261123100000_sj_hidden.sql`: tabel `sj_visibility (kind bp|area, value, hidden)` + RPC
+  `sj_visibility_set(kind, values[], hidden)` (sj_can_manage; upsert, tanpa DELETE) + `pack_sj.hidden`. Setting
+  (`sj-visibility.tsx`): centang Area & BP (A-Z, cari, centang/hapus centang massal, simpan sekaligus). Yang tidak
+  dicentang disaring `applyVisibility` sebelum filter → hilang dari Dashboard & Kertas Kerja, untuk semua user.

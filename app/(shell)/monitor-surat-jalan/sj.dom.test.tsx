@@ -30,7 +30,7 @@ const base = (o: Partial<Datasets["sj"]> = {}): Datasets["sj"] => ({
   docs: [ag("SJ/1", "2026-09-01"), ag("SJ/2", "2026-09-03"), ag("SJ/3", "2026-09-05")],
   receipts: [rc("SJ/1", "2026-09-04", "Wienda Aswar")],
   receivers: [{ id: 1, name: "Bintang Anugia Arragi", active: true }, { id: 2, name: "Wienda Aswar", active: true }],
-  log: [], uploads: [{ at: "2026-09-30T02:00:00Z", file_name: "lama.csv", rows: 1, uploader: "Mando" }],
+  hidden: [], log: [], uploads: [{ at: "2026-09-30T02:00:00Z", file_name: "lama.csv", rows: 1, uploader: "Mando" }],
   docsAt: { file: "lama.csv", at: "2026-09-30T02:00:00Z" }, canManage: false, ...o,
 });
 
@@ -43,47 +43,58 @@ const flush = () => act(async () => { for (let i = 0; i < 10; i++) await Promise
 const btn = (start: string) => [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.startsWith(start));
 
 describe("Monitor Surat Jalan — tampilan", () => {
-  it("Dashboard dari SJ laporan: KPI = baris Kertas Kerja, durasi dari Tanggal SJ, periode tampil, tanpa Aging", () => {
-    h.data = base();
+  it("Dashboard: ringkasan per Business Partner per bulan (SJ / Sudah / Belum + Total), semua periode, tanpa Aging", () => {
+    h.data = base({ docs: [ag("SJ/1", "2026-09-01"), ag("SJ/2", "2026-10-03"), ag("SJ/3", "2026-09-05", { business_partner: "Toko B" })] });
     act(() => root.render(<SjView />));
-    expect(text()).toContain("Periode Tanggal SJ: 01/09/2026 – 30/09/2026 (bulan terbaru)");
-    expect(text()).toContain("SJ dipantau3");
-    expect(text()).toContain("3,0 hari"); // SJ/1: Tanggal SJ 1 Sep → Receive 4 Sep
+    expect(text()).toContain("Periode Tanggal SJ: semua periode · Area: semua · Business Partner: semua");
+    const heads = [...host.querySelectorAll("thead th")].map((t) => t.textContent?.trim()).filter(Boolean).join("|");
+    expect(heads).toMatch(/Business Partner.*Sep 2026 · SJ.*Sep 2026 · Sudah.*Sep 2026 · Belum.*Okt 2026 · SJ.*Total SJ.*Total Sudah.*Total Belum.*% Sudah/);
+    const rowA = [...host.querySelectorAll("tbody tr[data-index]")].find((tr) => tr.textContent?.includes("Toko A"))!;
+    expect([...rowA.querySelectorAll("td")].map((td) => td.textContent?.trim()).filter((x) => x !== "")).toEqual(["Toko A", "1", "1", "0", "1", "0", "1", "2", "1", "1", "50"]);
+    expect(host.querySelector("[aria-label='Total']")?.textContent).toMatch(/Business Partner2.*SJ3.*Sudah diterima1.*Belum diterima2/);
     expect(text()).not.toMatch(/Aging/);
-    tab("Kertas Kerja");
-    expect(host.querySelectorAll("tbody tr[data-index]").length).toBe(3);
-    expect(text()).toContain("Sudah diterima");
-    expect(text()).toContain("Belum diterima");
   });
 
-  it("Kertas Kerja: kolom default; filter Area & Locator (dinamis) mengubah KPI; tanpa Marketing/Payment Group", () => {
-    h.data = base({ docs: [
-      ag("SJ/1", "2026-09-01", { area: "Bandung", locator: "TRA-BDG D1" }),
-      ag("SJ/2", "2026-09-03", { locator: "TRA-JKT D2" }),
-      ag("SJ/3", "2026-09-05"),
-    ] });
+  it("klik Business Partner di Dashboard → Kertas Kerja terfilter BP itu; filter BP (bukan Locator) di Kertas Kerja", () => {
+    h.data = base({ docs: [ag("SJ/1", "2026-09-01", { area: "Bandung" }), ag("SJ/2", "2026-09-03", { business_partner: "Toko B" }), ag("SJ/3", "2026-09-05")] });
     act(() => root.render(<SjView />));
-    expect(host.querySelector("select[aria-label='Marketing']")).toBeNull();
-    expect(host.querySelector("select[aria-label='Payment Group']")).toBeNull();
-    const area = host.querySelector<HTMLSelectElement>("select[aria-label='Area']")!;
-    expect([...area.options].map((o) => o.textContent)).toEqual(["Area: semua (2)", "Bandung (1)", "Jakarta (2)"]);
-    act(() => { area.value = "Jakarta"; area.dispatchEvent(new Event("change", { bubbles: true })); });
-    expect(text()).toContain("SJ dipantau2");
-    const loc = host.querySelector<HTMLSelectElement>("select[aria-label='Locator']")!;
-    expect([...loc.options].map((o) => o.value)).toEqual(["", "TRA-JKT D2", "TRA-JKT D5"]); // dinamis: hanya Locator Jakarta
-    expect(text()).toContain("Per Locator");
-    tab("Kertas Kerja");
+    expect(host.querySelector("select[aria-label='Locator']")).toBeNull();
+    act(() => { [...host.querySelectorAll<HTMLButtonElement>("tbody button")].find((b) => b.textContent === "Toko B")!.click(); });
+    expect(host.querySelector("[role=tab][aria-selected=true]")?.textContent).toContain("Kertas Kerja");
+    expect(host.querySelector<HTMLInputElement>("input[aria-label='Business Partner']")!.value).toBe("Toko B");
+    expect(host.querySelectorAll("tbody tr[data-index]").length).toBe(1);
     const heads = [...host.querySelectorAll("thead th")].map((t) => t.textContent?.trim()).filter(Boolean);
     expect(heads.slice(0, 7).join("|")).toMatch(/^SJ No\..*Tanggal SJ.*Business Partner.*Area.*Status.*Receiver.*Receive Date/);
-    expect(heads.some((h2) => /^(Invoice|Marketing|Payment Group|Penanda)/.test(h2!))).toBe(false);
+    act(() => { host.querySelector<HTMLButtonElement>("button[aria-label='Hapus filter Business Partner']")!.click(); });
+    expect(host.querySelectorAll("tbody tr[data-index]").length).toBe(3);
+    const area = host.querySelector<HTMLSelectElement>("select[aria-label='Area']")!;
+    expect([...area.options].map((o) => o.textContent)).toEqual(["Area: semua (2)", "Bandung (1)", "Jakarta (2)"]);
   });
 
-  it("tanpa penerimaan: rata-rata '—', bukan angka 0", () => {
-    h.data = base({ receipts: [], canManage: true });
+  it("BP / Area yang tidak dicentang (tersimpan) tidak tampil di Dashboard & Kertas Kerja", () => {
+    h.data = base({ docs: [ag("SJ/1", "2026-09-01", { area: "Bandung" }), ag("SJ/2", "2026-09-03", { business_partner: "Toko B" }), ag("SJ/3", "2026-09-05")],
+      hidden: [{ kind: "area", value: "Bandung" }, { kind: "bp", value: "Toko B" }] });
     act(() => root.render(<SjView />));
-    const kpi = [...host.querySelectorAll("div")].find((d) => d.firstElementChild?.textContent === "Rata-rata waktu penerimaan");
-    expect(kpi?.textContent).toContain("—");
-    expect(kpi?.textContent).not.toContain("0 hari");
+    expect(host.querySelector("[aria-label='Total']")?.textContent).toMatch(/Business Partner1.*SJ1/);
+    tab("Kertas Kerja");
+    expect(host.querySelectorAll("tbody tr[data-index]").length).toBe(1);
+  });
+
+  it("Setting: centang BP & Area urut A-Z; perubahan disimpan lewat sj_visibility_set", async () => {
+    h.data = base({ canManage: true, docs: [ag("SJ/1", "2026-09-01", { business_partner: "Zeta" }), ag("SJ/2", "2026-09-03", { business_partner: "Alfa", area: "Bandung" })] });
+    h.rpc.mockResolvedValue({ data: { count: 1 }, error: null });
+    act(() => root.render(<SjView />));
+    tab("Upload & Setting");
+    const boxes = (kind: string) => [...host.querySelectorAll<HTMLInputElement>(`input[aria-label^='Tampilkan ${kind} ']`)];
+    expect(boxes("Business Partner").map((b) => b.getAttribute("aria-label"))).toEqual(["Tampilkan Business Partner Alfa", "Tampilkan Business Partner Zeta"]);
+    expect(boxes("Area").map((b) => b.checked)).toEqual([true, true]);
+    act(() => { boxes("Business Partner")[1].click(); });
+    act(() => { boxes("Area")[0].click(); });
+    await act(async () => { btn("Simpan perubahan (2)")!.click(); });
+    await flush();
+    expect(h.rpc).toHaveBeenCalledWith("sj_visibility_set", { p_kind: "area", p_values: ["Bandung"], p_hidden: true });
+    expect(h.rpc).toHaveBeenCalledWith("sj_visibility_set", { p_kind: "bp", p_values: ["Zeta"], p_hidden: true });
+    expect(h.reload).toHaveBeenCalled();
   });
 
   it("belum ada laporan: pesan jelas (bukan soal Aging)", () => {
