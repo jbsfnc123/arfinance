@@ -14,6 +14,8 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt
 export const monthShort = (m: string) => (m === NO_MONTH ? "Tanpa tanggal" : `${MON[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`);
 
 type Row = Record<string, string | number>;
+const MONTH_TONE = "bg-accent/[0.06]"; // bulan berselang (kontras rendah; aman terang/gelap)
+const TOTAL_TONE = "bg-fg/[0.05]";
 
 // Dashboard (Fase 86): ringkasan per Business Partner per bulan Tanggal SJ — SJ / Sudah / Belum per bulan + Total.
 // Dihitung dari baris yang SAMA dengan Kertas Kerja (filter bersama; BP/Area yang tidak dicentang di Setting tidak ikut).
@@ -32,15 +34,19 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
           onClick={() => { setBp(String(r.bp)); openKk({}); }}>{String(r.bp)}</button>
       ) },
     { k: "mg", l: "Marketing Group" },
-    ...sum.months.flatMap((m): LCol<Row>[] => [
-      { k: `${m}|n`, l: `${monthShort(m)} · SJ`, n: true, sum: true },
-      { k: `${m}|d`, l: `${monthShort(m)} · Sudah`, n: true, sum: true },
-      { k: `${m}|o`, l: `${monthShort(m)} · Belum`, n: true, sum: true },
-    ]),
-    { k: "total", l: "Total SJ", n: true, sum: true },
-    { k: "done", l: "Total Sudah", n: true, sum: true },
-    { k: "open", l: "Total Belum", n: true, sum: true },
-    { k: "pct", l: "% Sudah", n: true },
+    // Fase 88: header bertingkat per bulan + pembatas kiri + warna lembut berselang agar tiap bulan mudah dibedakan.
+    ...sum.months.flatMap((m, i): LCol<Row>[] => {
+      const g = { group: monthShort(m), tone: i % 2 ? MONTH_TONE : undefined };
+      return [
+        { k: `${m}|n`, l: "Qty SJ", n: true, sum: true, ...g },
+        { k: `${m}|d`, l: "Diterima", n: true, sum: true, ...g },
+        { k: `${m}|o`, l: "Belum Diterima", n: true, sum: true, ...g },
+      ];
+    }),
+    { k: "total", l: "Qty SJ", n: true, sum: true, group: "Total", tone: TOTAL_TONE },
+    { k: "done", l: "Diterima", n: true, sum: true, group: "Total", tone: TOTAL_TONE },
+    { k: "open", l: "Belum Diterima", n: true, sum: true, group: "Total", tone: TOTAL_TONE },
+    { k: "pct", l: "% Diterima", n: true, group: "Total", tone: TOTAL_TONE },
   ], [sum.months, setBp, openKk]);
 
   if (s.loading) return <div className="h-40 animate-pulse rounded-xl bg-surface-2" aria-label="Memuat" />;
@@ -53,9 +59,9 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
       <div className={`${card} flex flex-wrap gap-x-8 gap-y-2 px-4 py-3 text-sm`} role="group" aria-label="Total">
         <Stat k="Business Partner" v={n(sum.rows.length)} />
         <Stat k="SJ" v={n(t.n)} />
-        <Stat k="Sudah diterima" v={n(t.done)} />
+        <Stat k="Diterima" v={n(t.done)} />
         <Stat k="Belum diterima" v={n(t.open)} />
-        <Stat k="% Sudah" v={pct1(t.n ? (t.done / t.n) * 100 : null)} />
+        <Stat k="% Diterima" v={pct1(t.n ? (t.done / t.n) * 100 : null)} />
       </div>
       <LocalTable title="Ringkasan per Business Partner" stateKey="sj-dash-bp" rows={rows} cols={cols} rowKey={(r) => String(r.bp)}
         defaultSort={{ k: "total", dir: -1 }} search={["bp", "mg"]} emptyText="Tidak ada SJ pada filter ini." />

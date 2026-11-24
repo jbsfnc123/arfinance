@@ -1076,3 +1076,13 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   dikirim. `jasper.sj` jadi unduh saja; rangkaian tersimpan dipindah otomatis ke `jasper.sj-update`.
 - Monitor: kolom Marketing Group (Kertas Kerja & Dashboard) + filter Marketing Group; upload manual = CSV Serah Terima +
   Excel Invoice by Date (opsional), ganti total. Uji coba 2026-11-24: 89,7% SJ ber-Marketing Group.
+
+## Monitor Surat Jalan: header per bulan bertingkat + centang Marketing Group (Fase 88, 2026-11-25)
+- `LocalTable` (lib/local/table.tsx): opsi kolom `group` (baris header atas, kolom berurutan ber-grup sama digabung
+  dengan colSpan; awal grup diberi pembatas kiri di header/sel/total) & `tone` (warna lembut kolom). `fullLabel`
+  ("Sep 2026 · Qty SJ") untuk aria-label, daftar kolom tersembunyi & header Excel; `headerGroups` diuji. Tabel lain
+  tidak berubah (tanpa `group`).
+- Dashboard SJ: grup per bulan (Qty SJ · Diterima · Belum Diterima), bulan berselang `bg-accent/[0.06]`, grup Total
+  (`bg-fg/[0.05]`) + % Diterima.
+- Migrasi `20261125100000_sj_visibility_mg.sql`: `sj_visibility.kind` + `'mg'`, `sj_visibility_set` menerima `mg`.
+  Setting: daftar centang Marketing Group (A-Z) di antara Area & Business Partner; `applyVisibility` menyaring `mgOf`.

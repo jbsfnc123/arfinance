@@ -47,11 +47,22 @@ describe("Monitor Surat Jalan — tampilan", () => {
     h.data = base({ docs: [ag("SJ/1", "2026-09-01"), ag("SJ/2", "2026-10-03"), ag("SJ/3", "2026-09-05", { business_partner: "Toko B" })] });
     act(() => root.render(<SjView />));
     expect(text()).toContain("Periode Tanggal SJ: semua periode · Area: semua · Business Partner: semua · Marketing Group: semua");
-    const heads = [...host.querySelectorAll("thead th")].map((t) => t.textContent?.trim()).filter(Boolean).join("|");
-    expect(heads).toMatch(/Business Partner.*Sep 2026 · SJ.*Sep 2026 · Sudah.*Sep 2026 · Belum.*Okt 2026 · SJ.*Total SJ.*Total Sudah.*Total Belum.*% Sudah/);
+    // Fase 88: header bertingkat — baris 1 = grup bulan (colSpan 3) + Total (colSpan 4), baris 2 = Qty SJ / Diterima / Belum Diterima.
+    const [g, labels] = [...host.querySelectorAll("thead tr")];
+    const gcells = [...g.querySelectorAll("th")].map((t) => [t.textContent?.trim(), t.getAttribute("colspan") ?? "1"]);
+    expect(gcells.filter(([t]) => t)).toEqual([["Sep 2026", "3"], ["Okt 2026", "3"], ["Total", "4"]]);
+    const heads = [...labels.querySelectorAll("th")].map((t) => t.textContent?.trim()).filter(Boolean);
+    expect(heads).toEqual(["Business Partner", "Marketing Group", "Qty SJ", "Diterima", "Belum Diterima", "Qty SJ", "Diterima", "Belum Diterima", "Qty SJ", "Diterima", "Belum Diterima", "% Diterima"]);
+    // Pembatas kiri di awal tiap bulan; bulan kedua berwarna lembut (berselang).
+    const ths = [...labels.querySelectorAll("th")];
+    expect(ths[2].className).toContain("border-l");
+    expect(ths[2].className).not.toContain("bg-accent");
+    expect(ths[5].className).toContain("border-l");
+    expect(ths[5].className).toContain("bg-accent/[0.06]");
+    expect(host.querySelector("button[aria-label='Urutkan menurut Sep 2026 · Qty SJ']")).not.toBeNull();
     const rowA = [...host.querySelectorAll("tbody tr[data-index]")].find((tr) => tr.textContent?.includes("Toko A"))!;
     expect([...rowA.querySelectorAll("td")].map((td) => td.textContent?.trim()).filter((x) => x !== "")).toEqual(["Toko A", "(tanpa Marketing Group)", "1", "1", "0", "1", "0", "1", "2", "1", "1", "50"]);
-    expect(host.querySelector("[aria-label='Total']")?.textContent).toMatch(/Business Partner2.*SJ3.*Sudah diterima1.*Belum diterima2/);
+    expect(host.querySelector("[aria-label='Total']")?.textContent).toMatch(/Business Partner2.*SJ3.*Diterima1.*Belum diterima2/);
     expect(text()).not.toMatch(/Aging/);
   });
 
@@ -199,5 +210,23 @@ describe("Monitor Surat Jalan — upload", () => {
     await act(async () => { [...document.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === "Simpan perubahan")!.click(); });
     await flush();
     expect(h.rpc).toHaveBeenCalledWith("sj_receiver_save", { p_id: 2, p_name: "Wienda Aswar", p_active: false });
+  });
+});
+
+describe("Monitor Surat Jalan — Marketing Group di Setting (Fase 88)", () => {
+  it("Marketing Group tersembunyi hilang dari Dashboard; centang MG memanggil sj_visibility_set kind mg", async () => {
+    h.data = base({ canManage: true,
+      docs: [ag("SJ/1", "2026-09-01", { marketing_group: "Reseller" }), ag("SJ/2", "2026-09-03", { business_partner: "Toko B", marketing_group: "Traditional" })],
+      hidden: [{ kind: "mg", value: "Reseller" }] });
+    h.rpc.mockResolvedValue({ data: { count: 1 }, error: null });
+    act(() => root.render(<SjView />));
+    expect(host.querySelector("[aria-label='Total']")?.textContent).toMatch(/Business Partner1.*SJ1/);
+    tab("Upload & Setting");
+    const boxes = [...host.querySelectorAll<HTMLInputElement>("input[aria-label^='Tampilkan Marketing Group ']")];
+    expect(boxes.map((b) => [b.getAttribute("aria-label"), b.checked])).toEqual([["Tampilkan Marketing Group Reseller", false], ["Tampilkan Marketing Group Traditional", true]]);
+    act(() => { boxes[0].click(); });
+    await act(async () => { btn("Simpan perubahan (1)")!.click(); });
+    await flush();
+    expect(h.rpc).toHaveBeenCalledWith("sj_visibility_set", { p_kind: "mg", p_values: ["Reseller"], p_hidden: false });
   });
 });
