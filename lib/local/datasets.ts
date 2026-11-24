@@ -71,7 +71,7 @@ export type Datasets = {
   emailCustomer: EmailData;
   // Monitor Surat Jalan (Fase 85): SJ dari laporan Serah Terima (bukan Aging), penerimaan tersimpan, daftar Receiver, riwayat.
   sj: { docs: SjDocRec[]; receipts: SjReceipt[]; receivers: SjReceiver[]; log: SjLog[]; uploads: SjUpload[];
-    hidden: { kind: "bp" | "area"; value: string }[]; docsAt: { file: string; at: string } | null; canManage: boolean };
+    hidden: { kind: "bp" | "area" | "mg"; value: string }[]; docsAt: { file: string; at: string } | null; canManage: boolean };
 };
 export type DatasetName = keyof Datasets;
 

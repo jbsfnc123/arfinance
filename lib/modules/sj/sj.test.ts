@@ -6,6 +6,7 @@ import {
   type SjDocRec, type SjReceipt,
 } from "./compute";
 import { marketingMap, marketingStats, withMarketing } from "./marketing";
+import type { LCol } from "@/lib/local/table";
 
 // Model Fase 85/86: daftar = SJ dari laporan Serah Terima (bukan Aging); tanggal awal = Tanggal SJ; filter Area & Business Partner.
 const TODAY = "2026-09-30";
@@ -200,5 +201,22 @@ describe("Marketing Group dari Invoice by Date (Fase 87, digabung lokal)", () =>
       { sj_key: "SJ/1", sj_no: "sj/1", receive_date: "2026-09-03", receiver: "Siapa Saja" },
       { sj_key: "SJ/3", sj_no: "SJ/3", receive_date: "2026-09-04", receiver: "Wienda Aswar" },
     ]);
+  });
+});
+
+describe("tampilan Marketing Group & header bergrup (Fase 88)", () => {
+  it("Marketing Group yang tidak dicentang (termasuk tanpa MG) tidak tampil", () => {
+    const rows = buildRows([ag("A", "2026-09-01", { marketing_group: "Reseller" }), ag("B", "2026-09-02"), ag("C", "2026-09-03", { marketing_group: "Traditional" })], [], REC, TODAY);
+    expect(applyVisibility(rows, hiddenSets([{ kind: "mg", value: "Reseller" }])).map((r) => r.sj_key)).toEqual(["B", "C"]);
+    expect(applyVisibility(rows, hiddenSets([{ kind: "mg", value: NO_MG }])).map((r) => r.sj_key)).toEqual(["A", "C"]);
+  });
+  it("headerGroups: kolom berurutan ber-grup sama digabung; tanpa grup = sel kosong", async () => {
+    const { headerGroups, fullLabel } = await import("@/lib/local/table");
+    type R = Record<string, number>;
+    const cols = [{ k: "bp", l: "BP" }, { k: "a", l: "Qty SJ", group: "Sep 2026" }, { k: "b", l: "Diterima", group: "Sep 2026" },
+      { k: "c", l: "Qty SJ", group: "Okt 2026", tone: "x" }, { k: "t", l: "Qty SJ", group: "Total" }] as LCol<R>[];
+    expect(headerGroups(cols)).toEqual([{ label: "", span: 1, tone: undefined }, { label: "Sep 2026", span: 2, tone: undefined }, { label: "Okt 2026", span: 1, tone: "x" }, { label: "Total", span: 1, tone: undefined }]);
+    expect(fullLabel(cols[1])).toBe("Sep 2026 · Qty SJ");
+    expect(fullLabel(cols[0])).toBe("BP");
   });
 });

@@ -26,7 +26,21 @@ export type LCol<T> = {
   text?: (r: T) => string;             // teks untuk cari/tooltip/export bila berbeda dari nilai mentah
   sum?: boolean;                       // tampilkan total kolom (baris hasil filter) di footer
   wrap?: boolean;                      // kolom teks panjang: selalu dibungkus, lebar maks. 28rem
+  group?: string;                      // judul grup di baris header atas (kolom berurutan ber-grup sama digabung) + pembatas kiri
+  tone?: string;                       // kelas warna lembut untuk header, sel & total kolom ini (mis. "bg-accent/[0.05]")
 };
+/** Label lengkap kolom (grup · label) — untuk aksesibilitas, daftar kolom tersembunyi, dan header Excel. */
+export const fullLabel = <T,>(c: LCol<T>) => (c.group ? `${c.group} · ${c.l}` : c.l);
+/** Grup header berurutan dari kolom tampil: [{ label, span, tone }] (kolom tanpa grup = label ""). */
+export function headerGroups<T>(cols: readonly LCol<T>[]) {
+  const out: { label: string; span: number; tone?: string }[] = [];
+  for (const c of cols) {
+    const g = c.group ?? "";
+    const last = out[out.length - 1];
+    if (last && g && last.label === g) last.span++; else out.push({ label: g, span: 1, tone: c.tone });
+  }
+  return out;
+}
 export type LFilter<T> = { k: keyof T & string; l: string; options: string[] };
 
 const ROW_H = 34; // Nyaman; Padat → rowHeight() (lib/ui/density.ts)
@@ -274,6 +288,11 @@ export function LocalTable<T>(props: {
     ? Object.fromEntries(cols.filter((c) => c.sum).map((c) => [c.k, rows.reduce((a, r) => a + (Number(r[c.k]) || 0), 0)]))
     : null;
   const span = cols.length + (props.selectable ? 1 : 0);
+  // Header bergrup (opsional): kolom pertama tiap grup diberi pembatas kiri di header, sel & total.
+  const grouped = cols.some((c) => c.group);
+  const groups = grouped ? headerGroups(cols) : [];
+  const groupStart = new Set(cols.filter((c, i) => c.group && cols[i - 1]?.group !== c.group).map((c) => c.k));
+  const colCls = (c: LCol<T>) => `${c.tone ?? ""} ${groupStart.has(c.k) ? "border-l border-line" : ""}`;
 
   function commit() {
     if (!editing) return;
@@ -291,7 +310,7 @@ export function LocalTable<T>(props: {
   async function exportXlsx() {
     try {
       await downloadXlsx(`${props.title}.xlsx`, props.title, [
-        cols.map((c) => c.l),
+        cols.map((c) => fullLabel(c)),
         ...allRows.map((r) => cols.map((c) => (c.text ? c.text(r) : (r[c.k] as unknown) ?? ""))),
       ]);
     } catch (e) {
@@ -331,7 +350,7 @@ export function LocalTable<T>(props: {
                 {hiddenCols.map((c) => (
                   <button key={c.k} type="button" onClick={() => setHidden(hidden.filter((k) => k !== c.k))}
                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-2">
-                    <Icon name="visibility" size={16} className="text-fg-2" />{c.l}
+                    <Icon name="visibility" size={16} className="text-fg-2" />{fullLabel(c)}
                   </button>
                 ))}
                 <button type="button" onClick={() => { setHidden([]); setHiddenOpen(false); }}
@@ -381,6 +400,15 @@ export function LocalTable<T>(props: {
       <div ref={scrollRef} className={`${card} overflow-auto ${fill ? "" : props.maxHeight ?? "max-h-[70vh]"}`}>
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-10 bg-surface/90 backdrop-blur">
+            {grouped && (
+              <tr>
+                {props.selectable && <th className={`${th} border-b border-hairline`} />}
+                {groups.map((g, i) => (
+                  <th key={i} colSpan={g.span} scope={g.label ? "colgroup" : undefined}
+                    className={`${th} border-b border-hairline !text-center font-semibold text-fg ${g.label ? `border-l border-line ${g.tone ?? ""}` : ""}`}>{g.label}</th>
+                ))}
+              </tr>
+            )}
             <tr>
               {props.selectable && (
                 <th className={`${th} w-8 cursor-pointer border-b border-hairline pointer-coarse:min-w-11`} onClick={(e) => { if (e.target === e.currentTarget) setSel(allSel ? new Set() : new Set(rows.map(props.rowKey))); }}>
@@ -391,15 +419,15 @@ export function LocalTable<T>(props: {
               {cols.map((c) => (
                 <th key={c.k} onClick={() => toggleSort(c.k)}
                   aria-sort={sort?.k === c.k ? (sort.dir === 1 ? "ascending" : "descending") : undefined}
-                  className={`${th} group cursor-pointer select-none border-b border-hairline hover:text-fg pointer-coarse:py-0 ${c.n ? "text-right" : ""}`} style={{ minWidth: c.w }}>
+                  className={`${th} group cursor-pointer select-none border-b border-hairline hover:text-fg pointer-coarse:py-0 ${c.n ? "text-right" : ""} ${colCls(c)}`} style={{ minWidth: c.w }}>
                   {/* Tombol agar urutkan bisa lewat keyboard (Enter/Spasi); klik area header tetap berfungsi. */}
                   <button type="button" onClick={(e) => { e.stopPropagation(); toggleSort(c.k); }}
-                    aria-label={`Urutkan menurut ${c.l}`} className="inline-flex items-center gap-0.5 rounded-[4px] font-medium pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                    aria-label={`Urutkan menurut ${fullLabel(c)}`} className="inline-flex items-center gap-0.5 rounded-[4px] font-medium pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                     {c.l}{c.edit && <span className="ml-1 inline-flex text-accent" title="Bisa diedit"><Icon name="edit" size={12} /></span>}
                     {sort?.k === c.k && <Icon name={sort.dir === 1 ? "expand_less" : "expand_more"} size={13} strokeWidth={2.25} className="text-accent" />}
                   </button>
                   {props.hideKey && cols.length > 1 && (
-                    <button type="button" title={`Sembunyikan kolom ${c.l}`} aria-label={`Sembunyikan kolom ${c.l}`}
+                    <button type="button" title={`Sembunyikan kolom ${fullLabel(c)}`} aria-label={`Sembunyikan kolom ${fullLabel(c)}`}
                       onClick={(e) => { e.stopPropagation(); setHidden([...hidden, c.k]); }}
                       className="ml-1 inline-flex align-middle text-fg-2 opacity-0 hover:text-fg focus:opacity-100 group-hover:opacity-100 pointer-coarse:h-11 pointer-coarse:w-11 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:opacity-70">
                       <Icon name="visibility_off" size={14} />
@@ -435,7 +463,7 @@ export function LocalTable<T>(props: {
                     return (
                       <td key={c.k}
                         onDoubleClick={() => c.edit && props.onEdit && setEditing({ id, k: c.k, v: v === null || v === undefined ? "" : String(v) })}
-                        className={`border-b border-hairline px-3 ${wrap ? "min-w-40 max-w-md whitespace-normal break-words py-1.5" : "max-w-[28rem] truncate whitespace-nowrap"} ${c.n ? "text-right tabular-nums" : ""} ${c.edit && props.onEdit ? "cursor-text" : ""}`}
+                        className={`border-b border-hairline px-3 ${wrap ? "min-w-40 max-w-md whitespace-normal break-words py-1.5" : "max-w-[28rem] truncate whitespace-nowrap"} ${c.n ? "text-right tabular-nums" : ""} ${c.edit && props.onEdit ? "cursor-text" : ""} ${colCls(c)}`}
                         title={c.edit && props.onEdit ? `${text ? text + " — " : ""}klik dua kali untuk mengedit` : !wrap && text.length > 24 ? text : undefined}>
                         {isEdit ? (
                           <input autoFocus type={c.edit === "date" ? "date" : "text"} value={editing.v}
@@ -460,7 +488,7 @@ export function LocalTable<T>(props: {
               <tr>
                 {props.selectable && <td className="border-t border-line" />}
                 {cols.map((c, i) => (
-                  <td key={c.k} className={`whitespace-nowrap border-t border-line px-3 py-2 ${c.n ? "text-right tabular-nums" : ""}`}>
+                  <td key={c.k} className={`whitespace-nowrap border-t border-line px-3 py-2 ${c.n ? "text-right tabular-nums" : ""} ${colCls(c)}`}>
                     {c.sum ? Math.round(sums[c.k]).toLocaleString("id-ID") : i === 0 ? "Total" : ""}
                   </td>
                 ))}

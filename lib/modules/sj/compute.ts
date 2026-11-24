@@ -75,7 +75,7 @@ export function buildRows(
   });
 }
 
-// ── Tampilan (Fase 86): BP / Area yang tidak dicentang di Setting tidak tampil di Dashboard & Kertas Kerja ─────
+// ── Tampilan (Fase 86/88): BP / Area / Marketing Group yang tidak dicentang di Setting tidak tampil di Dashboard & Kertas Kerja ─────
 export const NO_BP = "(tanpa Business Partner)";
 export const NO_AREA = "(tanpa Area)";
 export const bpOf = (r: { business_partner: string | null }) => r.business_partner?.trim() || NO_BP;
@@ -83,15 +83,16 @@ export const areaOf = (r: { area: string | null }) => r.area?.trim() || NO_AREA;
 /** Marketing Group (Fase 87, dari Invoice by Date lewat AR Bot / upload manual). */
 export const NO_MG = "(tanpa Marketing Group)";
 export const mgOf = (r: { marketing_group: string | null }) => r.marketing_group?.trim() || NO_MG;
-export type SjHidden = { bp: ReadonlySet<string>; area: ReadonlySet<string> };
+export type SjHidden = { bp: ReadonlySet<string>; area: ReadonlySet<string>; mg?: ReadonlySet<string> };
 export function hiddenSets(list: readonly { kind: string; value: string }[] | undefined): SjHidden {
-  const bp = new Set<string>(), area = new Set<string>();
-  for (const h of list ?? []) (h.kind === "area" ? area : bp).add(h.value);
-  return { bp, area };
+  const bp = new Set<string>(), area = new Set<string>(), mg = new Set<string>();
+  for (const h of list ?? []) (h.kind === "area" ? area : h.kind === "mg" ? mg : bp).add(h.value);
+  return { bp, area, mg };
 }
 export function applyVisibility(rows: readonly SjRow[], hidden: SjHidden): SjRow[] {
-  if (!hidden.bp.size && !hidden.area.size) return rows as SjRow[];
-  return rows.filter((r) => !hidden.bp.has(bpOf(r)) && !hidden.area.has(areaOf(r)));
+  const mg = hidden.mg ?? new Set<string>();
+  if (!hidden.bp.size && !hidden.area.size && !mg.size) return rows as SjRow[];
+  return rows.filter((r) => !hidden.bp.has(bpOf(r)) && !hidden.area.has(areaOf(r)) && !mg.has(mgOf(r)));
 }
 
 // ── Filter bersama (Dashboard & Kertas Kerja) ─────────────────────────
