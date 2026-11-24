@@ -23,7 +23,9 @@ export const SJ_MAX_DAYS = 92;
 export const JOBS: readonly JobInfo[] = [
   { id: "jasper.aging", group: "jasper", label: "Aging Detail", short: "Aging", icon: "receipt_long", pushable: true, format: "Excel" },
   { id: "jasper.send-invoice", group: "jasper", label: "Send Invoice To Customer", short: "Jadwal TF", icon: "local_shipping", pushable: true, format: "CSV" },
-  { id: "jasper.sj", group: "jasper", label: "Serah Terima Surat Jalan", short: "Surat Jalan", icon: "task_alt", pushable: true, format: "CSV" },
+  // Fase 87: Serah Terima SJ = unduh saja; kirim ke AR Workspace (ganti total + Marketing Group) lewat Pengkinian Data Surat Jalan.
+  { id: "jasper.sj", group: "jasper", label: "Serah Terima Surat Jalan", short: "Surat Jalan", icon: "task_alt", pushable: false, format: "CSV" },
+  { id: "jasper.sj-update", group: "jasper", label: "Pengkinian Data Surat Jalan", short: "Pengkinian SJ", nav: "Pengkinian SJ", icon: "sync", pushable: true, format: "CSV" },
   { id: "jasper.invoice-by-date", group: "jasper", label: "Invoice & Payment Date Comparison", short: "Invoice by Date", nav: "Invoice by Date", icon: "payments", pushable: true, format: "Excel" },
   { id: "edi.gr", group: "edi", label: "GR Report Detail", short: "GR Report", icon: "download", pushable: true, format: "CSV" },
   { id: "edi.kwitansi", group: "edi", label: "Download Kwitansi", short: "Kwitansi", icon: "receipt_long", pushable: true, format: "CSV" },
@@ -37,7 +39,8 @@ export const jobInfo = (id: JobId) => JOBS.find((j) => j.id === id)!;
 export const DEFAULT_PARAMS: Record<JobId, JobParams> = {
   "jasper.aging": { push: true },
   "jasper.send-invoice": { push: true },
-  "jasper.sj": { push: true, days: 60 },
+  "jasper.sj": { push: false, days: 60 },
+  "jasper.sj-update": { push: true, days: 60 },
   "jasper.invoice-by-date": { push: false },
   "edi.gr": { push: true },
   "edi.kwitansi": { push: true },
@@ -49,7 +52,7 @@ export const DEFAULT_PARAMS: Record<JobId, JobParams> = {
 export const DEFAULT_CHAIN: Chain = {
   id: "harian-ar",
   name: "Harian AR",
-  jobs: [{ id: "jasper.aging" }, { id: "jasper.send-invoice" }, { id: "jasper.sj" }],
+  jobs: [{ id: "jasper.aging" }, { id: "jasper.send-invoice" }, { id: "jasper.sj-update" }],
   schedule: { enabled: false, days: [1, 2, 3, 4, 5], time: "10:00" },
 };
 
@@ -102,7 +105,8 @@ export function mergeConfig(saved: Partial<Config> | null | undefined): Config {
     },
     downloadDir: typeof saved.downloadDir === "string" ? saved.downloadDir.trim() : "",
     jobs: { ...saved.jobs },
-    chains: saved.chains?.length ? saved.chains : d.chains,
+    // Fase 87: rangkaian lama yang memakai Serah Terima SJ (dulu mengirim) dipindah ke Pengkinian Data Surat Jalan.
+    chains: saved.chains?.length ? saved.chains.map((c) => ({ ...c, jobs: c.jobs.map((j) => (j.id === "jasper.sj" ? { ...j, id: "jasper.sj-update" as const } : j)) })) : d.chains,
     multi: { ...d.multi, ...saved.multi, order: multiOrder(saved.multi?.order) },
   };
 }
@@ -164,7 +168,7 @@ export function defaultDates(id: JobId, today: string, days = 7): { start: strin
   switch (id) {
     case "jasper.send-invoice": return weekToDate(today);
     case "jasper.invoice-by-date": return { start: `${today.slice(0, 7)}-01`, end: today };
-    case "jasper.sj": return { start: addDays(today, -(Math.min(SJ_MAX_DAYS, Math.max(1, days)) - 1)), end: today };
+    case "jasper.sj": case "jasper.sj-update": return { start: addDays(today, -(Math.min(SJ_MAX_DAYS, Math.max(1, days)) - 1)), end: today };
     case "edi.gr": return { start: addDays(today, -30), end: today };
     case "edi.kwitansi": return { start: `${today.slice(0, 7)}-01`, end: today };
     default: return null;

@@ -1,7 +1,7 @@
 // Tipe bersama server, runner, dan UI AR Bot.
 
 export type JobId =
-  | "jasper.aging" | "jasper.send-invoice" | "jasper.sj" | "jasper.invoice-by-date"
+  | "jasper.aging" | "jasper.send-invoice" | "jasper.sj" | "jasper.sj-update" | "jasper.invoice-by-date"
   | "edi.gr" | "edi.kwitansi" | "edi.upload-faktur" | "edi.invoice-inbox" | "edi.outbox-invoice";
 
 export type JobGroup = "jasper" | "edi";

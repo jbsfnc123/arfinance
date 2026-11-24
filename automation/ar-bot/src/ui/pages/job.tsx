@@ -56,7 +56,7 @@ export function JobPage({ id }: { id: JobId }) {
           {info.pushable && (
             <Switch checked={!!saved.push && !monthMode} disabled={monthMode} onChange={(v) => setSaved({ push: v })} label="Kirim ke AR Workspace" />
           )}
-          {id === "jasper.sj" && (
+          {(id === "jasper.sj" || id === "jasper.sj-update") && (
             <Field label="Rentang hari (termasuk hari ini)" className="w-48">
               <input className={inputCls} type="number" min={1} max={SJ_MAX_DAYS} value={saved.days ?? 60}
                 onChange={(e) => setSaved({ days: Math.min(SJ_MAX_DAYS, Math.max(1, Number(e.target.value) || 60)) })} />

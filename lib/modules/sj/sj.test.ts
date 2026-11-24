@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { docRows, parseCsv, parseSjCsv, parseSjDate, receiptCandidates, SJ_HEADERS } from "./parse";
+import { docRows, parseCsv, parseSjCsv, parseSjDate, receiptCandidates, receiptRows, SJ_HEADERS } from "./parse";
 import {
-  activeSet, applyVisibility, bpMonthSummary, buildRows, FLAG, filterChoices, filterRows, hiddenSets, NO_BP, NO_MONTH, receiverImpact, receiverNames,
+  activeSet, applyVisibility, bpMonthSummary, buildRows, FLAG, filterChoices, filterRows, hiddenSets, NO_BP, NO_MG, NO_MONTH, receiverImpact, receiverNames,
   STATUS_DONE, STATUS_OPEN,
   type SjDocRec, type SjReceipt,
 } from "./compute";
+import { marketingMap, marketingStats, withMarketing } from "./marketing";
 
 // Model Fase 85/86: daftar = SJ dari laporan Serah Terima (bukan Aging); tanggal awal = Tanggal SJ; filter Area & Business Partner.
 const TODAY = "2026-09-30";
@@ -52,7 +53,7 @@ describe("ringkasan, filter & tampilan (Fase 86)", () => {
     ag("C", "2026-09-03", { business_partner: "Toko C" }), ag("D", "2026-10-10"), ag("E", null, { business_partner: null }),
   ];
   const rows = buildRows(docs, [rc("A", "2026-09-04", "Wienda Aswar"), rc("B", "2026-09-03", "Bintang Anugia Arragi"), rc("C", "2026-09-01", "Wienda Aswar")], REC, TODAY);
-  const F = { from: "", to: "", area: "", bp: "" };
+  const F = { from: "", to: "", area: "", bp: "", mg: "" };
   it("ringkasan per Business Partner per bulan Tanggal SJ: SJ / Sudah / Belum + Total; tanpa tanggal di akhir", () => {
     const s = bpMonthSummary(rows);
     expect(s.months).toEqual(["2026-09", "2026-10", NO_MONTH]);
@@ -165,5 +166,39 @@ describe("potongan kiriman (Fase 85b)", () => {
     expect(chunkReport([], [], 2)).toEqual([{ docs: [], receipts: [] }]);
     const z = { docs: 0, docsNew: 0, sent: 0, saved: 0, existing: 0, notRecognized: 0, badDate: 0 };
     expect(sumReport([{ ...z, docs: 2, saved: 1 }, { ...z, docs: 3, saved: 4 }])).toMatchObject({ docs: 5, saved: 5 });
+  });
+});
+
+describe("Marketing Group dari Invoice by Date (Fase 87, digabung lokal)", () => {
+  it("BP Name → Marketing Group dari invoice terbaru; cocok tanpa beda huruf/spasi; statistik", () => {
+    const map = marketingMap([
+      { bp_name: "Toko A", marketing_group: "Traditional", invoice_date: "2026-09-01" },
+      { bp_name: "toko  a", marketing_group: "Reseller", invoice_date: "2026-10-05" }, // terbaru menang
+      { bp_name: "Toko B", marketing_group: "E Commerce", invoice_date: "2026-10-01" },
+      { bp_name: "Toko C", marketing_group: null, invoice_date: "2026-10-01" },         // tanpa grup → diabaikan
+    ]);
+    expect([...map]).toEqual([["toko a", "Reseller"], ["toko b", "E Commerce"]]);
+    const doc = (sj: string, bp: string | null) => ({ sj_key: sj, sj_no: sj, tanggal_sj: "2026-10-01", area: "Jakarta", business_partner: bp, locator: null, send_date: null });
+    const docs = withMarketing([doc("SJ/1", " TOKO A "), doc("SJ/2", "Toko B"), doc("SJ/3", "Toko Z"), doc("SJ/4", null)], map);
+    expect(docs.map((d) => d.marketing_group)).toEqual(["Reseller", "E Commerce", null, null]);
+    expect(marketingStats(docs)).toMatchObject({ total: 4, matched: 2, pct: 50, groups: [{ group: "Reseller", n: 1 }, { group: "E Commerce", n: 1 }] });
+  });
+  it("filter & ringkasan memakai Marketing Group", () => {
+    const docs = [ag("A", "2026-09-01", { marketing_group: "Traditional" }), ag("B", "2026-09-02", { business_partner: "Toko B", marketing_group: "Reseller" }), ag("C", "2026-09-03")];
+    const rows = buildRows(docs, [], REC, TODAY);
+    const F = { from: "", to: "", area: "", bp: "", mg: "" };
+    expect(filterRows(rows, { ...F, mg: "Reseller" }).map((r) => r.sj_key)).toEqual(["B"]);
+    expect(filterRows(rows, { ...F, mg: NO_MG }).map((r) => r.sj_key)).toEqual(["C"]);
+    expect(filterChoices(rows, { ...F, bp: "Toko A" }).mg.map((o) => o.value)).toEqual([NO_MG, "Traditional"]);
+    expect(bpMonthSummary(rows).rows.find((r) => r.bp === "Toko B")?.marketing_group).toBe("Reseller");
+  });
+  it("baris penerimaan: semua baris SJ/… ber-Receiver & tanggal, urut file, tanpa daftar Receiver", () => {
+    const head = SJ_HEADERS.join(",");
+    const line = (sj: string, recv: string, rdate: string) => ["Jakarta", sj, "01 Sep 2026", "Toko A", "L", "02 Sep 2026", "Siti", rdate, recv, "-", "Ya", "-", "R", "PT X", "B 1", "Budi", "", "1"].join(",");
+    const p = parseSjCsv([head, line("sj/1", "Siapa  Saja", "03 Sep 2026"), line("SJ/1", "-", "-"), line("MR/2", "Wienda Aswar", "03 Sep 2026"), line("SJ/3", "Wienda Aswar", "04 Sep 2026")].join("\n"));
+    expect(receiptRows(p)).toEqual([
+      { sj_key: "SJ/1", sj_no: "sj/1", receive_date: "2026-09-03", receiver: "Siapa Saja" },
+      { sj_key: "SJ/3", sj_no: "SJ/3", receive_date: "2026-09-04", receiver: "Wienda Aswar" },
+    ]);
   });
 });

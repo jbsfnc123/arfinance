@@ -68,7 +68,7 @@ export function SjView() {
   );
 }
 
-/** Filter periode Tanggal SJ + Area + Business Partner (dinamis) — dipakai bersama Dashboard & Kertas Kerja. */
+/** Filter periode Tanggal SJ + Area + Business Partner + Marketing Group (dinamis) — dipakai bersama Dashboard & Kertas Kerja. */
 export function PeriodFilter({ s }: { s: SjState }) {
   const f = s.filter;
   return (
@@ -84,6 +84,10 @@ export function PeriodFilter({ s }: { s: SjState }) {
         {s.choices.area.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
       </select>
       <BpFilter s={s} />
+      <select aria-label="Marketing Group" value={f.mg} onChange={(e) => s.setMg(e.target.value)} className={`${inputCls} !w-auto max-w-64`}>
+        <option value="">Marketing Group: semua ({s.choices.mg.length})</option>
+        {s.choices.mg.map((o) => <option key={o.value} value={o.value}>{o.value} ({o.n.toLocaleString("id-ID")})</option>)}
+      </select>
       {(f.from || f.to) && <button type="button" className={btnGhost} onClick={() => s.setPeriod("", "")}>Semua periode</button>}
     </div>
   );
@@ -114,5 +118,5 @@ function BpFilter({ s }: { s: SjState }) {
 export function periodText(s: SjState) {
   const f = s.filter;
   const p = f.from || f.to ? `${f.from ? fmtDate(f.from) : "awal"} – ${f.to ? fmtDate(f.to) : "akhir"}` : "semua periode";
-  return `Periode Tanggal SJ: ${p} · Area: ${f.area || "semua"} · Business Partner: ${f.bp || "semua"}`;
+  return `Periode Tanggal SJ: ${p} · Area: ${f.area || "semua"} · Business Partner: ${f.bp || "semua"} · Marketing Group: ${f.mg || "semua"}`;
 }

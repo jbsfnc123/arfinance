@@ -1063,3 +1063,16 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   `sj_visibility_set(kind, values[], hidden)` (sj_can_manage; upsert, tanpa DELETE) + `pack_sj.hidden`. Setting
   (`sj-visibility.tsx`): centang Area & BP (A-Z, cari, centang/hapus centang massal, simpan sekaligus). Yang tidak
   dicentang disaring `applyVisibility` sebelum filter → hilang dari Dashboard & Kertas Kerja, untuk semua user.
+
+## Surat Jalan: ganti total setiap update + Marketing Group (Fase 87, 2026-11-24)
+- Migrasi `20261124100000_sj_replace.sql`: `sj_docs.marketing_group`; RPC `sj_report_replace(file, part, parts, docs,
+  receipts)` — potongan 1 menghapus seluruh `sj_docs` & `sj_receipts`, potongan berikutnya menambah; Receiver aktif &
+  tanggal disaring server (baris pertama yang diakui per SJ); `import_log` sekali per update. Data SJ lama DIHAPUS saat
+  migrasi (permintaan user). Daftar Tagihan (Receive Date SJ) ikut data terbaru. `sj_report_apply`/`sj_receipts_apply`
+  tidak dipakai lagi.
+- AR Bot: job baru `jasper.sj-update` "Pengkinian Data Surat Jalan" = Serah Terima SJ + Invoice by Date (rentang sama,
+  bawaan 60 hari; Status "---" = semua) → gabung lokal (`lib/modules/sj/marketing.ts`: BP Name → Marketing Group dari
+  invoice terbaru) → `sj_report_replace` per 5.000. Bot tidak membaca data apa pun dari Workspace; data invoice tidak
+  dikirim. `jasper.sj` jadi unduh saja; rangkaian tersimpan dipindah otomatis ke `jasper.sj-update`.
+- Monitor: kolom Marketing Group (Kertas Kerja & Dashboard) + filter Marketing Group; upload manual = CSV Serah Terima +
+  Excel Invoice by Date (opsional), ganti total. Uji coba 2026-11-24: 89,7% SJ ber-Marketing Group.

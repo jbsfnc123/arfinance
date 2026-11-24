@@ -46,11 +46,11 @@ describe("Monitor Surat Jalan — tampilan", () => {
   it("Dashboard: ringkasan per Business Partner per bulan (SJ / Sudah / Belum + Total), semua periode, tanpa Aging", () => {
     h.data = base({ docs: [ag("SJ/1", "2026-09-01"), ag("SJ/2", "2026-10-03"), ag("SJ/3", "2026-09-05", { business_partner: "Toko B" })] });
     act(() => root.render(<SjView />));
-    expect(text()).toContain("Periode Tanggal SJ: semua periode · Area: semua · Business Partner: semua");
+    expect(text()).toContain("Periode Tanggal SJ: semua periode · Area: semua · Business Partner: semua · Marketing Group: semua");
     const heads = [...host.querySelectorAll("thead th")].map((t) => t.textContent?.trim()).filter(Boolean).join("|");
     expect(heads).toMatch(/Business Partner.*Sep 2026 · SJ.*Sep 2026 · Sudah.*Sep 2026 · Belum.*Okt 2026 · SJ.*Total SJ.*Total Sudah.*Total Belum.*% Sudah/);
     const rowA = [...host.querySelectorAll("tbody tr[data-index]")].find((tr) => tr.textContent?.includes("Toko A"))!;
-    expect([...rowA.querySelectorAll("td")].map((td) => td.textContent?.trim()).filter((x) => x !== "")).toEqual(["Toko A", "1", "1", "0", "1", "0", "1", "2", "1", "1", "50"]);
+    expect([...rowA.querySelectorAll("td")].map((td) => td.textContent?.trim()).filter((x) => x !== "")).toEqual(["Toko A", "(tanpa Marketing Group)", "1", "1", "0", "1", "0", "1", "2", "1", "1", "50"]);
     expect(host.querySelector("[aria-label='Total']")?.textContent).toMatch(/Business Partner2.*SJ3.*Sudah diterima1.*Belum diterima2/);
     expect(text()).not.toMatch(/Aging/);
   });
@@ -64,7 +64,7 @@ describe("Monitor Surat Jalan — tampilan", () => {
     expect(host.querySelector<HTMLInputElement>("input[aria-label='Business Partner']")!.value).toBe("Toko B");
     expect(host.querySelectorAll("tbody tr[data-index]").length).toBe(1);
     const heads = [...host.querySelectorAll("thead th")].map((t) => t.textContent?.trim()).filter(Boolean);
-    expect(heads.slice(0, 7).join("|")).toMatch(/^SJ No\..*Tanggal SJ.*Business Partner.*Area.*Status.*Receiver.*Receive Date/);
+    expect(heads.slice(0, 8).join("|")).toMatch(/^SJ No\..*Tanggal SJ.*Business Partner.*Marketing Group.*Area.*Status.*Receiver.*Receive Date/);
     act(() => { host.querySelector<HTMLButtonElement>("button[aria-label='Hapus filter Business Partner']")!.click(); });
     expect(host.querySelectorAll("tbody tr[data-index]").length).toBe(3);
     const area = host.querySelector<HTMLSelectElement>("select[aria-label='Area']")!;
@@ -136,41 +136,36 @@ describe("Monitor Surat Jalan — upload", () => {
     L("MR/7", "08 Sep 2026", "Wienda Aswar"),             // bukan SJ/… → tidak masuk daftar dipantau
   ].join("\n");
   const pickFile = async () => {
-    const input = host.querySelector<HTMLInputElement>("input[type=file]")!;
+    const input = host.querySelector<HTMLInputElement>("input[aria-label='File Serah Terima SJ']")!;
     Object.defineProperty(input, "files", { value: [new File([CSV], "uji.csv", { type: "text/csv" })], configurable: true });
     await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
     await flush();
   };
 
-  it("pratinjau SJ baru & penerimaan → sj_report_apply (dokumen + penerimaan, tanpa Aging); hasil dari server", async () => {
+  it("pratinjau → sj_report_replace (ganti total, semua baris penerimaan dikirim, server yang menyaring Receiver); hasil dari server", async () => {
     h.data = base({ canManage: true });
-    h.rpc.mockResolvedValue({ data: { docs: 4, docsNew: 1, sent: 3, saved: 3, existing: 0, notRecognized: 0, badDate: 0 }, error: null });
+    h.rpc.mockResolvedValue({ data: { docs: 4, sent: 5, saved: 3, notRecognized: 1, badDate: 0 }, error: null });
     act(() => root.render(<SjView />));
     tab("Upload & Setting");
     await pickFile();
     expect(text()).toContain("SJ dipantau (SJ/…)4");
-    expect(text()).toContain("· SJ baru1");
-    expect(text()).toContain("SJ dengan penerimaan diakui5");
-    expect(text()).toContain("· sudah punya Receive Date (dilewati)1");
-    expect(text()).toContain("Receive Date akan disimpan4");
+    expect(text()).toContain("Baris penerimaan (Receiver & tanggal)5");
+    expect(text()).toContain("dihapus seluruhnya");
+    expect(text()).toContain("kolom Marketing Group akan kosong");
     expect(text()).toContain("Marselia Angelia — 1 baris");
     expect(text()).not.toMatch(/Aging/);
-    await act(async () => { btn("Simpan 4 SJ · 4 Receive Date")!.click(); });
+    await act(async () => { btn("Ganti data SJ (4 SJ)")!.click(); });
     await flush();
     const [fn, args] = h.rpc.mock.calls[0];
-    expect(fn).toBe("sj_report_apply");
-    expect(args.p_file_name).toBe("uji.csv");
+    expect(fn).toBe("sj_report_replace");
+    expect([args.p_file_name, args.p_part, args.p_parts]).toEqual(["uji.csv", 1, 1]);
     expect(args.p_docs.map((d: { sj_key: string }) => d.sj_key)).toEqual(["SJ/1", "SJ/2", "SJ/3", "SJ/99"]);
-    expect(args.p_docs[0]).toMatchObject({ tanggal_sj: "2026-09-01", area: "Jakarta", business_partner: "Toko A", locator: "L1", send_date: "2026-09-02" });
-    expect(args.p_receipts).toEqual([
-      { sj_key: "SJ/2", sj_no: "SJ/2", receive_date: "2026-09-07", receiver: "Wienda Aswar" },
-      { sj_key: "SJ/3", sj_no: "SJ/3", receive_date: "2026-09-08", receiver: "Bintang Anugia Arragi" },
-      { sj_key: "SJ/99", sj_no: "SJ/99", receive_date: "2026-09-08", receiver: "Wienda Aswar" },
-      { sj_key: "MR/7", sj_no: "MR/7", receive_date: "2026-09-08", receiver: "Wienda Aswar" },
+    expect(args.p_docs[0]).toMatchObject({ tanggal_sj: "2026-09-01", area: "Jakarta", business_partner: "Toko A", locator: "L1", send_date: "2026-09-02", marketing_group: null });
+    expect(args.p_receipts.map((r: { sj_key: string; receiver: string }) => `${r.sj_key}:${r.receiver}`)).toEqual([
+      "SJ/1:Bintang Anugia Arragi", "SJ/2:Marselia Angelia", "SJ/2:Wienda Aswar", "SJ/3:Bintang Anugia Arragi", "SJ/99:Wienda Aswar",
     ]);
     expect(text()).toContain("Hasil upload (dikonfirmasi server)");
     expect(text()).toContain("Receive Date disimpan3");
-    expect(text()).toContain("· SJ baru1");
     expect(h.reload).toHaveBeenCalled();
   });
 
@@ -180,11 +175,11 @@ describe("Monitor Surat Jalan — upload", () => {
     act(() => root.render(<SjView />));
     tab("Upload & Setting");
     await pickFile();
-    await act(async () => { btn("Simpan 4 SJ")!.click(); });
+    await act(async () => { btn("Ganti data SJ")!.click(); });
     await flush();
     expect(text()).toContain("Upload gagal: koneksi terputus");
     expect(text()).not.toContain("Hasil upload");
-    expect(btn("Simpan 4 SJ")!.disabled).toBe(false);
+    expect(btn("Ganti data SJ")!.disabled).toBe(false);
   });
 
   it("Receiver: duplikat ternormalisasi ditolak; pratinjau dampak (menonaktifkan Wienda mengubah 1 SJ)", async () => {

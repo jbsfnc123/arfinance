@@ -15,6 +15,7 @@ const COLS: LCol<SjRow>[] = [
   { k: "sj_no", l: "SJ No." },
   { k: "tanggal_sj", l: "Tanggal SJ", d: true },
   { k: "business_partner", l: "Business Partner", w: 240 },
+  { k: "marketing_group", l: "Marketing Group" },
   { k: "area", l: "Area" },
   { k: "locator", l: "Locator" },
   { k: "send_date", l: "Send Date", d: true },
@@ -61,9 +62,9 @@ export function SjWorksheet({ s, quick, setQuick, focus, setFocus }: {
           </div>
         </>
       )}
-      <LocalTable title="Kertas Kerja Surat Jalan" hideKey="sj-kk4" stateKey="sj-kk4" defaultHidden={["locator", "send_date", "durasi", "umur", "flag_text"]} rows={rows} cols={COLS} rowKey={(r) => r.sj_key}
+      <LocalTable title="Kertas Kerja Surat Jalan" hideKey="sj-kk5" stateKey="sj-kk5" defaultHidden={["locator", "send_date", "durasi", "umur", "flag_text"]} rows={rows} cols={COLS} rowKey={(r) => r.sj_key}
         loading={s.loading} defaultSort={{ k: "tanggal_sj", dir: -1 }}
-        search={["sj_no", "business_partner", "area", "locator", "receiver", "flag_text"]}
+        search={["sj_no", "business_partner", "marketing_group", "area", "locator", "receiver", "flag_text"]}
         filters={[
           { k: "status", l: "Status", options: [STATUS_DONE, STATUS_OPEN] },
           { k: "receiver", l: "Receiver", options: receivers },
