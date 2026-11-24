@@ -78,7 +78,7 @@ export const MENU_HELP: MenuHelp[] = [
   ] },
   { href: "/monitor-surat-jalan", menu: "Tukar Faktur › Monitor Surat Jalan", text: [
     "Data SJ = isi update TERAKHIR saja (Laporan Serah Terima Surat Jalan By Shipment Date, nomor berawalan SJ/): setiap update mengganti seluruh data lama. Tidak bergantung pada Aging.",
-    "Marketing Group diambil dari laporan Invoice by Date (BP Name = Business Partner; bila lebih dari satu, dari invoice terbaru) dan digabung sebelum dikirim. BP tanpa invoice di rentang yang sama tampil "(tanpa Marketing Group)".",
+    "Marketing Group diambil dari laporan Invoice by Date (BP Name = Business Partner; bila lebih dari satu, dari invoice terbaru) dan digabung sebelum dikirim. BP tanpa invoice di rentang yang sama tampil (tanpa Marketing Group).",
     "Rata-rata waktu penerimaan = Receive Date tersimpan (Receiver yang diakui) − Tanggal SJ (hari kalender), satu nilai per SJ; durasi negatif & tanggal masa depan tidak dihitung. Umur belum diterima = hari ini − Tanggal SJ. Filter (Dashboard & Kertas Kerja sama): periode Tanggal SJ, Area, Business Partner (ketik lalu pilih dari daftar), Marketing Group.",
     "Dashboard: ringkasan per Business Partner per bulan Tanggal SJ — SJ, Sudah, Belum per bulan + Total & % Sudah. Klik nama BP untuk melihat SJ-nya di Kertas Kerja; tabel bisa dicari, diurutkan & diekspor ke Excel.",
     "Setting › Business Partner & Area yang ditampilkan: hapus centang untuk menyembunyikan BP/Area dari Dashboard & Kertas Kerja (berlaku untuk semua user; hanya Controller/Super Admin yang dapat mengubah). BP/Area baru otomatis tercentang; daftar urut A-Z.",
