@@ -166,6 +166,20 @@ export class JasperSession {
     if (!(await current()).includes(text)) throw new Error(`${label} ${text} tidak terpilih (terbaca "${(await current()).trim()}").`);
   }
 
+  /** Teks pilihan dropdown single-select (dibuka lalu ditutup lagi tanpa memilih) — untuk memeriksa opsi yang tersedia. */
+  async optionTexts(controlId: string): Promise<{ current: string; options: string[] }> {
+    const page = this.page!;
+    await this.scrollTo(`#${controlId}`);
+    const current = await page.$eval(`#${controlId} .jr-mSingleselect-input-selection`, (el) => (el.textContent ?? "").trim()).catch(() => "");
+    await page.click(`#${controlId} a.jr-mSingleselect-input`);
+    await delay(800);
+    const options = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("li.jr-mSelectlist-item")]
+      .filter((el) => el.checkVisibility()).map((el) => (el.title || el.textContent || "").trim()).filter(Boolean));
+    await page.keyboard.press("Escape");
+    await delay(400);
+    return { current, options };
+  }
+
   /** Apply → tunggu laporan selesai. false bila laporan kosong. */
   async applyAndWait() {
     const page = this.page!;

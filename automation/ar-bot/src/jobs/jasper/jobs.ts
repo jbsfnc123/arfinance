@@ -7,10 +7,12 @@ import type { JobParams, JobResult } from "~/shared/types";
 import { jobDir } from "~/core/paths";
 import { CancelledError, type RunContext } from "~/runner/ctx";
 import {
-  inspectAging, inspectErp, inspectSchedule, inspectSj, markPushed, num, pushAging, pushErp, pushSchedule, pushSj, readSheets, rp, sha256, unchanged,
+  inspectAging, inspectErp, inspectSchedule, inspectSj, markPushed, num, pushAging, pushErp, pushSchedule, pushSjReplace, readSheets, rp, sha256, unchanged,
 } from "../arw";
 import { finalize, JasperSession } from "./session";
 import { SJ_MAX_DAYS } from "~/shared/catalog";
+import { docRows, receiptRows } from "@/lib/modules/sj/parse";
+import { marketingMap, marketingStats, withMarketing } from "@/lib/modules/sj/marketing";
 
 export type JobOut = Partial<JobResult>;
 
@@ -147,53 +149,100 @@ export async function sendInvoiceJob(ctx: RunContext, p: JobParams): Promise<Job
 /** Fase 85: laporan berdasarkan Tanggal SJ (shipment) — Monitor Surat Jalan tidak lagi bergantung pada Aging. */
 export const SJ_REPORT = "Laporan Serah Terima Surat Jalan By Shipment Date (NEW)";
 
-export async function sjJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
-  const js = jasperOf(ctx);
-  const today = todayJakarta();
+/** Rentang Tanggal SJ job Serah Terima / Pengkinian: `days` hari ke belakang (bawaan 60, maks. SJ_MAX_DAYS) atau start/end. */
+function sjRange(id: "jasper.sj" | "jasper.sj-update", p: JobParams) {
   const days = Math.min(SJ_MAX_DAYS, Math.max(1, p.days ?? 60));
-  const def = defaultDates("jasper.sj", today, days)!;
-  const from = p.start || def.start, to = p.end || def.end;
+  const def = defaultDates(id, todayJakarta(), days)!;
+  return { from: p.start || def.start, to: p.end || def.end };
+}
+
+/** Unduh Laporan Serah Terima SJ By Shipment Date (CSV). null bila laporan kosong. */
+async function downloadSjReport(ctx: RunContext, dirId: "jasper.sj" | "jasper.sj-update", from: string, to: string) {
+  const js = jasperOf(ctx);
   await js.openReport(SJ_REPORT);
   await js.setDate("StartDate", from, "Start Date");
   await js.setDate("EndDate", to, "End Date");
   await js.waitForLoading();
   await js.pickOrganization(["Organization", "AD_Org_ID"]);
-  ctx.info(`Start Date ${from} · End Date ${to}`);
-  if (!(await js.applyAndWait())) return { status: "skipped", summary: "Laporan kosong — data lama tetap." };
-  const file = finalize(ctx, await js.exportAs(jobDir("jasper.sj"), "CSV", /\.csv$/i), "Serah Terima SJ");
-
-  const buf = fs.readFileSync(file);
-  const parsed = inspectSj(buf.toString("utf8"));
-  const summary = `${num(parsed.stats.records)} baris · ${num(parsed.stats.uniqueSj)} SJ unik`;
-  ctx.info(`Baca: ${summary} · ${num(parsed.stats.withReceiver)} ber-Receiver · ${parsed.bad.length} baris bermasalah`);
-  if (!parsed.rows.length) return { status: "skipped", files: [file], summary: "Tidak ada baris data — data lama tetap." };
-  const sha = await shouldPush(ctx, "jasper.sj", p, buf, file, today.slice(0, 7));
-  if (!sha) return { files: [file], rows: parsed.stats.records, summary, pushed: false };
-  const { candidates, result: r } = await pushSj(ctx, file, parsed);
-  markPushed("jasper.sj", sha);
-  if (!r) {
-    ctx.info("AR Workspace: tidak ada SJ/… maupun penerimaan yang bisa dikirim.");
-    return { files: [file], rows: parsed.stats.records, summary: `${summary} · 0 dikirim`, pushed: true };
-  }
-  ctx.log("ok", `AR Workspace: ${num(r.docs)} SJ dipantau diperbarui (${num(r.docsNew)} baru) · ${num(candidates)} penerimaan dikirim → ` +
-    `${num(r.saved)} Receive Date baru · ${num(r.existing)} sudah ada · ${num(r.notRecognized)} Receiver tidak diakui · ${num(r.badDate)} tanggal tidak valid`);
-  return { files: [file], rows: parsed.stats.records, summary: `${summary} · ${num(r.docsNew)} SJ baru · ${num(r.saved)} Receive Date baru`, pushed: true };
+  ctx.info(`Serah Terima SJ · Start Date ${from} · End Date ${to}`);
+  if (!(await js.applyAndWait())) return null;
+  return finalize(ctx, await js.exportAs(jobDir(dirId), "CSV", /\.csv$/i), "Serah Terima SJ");
 }
 
-export async function invoiceByDateJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
+/**
+ * Unduh Invoice and Payment Date Comparison (Excel). `status` = teks pilihan Status; "semua" = pilih opsi yang
+ * mengandung "Semua"/"All" bila ada (untuk Marketing Group: invoice lunas juga dihitung), selain itu biarkan bawaan.
+ */
+async function downloadInvoiceByDate(ctx: RunContext, dirId: "jasper.invoice-by-date" | "jasper.sj-update", start: string, end: string, status: string) {
   const js = jasperOf(ctx);
-  const today = todayJakarta();
-  const def = defaultDates("jasper.invoice-by-date", today)!;
-  const start = p.start || def.start, end = p.end || def.end;
   await js.openReport("Invoice and Payment Date Comparison ( Based On Invoice Date)", "Invoice and Payment Date Comparison");
   await js.pickOrganization(["AD_Org_ID", "Organization"]);
   await js.setDate("whenStart", start, "Start Date");
   await js.setDate("whenEnd", end, "End Date");
   await js.waitForLoading();
-  await js.pickOption("status", "Piutang", "Status");
-  ctx.info(`Tanggal invoice ${start} s/d ${end} · Piutang`);
-  if (!(await js.applyAndWait())) return { status: "skipped", summary: "Laporan kosong." };
-  const file = finalize(ctx, await js.exportAs(jobDir("jasper.invoice-by-date"), "Excel", /\.xlsx?$/i), "Invoice by Date");
+  let picked = status;
+  if (status === "semua") {
+    const o = await js.optionTexts("status");
+    const all = o.options.find((t) => /^(semua|all)\b/i.test(t));
+    if (all) { await js.pickOption("status", all, "Status"); picked = all; } else picked = o.current || "bawaan";
+    ctx.info(`Status tersedia: ${o.options.join(", ") || "-"} → dipakai: ${picked}`);
+  } else await js.pickOption("status", status, "Status");
+  ctx.info(`Invoice by Date · tanggal invoice ${start} s/d ${end} · ${picked}`);
+  if (!(await js.applyAndWait())) return null;
+  return finalize(ctx, await js.exportAs(jobDir(dirId), "Excel", /\.xlsx?$/i), "Invoice by Date");
+}
+
+/** Serah Terima SJ (Fase 87): UNDUH saja — kirim ke AR Workspace lewat job "Pengkinian Data Surat Jalan". */
+export async function sjJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
+  const { from, to } = sjRange("jasper.sj", p);
+  const file = await downloadSjReport(ctx, "jasper.sj", from, to);
+  if (!file) return { status: "skipped", summary: "Laporan kosong." };
+  const parsed = inspectSj(fs.readFileSync(file, "utf8"));
+  const summary = `${num(parsed.stats.records)} baris · ${num(parsed.stats.uniqueSj)} SJ unik`;
+  ctx.info(`Baca: ${summary} · ${num(parsed.stats.withReceiver)} ber-Receiver · ${parsed.bad.length} baris bermasalah`);
+  return { files: [file], rows: parsed.stats.records, summary, pushed: false };
+}
+
+/**
+ * Pengkinian Data Surat Jalan (Fase 87): unduh Serah Terima SJ + Invoice by Date (rentang sama) → gabung LOKAL
+ * (Marketing Group per Business Partner = BP Name, dari invoice terbaru) → GANTI TOTAL data SJ di AR Workspace.
+ * Tidak membaca data apa pun dari Workspace; data invoice/penjualan tidak dikirim.
+ */
+export async function sjUpdateJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
+  const { from, to } = sjRange("jasper.sj-update", p);
+  const sjFile = await downloadSjReport(ctx, "jasper.sj-update", from, to);
+  if (!sjFile) return { status: "skipped", summary: "Laporan Serah Terima kosong — data di AR Workspace tidak diubah." };
+  const parsed = inspectSj(fs.readFileSync(sjFile, "utf8"));
+  ctx.info(`Baca Serah Terima: ${num(parsed.stats.records)} baris · ${num(parsed.stats.uniqueSj)} nomor unik · ${parsed.bad.length} baris bermasalah`);
+
+  const invFile = await downloadInvoiceByDate(ctx, "jasper.sj-update", from, to, "semua");
+  const erpRows = invFile ? inspectErp(readSheets(fs.readFileSync(invFile))).rows : [];
+  if (!invFile) ctx.warn("Invoice by Date kosong — Marketing Group tidak terisi.");
+  const map = marketingMap(erpRows);
+  const docs = withMarketing(docRows(parsed), map);
+  const receipts = receiptRows(parsed);
+  const st = marketingStats(docs);
+  ctx.info(`Gabung lokal: ${num(docs.length)} SJ · ${num(receipts.length)} baris penerimaan · ${num(map.size)} BP ber-Marketing Group di invoice · ` +
+    `${num(st.matched)} SJ ber-Marketing Group (${st.pct.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%)`);
+  ctx.info(`Marketing Group: ${st.groups.slice(0, 8).map((g) => `${g.group} ${num(g.n)}`).join(" · ") || "-"}`);
+  const files = [sjFile, ...(invFile ? [invFile] : [])];
+  const summary = `${num(docs.length)} SJ · ${num(st.matched)} ber-Marketing Group`;
+  if (!docs.length) return { status: "skipped", files, summary: "Tidak ada SJ/… di laporan — data di AR Workspace tidak diubah." };
+  if (ctx.opts.dryRun) { ctx.info("Uji coba: tidak dikirim."); return { files, rows: docs.length, summary, pushed: false }; }
+  if (!p.push) { ctx.info("Kirim ke AR Workspace nonaktif untuk job ini."); return { files, rows: docs.length, summary, pushed: false }; }
+
+  const r = await pushSjReplace(ctx, sjFile, docs, receipts);
+  ctx.log("ok", `AR Workspace: data SJ DIGANTI — ${num(r.docs)} SJ · ${num(r.saved)} Receive Date · ` +
+    `${num(r.notRecognized)} baris Receiver tidak diakui · ${num(r.badDate)} tanggal tidak valid (${r.parts} potongan)`);
+  return { files, rows: docs.length, summary: `${summary} · ${num(r.saved)} Receive Date · data diganti`, pushed: true };
+}
+
+export async function invoiceByDateJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
+  const today = todayJakarta();
+  const def = defaultDates("jasper.invoice-by-date", today)!;
+  const start = p.start || def.start, end = p.end || def.end;
+  const file = await downloadInvoiceByDate(ctx, "jasper.invoice-by-date", start, end, "Piutang");
+  if (!file) return { status: "skipped", summary: "Laporan kosong." };
 
   const buf = fs.readFileSync(file);
   const sheets = readSheets(buf);

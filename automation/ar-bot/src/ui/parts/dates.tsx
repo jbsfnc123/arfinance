@@ -10,7 +10,7 @@ export type Dates = { start: string; end: string };
 
 /** Nilai awal kolom tanggal job (null = job tanpa kolom tanggal). */
 export const initialDates = (id: JobId): Dates | null =>
-  id === "jasper.sj" || id === "jasper.aging" || id === "edi.upload-faktur" ? null : defaultDates(id, todayLocal());
+  id === "jasper.sj" || id === "jasper.sj-update" || id === "jasper.aging" || id === "edi.upload-faktur" ? null : defaultDates(id, todayLocal());
 
 /** Parameter tanggal untuk RunRequest (Kwitansi memakai bulan: tanggal 1). */
 export const dateParams = (id: JobId, d: Dates | null) =>

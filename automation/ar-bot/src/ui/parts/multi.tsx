@@ -90,7 +90,7 @@ export function MultiRunCard() {
                 {j.confirm && <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">aksi tulis</span>}
               </label>
               {info && <span className="self-center text-xs text-fg-2">{info} <span className="opacity-70">(atur di halaman menunya)</span></span>}
-              {on && id === "jasper.sj" && <span className="self-center text-xs text-fg-2">{p.days ?? 7} hari terakhir</span>}
+              {on && (id === "jasper.sj" || id === "jasper.sj-update") && <span className="self-center text-xs text-fg-2">{p.days ?? 60} hari terakhir</span>}
               {on && <JobDates id={id} value={dates[id] ?? null} compact onChange={(d) => setDates((x) => ({ ...x, [id]: d }))} />}
               <span className="ml-auto flex gap-0.5 self-center">
                 <button type="button" className="rounded px-1.5 text-fg-2 hover:bg-fg/8 hover:text-fg disabled:opacity-30" disabled={i === 0}

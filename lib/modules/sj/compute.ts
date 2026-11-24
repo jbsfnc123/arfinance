@@ -9,13 +9,13 @@
 //   upload DAN saat menampilkan: penerimaan oleh Receiver yang kemudian dinonaktifkan dihitung Belum diterima.
 // - Tanggal awal = Tanggal SJ (laporan). Durasi = Receive Date − Tanggal SJ (hari kalender); negatif / tanggal masa depan →
 //   masalah data, keluar dari rata-rata (tidak dijadikan 0). Umur belum diterima = hari ini (Asia/Jakarta) − Tanggal SJ.
-// - Filter: periode Tanggal SJ + Area + Business Partner (Fase 86); BP/Area yang tidak dicentang di Setting tidak tampil.
+// - Filter: periode Tanggal SJ + Area + Business Partner (Fase 86) + Marketing Group (Fase 87); BP/Area yang tidak dicentang di Setting tidak tampil.
 // - Dashboard (Fase 86): ringkasan per Business Partner per bulan Tanggal SJ (SJ / Sudah / Belum).
 
 /** Dokumen SJ dari laporan (pack_sj.docs). */
 export type SjDocRec = {
   sj_key: string; sj_no: string; tanggal_sj: string | null; area: string | null; business_partner: string | null;
-  locator: string | null; send_date: string | null;
+  locator: string | null; send_date: string | null; marketing_group?: string | null;
 };
 export type SjReceipt = { sj_key: string; sj_no: string; receive_date: string; receiver: string; file_name: string | null; recorded_at: string };
 export type SjReceiver = { id: number; name: string; active: boolean };
@@ -31,7 +31,7 @@ export const FLAG = {
 
 export type SjRow = {
   sj_key: string; sj_no: string; tanggal_sj: string | null; send_date: string | null;
-  business_partner: string | null; area: string | null; locator: string | null;
+  business_partner: string | null; area: string | null; locator: string | null; marketing_group: string | null;
   status: typeof STATUS_DONE | typeof STATUS_OPEN;
   receiver: string | null; receive_date: string | null;
   durasi: number | null; umur: number | null; flags: string[]; flag_text: string; perlu_cek: boolean;
@@ -68,7 +68,7 @@ export function buildRows(
     } else if (!ok && tgl && !future(tgl)) umur = daysBetween(tgl, today);
     return {
       sj_key: a.sj_key, sj_no: a.sj_no || rc?.sj_no || a.sj_key, tanggal_sj: tgl, send_date: a.send_date,
-      business_partner: a.business_partner, area: a.area, locator: a.locator,
+      business_partner: a.business_partner, area: a.area, locator: a.locator, marketing_group: a.marketing_group ?? null,
       status: ok ? STATUS_DONE : STATUS_OPEN, receiver: ok ? names.get(normName(rc!.receiver)) ?? rc!.receiver : null, receive_date: ok ? rc!.receive_date : null,
       durasi, umur, flags, flag_text: flags.join(", "), perlu_cek: flags.length > 0,
     };
@@ -80,6 +80,9 @@ export const NO_BP = "(tanpa Business Partner)";
 export const NO_AREA = "(tanpa Area)";
 export const bpOf = (r: { business_partner: string | null }) => r.business_partner?.trim() || NO_BP;
 export const areaOf = (r: { area: string | null }) => r.area?.trim() || NO_AREA;
+/** Marketing Group (Fase 87, dari Invoice by Date lewat AR Bot / upload manual). */
+export const NO_MG = "(tanpa Marketing Group)";
+export const mgOf = (r: { marketing_group: string | null }) => r.marketing_group?.trim() || NO_MG;
 export type SjHidden = { bp: ReadonlySet<string>; area: ReadonlySet<string> };
 export function hiddenSets(list: readonly { kind: string; value: string }[] | undefined): SjHidden {
   const bp = new Set<string>(), area = new Set<string>();
@@ -92,15 +95,15 @@ export function applyVisibility(rows: readonly SjRow[], hidden: SjHidden): SjRow
 }
 
 // ── Filter bersama (Dashboard & Kertas Kerja) ─────────────────────────
-export type SjFilter = { from: string; to: string; area: string; bp: string };
+export type SjFilter = { from: string; to: string; area: string; bp: string; mg: string };
 const inPeriod = (r: SjRow, f: SjFilter) =>
   (!f.from || (r.tanggal_sj !== null && r.tanggal_sj >= f.from)) && (!f.to || (r.tanggal_sj !== null && r.tanggal_sj <= f.to));
 export function filterRows(rows: readonly SjRow[], f: SjFilter): SjRow[] {
-  return rows.filter((r) => inPeriod(r, f) && (!f.area || areaOf(r) === f.area) && (!f.bp || bpOf(r) === f.bp));
+  return rows.filter((r) => inPeriod(r, f) && (!f.area || areaOf(r) === f.area) && (!f.bp || bpOf(r) === f.bp) && (!f.mg || mgOf(r) === f.mg));
 }
 
 /**
- * Opsi filter dinamis: Area dihitung dari baris yang lolos periode + BP terpilih, dan sebaliknya (dengan jumlah SJ).
+ * Opsi filter dinamis: tiap filter (Area / BP / Marketing Group) dihitung dari baris yang lolos periode + dua filter lainnya.
  * Pilihan aktif tetap ada walau jumlahnya 0 agar bisa dikosongkan.
  */
 export function filterChoices(rows: readonly SjRow[], f: SjFilter) {
@@ -111,15 +114,16 @@ export function filterChoices(rows: readonly SjRow[], f: SjFilter) {
     return [...m].sort((a, b) => a[0].localeCompare(b[0], "id")).map(([value, n]) => ({ value, n }));
   };
   return {
-    area: count(areaOf, (r) => !f.bp || bpOf(r) === f.bp, f.area),
-    bp: count(bpOf, (r) => !f.area || areaOf(r) === f.area, f.bp),
+    area: count(areaOf, (r) => (!f.bp || bpOf(r) === f.bp) && (!f.mg || mgOf(r) === f.mg), f.area),
+    bp: count(bpOf, (r) => (!f.area || areaOf(r) === f.area) && (!f.mg || mgOf(r) === f.mg), f.bp),
+    mg: count(mgOf, (r) => (!f.area || areaOf(r) === f.area) && (!f.bp || bpOf(r) === f.bp), f.mg),
   };
 }
 
 // ── Dashboard (Fase 86): ringkasan per Business Partner per bulan Tanggal SJ ──────────────────────
 export const NO_MONTH = "(tanpa tanggal)";
 export type BpMonthCell = { n: number; done: number; open: number };
-export type BpMonthRow = { bp: string; total: number; done: number; open: number; pct: number; months: Record<string, BpMonthCell> };
+export type BpMonthRow = { bp: string; marketing_group: string; total: number; done: number; open: number; pct: number; months: Record<string, BpMonthCell> };
 
 /** Satu baris per BP; kolom per bulan (YYYY-MM, urut naik; SJ tanpa Tanggal SJ → "(tanpa tanggal)" di akhir). */
 export function bpMonthSummary(rows: readonly SjRow[]): { months: string[]; rows: BpMonthRow[]; total: BpMonthCell } {
@@ -129,7 +133,7 @@ export function bpMonthSummary(rows: readonly SjRow[]): { months: string[]; rows
   for (const r of rows) {
     const bp = bpOf(r), m = r.tanggal_sj ? r.tanggal_sj.slice(0, 7) : NO_MONTH;
     months.add(m);
-    const g = by.get(bp) ?? { bp, total: 0, done: 0, open: 0, pct: 0, months: {} };
+    const g = by.get(bp) ?? { bp, marketing_group: mgOf(r), total: 0, done: 0, open: 0, pct: 0, months: {} };
     const c = (g.months[m] ??= { n: 0, done: 0, open: 0 });
     const done = r.status === STATUS_DONE ? 1 : 0;
     c.n++; c.done += done; c.open += 1 - done;

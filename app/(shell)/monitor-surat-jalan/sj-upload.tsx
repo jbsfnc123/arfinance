@@ -6,8 +6,11 @@ import { Modal } from "@/components/modal";
 import { TableBox } from "@/components/table-box";
 import { useToast } from "@/components/toast";
 import { btnGhost, btnPrimary, card, emptyTd, inputCls, td, th } from "@/components/ui";
-import { fmtDate, fmtTimestamp } from "@/lib/format";
-import { chunkReport, docRows, parseSjCsv, receiptCandidates, SJ_HEADERS, sumReport, type SjCandidate, type SjDoc, type SjParseResult, type SjReportResult } from "@/lib/modules/sj/parse";
+import { fmtTimestamp } from "@/lib/format";
+import { chunkReport, docRows, parseSjCsv, receiptRows, SJ_HEADERS, type SjParseResult } from "@/lib/modules/sj/parse";
+import { marketingMap, marketingStats, withMarketing } from "@/lib/modules/sj/marketing";
+import { parseErp } from "@/lib/uploads/parse";
+import { readAllSheets } from "@/lib/xlsx-client";
 import { activeSet, normName, receiverImpact, type SjReceiver } from "@/lib/modules/sj/compute";
 import type { SjState } from "./use-sj";
 import { VisibilitySettings } from "./sj-visibility";
@@ -16,32 +19,28 @@ const MAX_ROWS = 300000; // dikirim per potongan (batas server 60.000 per panggi
 const REQUIRED = new Set(["SJ No.", "Tanggal SJ", "Receive Date", "Receiver"]);
 const USED = new Set(["Area", "Business Partner", "Locator", "Send Date"]); // disimpan per SJ bila ada
 const n = (v: number) => v.toLocaleString("id-ID");
+const pct = (v: number) => `${v.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`;
 
 type Parsed = SjParseResult & { file: File };
-type Result = SjReportResult & { file: string };
+type Invoice = { file: File; map: Map<string, string>; invoices: number };
+type Result = { docs: number; sent: number; saved: number; notRecognized: number; badDate: number; file: string; mg: number };
 
-/** Pratinjau (perkiraan; hasil final dari server): SJ baru vs sudah dipantau, penerimaan baru vs sudah tersimpan. Tanpa Aging. */
-export function previewCandidates(docs: readonly SjDoc[], cands: readonly SjCandidate[], docKeys: ReadonlySet<string>, receiptKeys: ReadonlySet<string>) {
-  const toSave = cands.filter((c) => !receiptKeys.has(c.sj_key));
-  const docsNew = docs.filter((d) => !docKeys.has(d.sj_key)).length;
-  return { docs: docs.length, docsNew, existing: cands.length - toSave.length, toSave };
-}
-
-// Upload & Setting (Fase 85): Laporan Serah Terima Surat Jalan By Shipment Date (CSV) → parse di browser → dokumen per SJ
-// (SJ/…) + kandidat penerimaan (per SJ: baris pertama dengan Receiver diakui & Receive Date valid) → satu RPC atomik
-// sj_report_apply. Server menyaring ulang (Receiver aktif, tanggal) dan tidak menimpa Receive Date yang sudah ada.
-// Tidak bergantung pada Aging. Kontrol tulis hanya untuk Controller/Super Admin (server tetap menolak).
+// Upload & Setting (Fase 87): Laporan Serah Terima SJ By Shipment Date (CSV, wajib) + Invoice by Date (Excel, opsional →
+// Marketing Group per Business Partner = BP Name) → digabung di browser (fungsi yang sama dengan AR Bot) → GANTI TOTAL
+// data SJ lewat sj_report_replace per potongan. Receiver aktif & tanggal disaring server. Data invoice tidak dikirim.
+// Kontrol tulis hanya untuk Controller/Super Admin (server tetap menolak).
 export function SjUpload({ s }: { s: SjState }) {
   const supabase = useMemo(() => createClient(), []);
   const toast = useToast();
   const [parsed, setParsed] = useState<Parsed | null>(null);
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [parseErr, setParseErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<"parse" | "import" | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [importErr, setImportErr] = useState<string | null>(null);
   const [inputKey, setInputKey] = useState(0);
   const can = s.canManage;
-  const ready = !!s.ds.data; // sebelum data termuat: hak akses, SJ tersimpan & daftar Receiver belum diketahui
+  const ready = !!s.ds.data; // sebelum data termuat: hak akses & daftar Receiver belum diketahui
 
   async function pick(file: File | undefined) {
     setParsed(null); setParseErr(null); setResult(null); setImportErr(null);
@@ -50,37 +49,48 @@ export function SjUpload({ s }: { s: SjState }) {
     try {
       const p = parseSjCsv(await file.text());
       if (!p.rows.length) throw new Error("Tidak ada baris data yang bisa dibaca.");
-      if (p.rows.length > MAX_ROWS) throw new Error(`File berisi ${n(p.rows.length)} baris; maksimal ${n(MAX_ROWS)} per upload. Pecah file per periode lalu upload bergantian.`);
+      if (p.rows.length > MAX_ROWS) throw new Error(`File berisi ${n(p.rows.length)} baris; maksimal ${n(MAX_ROWS)} per upload.`);
       setParsed({ ...p, file });
     } catch (e) {
       setParseErr((e as Error).message);
     } finally { setBusy(null); }
   }
 
-  const cands = useMemo(() => (parsed && ready ? receiptCandidates(parsed, s.recognized) : null), [parsed, ready, s.recognized]);
-  const docs = useMemo(() => (parsed ? docRows(parsed) : null), [parsed]);
-  const prev = useMemo(() => (cands && docs ? previewCandidates(docs, cands, s.docKeys, s.receiptKeys) : null), [cands, docs, s.docKeys, s.receiptKeys]);
+  async function pickInvoice(file: File | undefined) {
+    setInvoice(null); setParseErr(null); setResult(null);
+    if (!file) return;
+    setBusy("parse");
+    try {
+      const e = parseErp(await readAllSheets(file));
+      setInvoice({ file, map: marketingMap(e.rows), invoices: e.invoices });
+    } catch (e) {
+      setParseErr(`File Invoice by Date: ${(e as Error).message}`);
+    } finally { setBusy(null); }
+  }
+
+  const docs = useMemo(() => (parsed ? withMarketing(docRows(parsed), invoice?.map ?? new Map()) : null), [parsed, invoice]);
+  const receipts = useMemo(() => (parsed ? receiptRows(parsed) : null), [parsed]);
+  const stats = useMemo(() => (docs ? marketingStats(docs) : null), [docs]);
 
   async function runImport() {
-    if (!parsed || !can || !prev || !docs) return;
+    if (!parsed || !can || !docs || !receipts || !stats) return;
     setBusy("import"); setImportErr(null);
     try {
-      // Semua SJ di file (daftar dipantau) + penerimaan yang belum tersimpan; server tetap memeriksa ulang.
-      const rows = prev.toSave.map(({ sj_key, sj_no, receive_date, receiver }) => ({ sj_key, sj_no, receive_date, receiver }));
-      // Per potongan agar tiap panggilan cepat; upsert & insert-only → mengulang aman bila satu potongan gagal.
-      const parts = chunkReport(docs, rows);
-      const out: SjReportResult[] = [];
+      // Potongan 1 menghapus data SJ lama di server; potongan berikutnya menambah. Mengulang dari awal selalu aman.
+      const parts = chunkReport(docs, receipts);
+      const out = { docs: 0, sent: 0, saved: 0, notRecognized: 0, badDate: 0 };
       for (const [i, part] of parts.entries()) {
-        const name = parts.length > 1 ? `${parsed.file.name} (${i + 1}/${parts.length})` : parsed.file.name;
-        const { data, error } = await supabase.rpc("sj_report_apply" as never, { p_file_name: name, p_docs: part.docs, p_receipts: part.receipts } as never);
+        const { data, error } = await supabase.rpc("sj_report_replace" as never, {
+          p_file_name: parsed.file.name, p_part: i + 1, p_parts: parts.length, p_docs: part.docs, p_receipts: part.receipts,
+        } as never);
         if (error) throw new Error(parts.length > 1 ? `potongan ${i + 1}/${parts.length}: ${error.message}` : error.message);
-        out.push(data as SjReportResult);
+        const r = data as typeof out;
+        for (const k of Object.keys(out) as (keyof typeof out)[]) out[k] += Number(r[k] ?? 0);
       }
-      const r = sumReport(out);
-      setResult({ ...r, file: parsed.file.name });
-      setParsed(null); setInputKey((k) => k + 1);
+      setResult({ ...out, file: parsed.file.name, mg: stats.matched });
+      setParsed(null); setInvoice(null); setInputKey((k) => k + 1);
       await s.ds.reload();
-      toast(`Upload selesai: ${n(r.docs)} SJ (${n(r.docsNew)} baru) · ${n(r.saved)} Receive Date baru.`, "success", 8000);
+      toast(`Data SJ diganti: ${n(out.docs)} SJ · ${n(out.saved)} Receive Date.`, "success", 8000);
     } catch (e) {
       setImportErr((e as Error).message);
     } finally { setBusy(null); }
@@ -105,13 +115,22 @@ export function SjUpload({ s }: { s: SjState }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className={`${card} space-y-3 p-4`}>
           <h2 className="font-medium">Upload Laporan Serah Terima Surat Jalan</h2>
+          <p className="text-[13px] text-fg-2">
+            Data SJ di AR Workspace <b>diganti seluruhnya</b> dengan isi file ini. Biasanya dikerjakan otomatis oleh AR Bot (Pengkinian Data Surat Jalan).
+          </p>
           <label className="block text-sm">
-            <span className="sr-only">Pilih file CSV</span>
-            <input key={inputKey} type="file" accept=".csv,text/csv" disabled={!can || busy !== null}
-              onChange={(e) => void pick(e.target.files?.[0])} className={inputCls} />
+            <span className="text-xs text-fg-2">Serah Terima SJ By Shipment Date (CSV, wajib)</span>
+            <input key={`sj-${inputKey}`} type="file" accept=".csv,text/csv" aria-label="File Serah Terima SJ" disabled={!can || busy !== null}
+              onChange={(e) => void pick(e.target.files?.[0])} className={`${inputCls} mt-1`} />
+          </label>
+          <label className="block text-sm">
+            <span className="text-xs text-fg-2">Invoice by Date (Excel, opsional — untuk kolom Marketing Group)</span>
+            <input key={`inv-${inputKey}`} type="file" accept=".xls,.xlsx" aria-label="File Invoice by Date" disabled={!can || busy !== null}
+              onChange={(e) => void pickInvoice(e.target.files?.[0])} className={`${inputCls} mt-1`} />
           </label>
           {busy === "parse" && <p className="text-sm text-accent" role="status">Membaca & memvalidasi file…</p>}
           {parseErr && <p className="text-sm text-danger" role="alert">{parseErr}</p>}
+          {invoice && <p className="text-[13px]">Invoice by Date: {n(invoice.invoices)} invoice · {n(invoice.map.size)} BP ber-Marketing Group.</p>}
         </section>
 
         <ReceiverSettings s={s} />
@@ -119,31 +138,33 @@ export function SjUpload({ s }: { s: SjState }) {
 
       <VisibilitySettings s={s} />
 
-      {parsed && (
+      {parsed && docs && receipts && stats && (
         <section className={`${card} space-y-3 p-4`} aria-label="Pratinjau upload">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-medium">Pratinjau: {parsed.file.name}</h2>
             <span className="text-xs text-fg-2">{(parsed.file.size / 1024 / 1024).toLocaleString("id-ID", { maximumFractionDigits: 1 })} MB</span>
             <div className="ml-auto flex gap-2">
-              <button type="button" className={btnGhost} disabled={busy !== null} onClick={() => { setParsed(null); setInputKey((k) => k + 1); }}>Batal</button>
-              <button type="button" className={btnPrimary} disabled={!ready || !can || busy !== null || !(prev?.docs || prev?.toSave.length)} onClick={() => void runImport()}>
-                {busy === "import" ? "Menyimpan…" : `Simpan ${n(prev?.docs ?? 0)} SJ · ${n(prev?.toSave.length ?? 0)} Receive Date`}
+              <button type="button" className={btnGhost} disabled={busy !== null} onClick={() => { setParsed(null); setInvoice(null); setInputKey((k) => k + 1); }}>Batal</button>
+              <button type="button" className={btnPrimary} disabled={!ready || !can || busy !== null || !docs.length} onClick={() => void runImport()}>
+                {busy === "import" ? "Menyimpan…" : `Ganti data SJ (${n(docs.length)} SJ)`}
               </button>
             </div>
           </div>
+          <p className="rounded-lg bg-warning/10 px-3 py-2 text-[13px]" role="note">
+            Data SJ lama ({n(s.ds.data?.docs.length ?? 0)} SJ · {n(s.ds.data?.receipts.length ?? 0)} Receive Date) akan <b>dihapus seluruhnya</b> dan diganti isi file ini.
+            {!invoice && " File Invoice by Date belum dipilih — kolom Marketing Group akan kosong."}
+          </p>
           {importErr && (
             <p className="rounded-lg bg-danger/10 px-3 py-2 text-[13px]" role="alert">
-              <b className="text-danger">Upload gagal:</b> {importErr} — tekan Simpan lagi untuk mengulang (aman: data yang sudah tersimpan tidak digandakan atau ditimpa).
+              <b className="text-danger">Upload gagal:</b> {importErr} — tekan tombol lagi untuk mengulang dari awal.
             </p>
           )}
           <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
             <Stat k="Baris data dibaca" v={n(parsed.stats.records)} />
             <Stat k="Nomor unik di file" v={n(parsed.stats.uniqueSj)} />
-            <Stat k="SJ dipantau (SJ/…)" v={prev ? n(prev.docs) : "…"} />
-            <Stat k="· SJ baru" v={prev ? n(prev.docsNew) : "…"} />
-            <Stat k="SJ dengan penerimaan diakui" v={cands ? n(cands.length) : "…"} />
-            <Stat k="· sudah punya Receive Date (dilewati)" v={prev ? n(prev.existing) : "…"} />
-            <Stat k="Receive Date akan disimpan" v={prev ? n(prev.toSave.length) : "…"} />
+            <Stat k="SJ dipantau (SJ/…)" v={n(docs.length)} />
+            <Stat k="Baris penerimaan (Receiver & tanggal)" v={n(receipts.length)} />
+            <Stat k="SJ ber-Marketing Group" v={`${n(stats.matched)} (${pct(stats.pct)})`} />
             <Stat k="Baris bermasalah (No. SJ kosong / kolom)" v={n(parsed.bad.length)} />
             <Stat k="Baris dengan masalah tanggal" v={n(parsed.stats.dateIssues)} />
           </dl>
@@ -182,17 +203,12 @@ export function SjUpload({ s }: { s: SjState }) {
                 ) : <p className="mt-1 text-[13px] text-fg-2">Tidak ada.</p>}
               </div>
               <div>
-                <h3 className="text-sm font-medium">Contoh yang akan disimpan</h3>
-                {prev?.toSave.length ? (
-                  <TableBox bare fill={false} maxHeight="max-h-[25vh]" className="mt-1">
-                    <table className="w-full text-[13px]">
-                      <thead><tr className="border-b border-line"><th className={th}>Baris</th><th className={th}>SJ No.</th><th className={th}>Receive Date</th><th className={th}>Receiver</th></tr></thead>
-                      <tbody>{prev.toSave.slice(0, 8).map((c) => (
-                        <tr key={c.sj_key} className="border-b border-line/50"><td className={td}>{c.line}</td><td className={td}>{c.sj_no}</td><td className={td}>{fmtDate(c.receive_date)}</td><td className={td}>{c.receiver}</td></tr>
-                      ))}</tbody>
-                    </table>
-                  </TableBox>
-                ) : <p className="mt-1 text-[13px] text-fg-2">{prev ? "Tidak ada SJ baru yang bisa diisi dari file ini." : "Menunggu data…"}</p>}
+                <h3 className="text-sm font-medium">Marketing Group</h3>
+                {stats.groups.length ? (
+                  <ul className="mt-1 text-[13px]">
+                    {stats.groups.slice(0, 10).map((g) => <li key={g.group}>{g.group} — {n(g.n)} SJ</li>)}
+                  </ul>
+                ) : <p className="mt-1 text-[13px] text-fg-2">Tidak ada (pilih file Invoice by Date).</p>}
               </div>
             </div>
           </div>
@@ -203,11 +219,10 @@ export function SjUpload({ s }: { s: SjState }) {
         <section className={`${card} p-4`} role="status" aria-label="Hasil upload">
           <h2 className="font-medium">Hasil upload (dikonfirmasi server): {result.file}</h2>
           <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
-            <Stat k="SJ diperbarui" v={n(result.docs)} />
-            <Stat k="· SJ baru" v={n(result.docsNew)} />
-            <Stat k="Penerimaan dikirim" v={n(result.sent)} />
+            <Stat k="SJ tersimpan (data diganti)" v={n(result.docs)} />
+            <Stat k="SJ ber-Marketing Group" v={n(result.mg)} />
+            <Stat k="Baris penerimaan dikirim" v={n(result.sent)} />
             <Stat k="Receive Date disimpan" v={n(result.saved)} />
-            <Stat k="Sudah ada, tidak ditimpa" v={n(result.existing)} />
             <Stat k="Receiver tidak diakui" v={n(result.notRecognized)} />
             <Stat k="Tanggal tidak valid" v={n(result.badDate)} />
           </dl>

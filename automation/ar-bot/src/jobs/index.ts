@@ -1,7 +1,7 @@
 // Registri job: id → fungsi. Job EDI Mitra 10 ada di jobs/edi.
 import type { JobId, JobParams } from "~/shared/types";
 import type { RunContext } from "~/runner/ctx";
-import { agingJob, invoiceByDateJob, sendInvoiceJob, sjJob, type JobOut } from "./jasper/jobs";
+import { agingJob, invoiceByDateJob, sendInvoiceJob, sjJob, sjUpdateJob, type JobOut } from "./jasper/jobs";
 import { ediGrJob, ediKwitansiJob, ediUploadFakturJob } from "./edi/jobs";
 import { ediInvoiceInboxJob } from "./edi/inbox";
 import { ediOutboxInvoiceJob } from "./edi/outbox";
@@ -12,6 +12,7 @@ export const JOB_FNS: Record<JobId, JobFn> = {
   "jasper.aging": agingJob,
   "jasper.send-invoice": sendInvoiceJob,
   "jasper.sj": sjJob,
+  "jasper.sj-update": sjUpdateJob,
   "jasper.invoice-by-date": invoiceByDateJob,
   "edi.gr": ediGrJob,
   "edi.kwitansi": ediKwitansiJob,

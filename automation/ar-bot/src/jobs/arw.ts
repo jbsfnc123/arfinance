@@ -9,8 +9,9 @@ import type { Database } from "@/lib/database.types";
 import { detectKind, parseAging, parseErp, type Sheet } from "@/lib/uploads/parse";
 import { runUpload } from "@/lib/uploads/run";
 import { parseMasterCsv, type ScheduleRow } from "@/lib/modules/tukar/schedule";
-import { chunkReport, docRows, parseSjCsv, receiptCandidates, sumReport, type SjReportResult } from "@/lib/modules/sj/parse";
-import { activeSet } from "@/lib/modules/sj/compute";
+import { chunkReport, parseSjCsv, type SjReceiptRow } from "@/lib/modules/sj/parse";
+import type { SjDocMg } from "@/lib/modules/sj/marketing";
+
 import { parseGrCsv, parseKwCsv } from "@/lib/modules/m10/parse";
 import { todayJakarta } from "@/lib/parsers/date";
 import { loadState, setLastPush } from "~/core/store";
@@ -95,28 +96,23 @@ export const pushSchedule = (ctx: RunContext, file: string, rows: ScheduleRow[])
 });
 
 /**
- * Fase 85 — Laporan Serah Terima By Shipment Date: semua SJ/… di file masuk daftar Monitor Surat Jalan (sj_docs) +
- * penerimaan (per SJ baris pertama dengan Receiver aktif & Receive Date valid) lewat satu RPC atomik sj_report_apply.
- * Tidak bergantung pada Aging.
+ * Fase 87 — Pengkinian Data Surat Jalan: GANTI TOTAL data SJ di AR Workspace (sj_report_replace). Potongan 1 mengosongkan
+ * data lama; Receiver aktif & tanggal disaring server — bot tidak membaca data apa pun dari Workspace.
  */
-export const pushSj = (ctx: RunContext, file: string, parsed: ReturnType<typeof inspectSj>) => withBot(ctx, async (c) => {
-  const { data: receivers, error: e1 } = await c.from("sj_receivers" as never).select("id, name, active");
-  if (e1) throw new Error(`daftar Receiver: ${e1.message}`);
-  const recognized = activeSet((receivers ?? []) as { id: number; name: string; active: boolean }[]);
-  if (!recognized.size) throw new Error("daftar Receiver aktif kosong (cek akses menu Monitor Surat Jalan untuk Bot ERP)");
-  const rows = receiptCandidates(parsed, recognized).map(({ sj_key, sj_no, receive_date, receiver }) => ({ sj_key, sj_no, receive_date, receiver }));
-  const docs = docRows(parsed);
-  if (!rows.length && !docs.length) return { candidates: 0, result: null as SjReportResult | null };
-  // Per potongan (upsert & insert-only → mengulang aman bila satu potongan gagal).
-  const parts = chunkReport(docs, rows);
-  const out: SjReportResult[] = [];
+export type SjReplaceResult = { docs: number; sent: number; saved: number; notRecognized: number; badDate: number; parts: number };
+export const pushSjReplace = (ctx: RunContext, file: string, docs: SjDocMg[], receipts: SjReceiptRow[]) => withBot(ctx, async (c) => {
+  const parts = chunkReport(docs, receipts);
+  const out: SjReplaceResult = { docs: 0, sent: 0, saved: 0, notRecognized: 0, badDate: 0, parts: parts.length };
   for (const [i, part] of parts.entries()) {
-    const name = parts.length > 1 ? `${path.basename(file)} (${i + 1}/${parts.length})` : path.basename(file);
-    const { data, error } = await c.rpc("sj_report_apply" as never, { p_file_name: name, p_docs: part.docs, p_receipts: part.receipts } as never);
-    if (error) throw new Error(`sj_report_apply potongan ${i + 1}/${parts.length}: ${error.message.slice(0, 200)}`);
-    out.push(data as SjReportResult);
+    ctx.check();
+    const { data, error } = await c.rpc("sj_report_replace" as never, {
+      p_file_name: path.basename(file), p_part: i + 1, p_parts: parts.length, p_docs: part.docs, p_receipts: part.receipts,
+    } as never);
+    if (error) throw new Error(`sj_report_replace potongan ${i + 1}/${parts.length}: ${error.message.slice(0, 200)}`);
+    const r = data as Omit<SjReplaceResult, "parts">;
+    for (const k of ["docs", "sent", "saved", "notRecognized", "badDate"] as const) out[k] += Number(r[k] ?? 0);
   }
-  return { candidates: rows.length, result: sumReport(out) };
+  return out;
 });
 
 // ── Mitra10 (EDI): sama dengan halaman Mitra10 › Upload (app/(shell)/mitra10/m10-upload.tsx) ──────────────

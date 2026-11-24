@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeConfig, nextRun, redact, validTime } from "./catalog";
+import { DEFAULT_CHAIN, defaultDates, jobInfo, mergeConfig, nextRun, redact, validTime } from "./catalog";
 
 describe("jadwal", () => {
   const s = { enabled: true, days: [1, 2, 3, 4, 5] as (1 | 2 | 3 | 4 | 5)[], time: "10:00" };
@@ -112,5 +112,16 @@ describe("URL login situs", () => {
     expect(c.jasper.loginUrl).toBe(DEFAULT_URLS.jasper);
     expect(c.edi.loginUrl).toBe(DEFAULT_URLS.edi);
     expect(c.edi.amountTolerance).toBe(50);
+  });
+});
+
+describe("Pengkinian Data Surat Jalan (Fase 87)", () => {
+  it("rangkaian tersimpan yang memakai Serah Terima SJ dipindah ke Pengkinian; Serah Terima jadi unduh saja", () => {
+    const c = mergeConfig({ chains: [{ id: "x", name: "Harian AR", jobs: [{ id: "jasper.aging" }, { id: "jasper.sj", params: { days: 30 } }], schedule: { enabled: true, days: [1], time: "09:00" } }] });
+    expect(c.chains[0].jobs).toEqual([{ id: "jasper.aging" }, { id: "jasper.sj-update", params: { days: 30 } }]);
+    expect(jobInfo("jasper.sj").pushable).toBe(false);
+    expect(jobInfo("jasper.sj-update").pushable).toBe(true);
+    expect(DEFAULT_CHAIN.jobs.map((j) => j.id)).toContain("jasper.sj-update");
+    expect(defaultDates("jasper.sj-update", "2026-11-24", 60)).toEqual({ start: "2026-09-26", end: "2026-11-24" });
   });
 });

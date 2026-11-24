@@ -7,7 +7,8 @@ Semua bot berjalan di PC ini. Kredensial dan file unduhan tidak meninggalkan PC;
 |---|---|---|---|
 | Jaspersoft | Aging Detail | Excel | `aging_commit` (Snapshot Aging / Daftar Tagihan) |
 | | Send Invoice To Customer (Senin s/d hari ini) | CSV | `schedule_replace` (jadwal kurir diganti) |
-| | Serah Terima Surat Jalan By Shipment Date (NEW), 60 hari (maks. 92) | CSV | `sj_report_apply` (daftar SJ + Receive Date insert-only; tanpa Aging) |
+| | Serah Terima Surat Jalan By Shipment Date (NEW), 60 hari (maks. 92) | CSV | unduh saja (Fase 87) |
+| | **Pengkinian Data Surat Jalan**: Serah Terima SJ + Invoice by Date (rentang sama) → gabung Marketing Group lokal | CSV + Excel | `sj_report_replace` — GANTI TOTAL data SJ; invoice tidak dikirim |
 | | Invoice & Payment Date Comparison (bulan berjalan) | Excel | upload `erp` (bawaan: **nonaktif**) |
 | EDI Mitra 10 | GR Report Detail (multi-akun, 30 hari) | CSV per akun | Mitra10 "Upload CSV GR": `m10_gr_add` (insert-only) |
 | | Download Kwitansi (multi-akun, bulan berjalan) | CSV per akun | Mitra10 "Import Kwitansi": `m10_kw_add`, Username = akun EDI (insert-only) |

@@ -158,3 +158,18 @@ export function sumReport(rs: readonly SjReportResult[]): SjReportResult {
   for (const r of rs) for (const k of Object.keys(z) as (keyof SjReportResult)[]) z[k] += Number(r[k] ?? 0);
   return z;
 }
+
+/**
+ * Fase 87 — semua baris SJ/… yang punya Receiver & Receive Date valid, urut file, TANPA daftar Receiver: server yang
+ * menyaring Receiver aktif dan memakai baris pertama yang diakui per SJ (AR Bot tidak membaca data apa pun dari Workspace).
+ */
+export type SjReceiptRow = { sj_key: string; sj_no: string; receive_date: string; receiver: string };
+export function receiptRows(parsed: Pick<SjParseResult, "rows">): SjReceiptRow[] {
+  const out: SjReceiptRow[] = [];
+  for (const r of parsed.rows) {
+    const key = r.sj_no.trim().toUpperCase();
+    if (!isSjDoc(key) || !r.receiver || !r.receive_date) continue;
+    out.push({ sj_key: key, sj_no: r.sj_no.trim(), receive_date: r.receive_date, receiver: r.receiver.trim().replace(/\s+/g, " ") });
+  }
+  return out;
+}

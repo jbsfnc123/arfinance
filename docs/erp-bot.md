@@ -23,12 +23,12 @@ Setiap hari kerja (Task Scheduler, default Senin–Jumat), PC lokal menjalankan 
    kunjungan kurir tidak terhapus). Tanpa file Aging kedua: Payment Group / Marketing / Open Amt diambil dari data
    tagihan (`ar_invoices` = Aging terkini, yang baru diperbarui tugas 1). Laporan kosong → jadwal lama dibiarkan.
 
-3. **Serah Terima Surat Jalan** (Fase 85) — laporan *Laporan Serah Terima Surat Jalan By Shipment Date (NEW)*
-   (filter = Tanggal SJ), Start Date = hari ini − 59, End Date = hari ini (bawaan 60 hari, maks. 92), Organization
-   *Penguin Trading* → Export **CSV** → parser halaman Monitor Surat Jalan (`lib/modules/sj/parse.ts` `parseSjCsv` +
-   `docRows` + `receiptCandidates`, Receiver aktif dibaca dari `sj_receivers`) → `sj_report_apply`: semua SJ/… di file
-   masuk daftar Monitor (`sj_docs`: Tanggal SJ, Area, BP, Locator, Send Date) dan Receive Date **insert-only** (data lama
-   tidak ditimpa). **Tidak bergantung pada Aging.** Mengirim ulang aman.
+3. **Pengkinian Data Surat Jalan** (Fase 87, job `jasper.sj-update`) — unduh *Laporan Serah Terima Surat Jalan By
+   Shipment Date (NEW)* (filter Tanggal SJ, bawaan 60 hari, maks. 92) + *Invoice and Payment Date Comparison* (rentang
+   sama, Status "---" = semua) → gabung di PC: `parseSjCsv` → `docRows` + `withMarketing(marketingMap(parseErp))`
+   (`lib/modules/sj/marketing.ts`, BP Name → Marketing Group dari invoice terbaru) + `receiptRows` → `sj_report_replace`
+   per 5.000: **data SJ di AR Workspace diganti seluruhnya**. Bot tidak membaca data apa pun dari Workspace; Receiver
+   aktif disaring server; data invoice/penjualan tidak dikirim. Job `jasper.sj` (Serah Terima saja) kini hanya mengunduh.
 
 Semua tugas berjalan sebagai akun sistem **Bot ERP** (menu `set.update` + `tukar.upload` + `tukar.monitor_sj`). Gagal
 satu tugas tidak menghentikan tugas lain.

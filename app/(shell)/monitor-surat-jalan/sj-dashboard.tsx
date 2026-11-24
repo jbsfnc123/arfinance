@@ -20,7 +20,7 @@ type Row = Record<string, string | number>;
 export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Quick; focus?: string }) => void }) {
   const sum = useMemo(() => bpMonthSummary(s.filtered), [s.filtered]);
   const rows = useMemo<Row[]>(() => sum.rows.map((r) => {
-    const o: Row = { bp: r.bp, total: r.total, done: r.done, open: r.open, pct: Math.round(r.pct * 10) / 10 };
+    const o: Row = { bp: r.bp, mg: r.marketing_group, total: r.total, done: r.done, open: r.open, pct: Math.round(r.pct * 10) / 10 };
     for (const m of sum.months) { const c = r.months[m]; o[`${m}|n`] = c?.n ?? 0; o[`${m}|d`] = c?.done ?? 0; o[`${m}|o`] = c?.open ?? 0; }
     return o;
   }), [sum]);
@@ -31,6 +31,7 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
         <button type="button" className="text-left text-accent hover:underline" title="Lihat SJ Business Partner ini di Kertas Kerja"
           onClick={() => { setBp(String(r.bp)); openKk({}); }}>{String(r.bp)}</button>
       ) },
+    { k: "mg", l: "Marketing Group" },
     ...sum.months.flatMap((m): LCol<Row>[] => [
       { k: `${m}|n`, l: `${monthShort(m)} · SJ`, n: true, sum: true },
       { k: `${m}|d`, l: `${monthShort(m)} · Sudah`, n: true, sum: true },
@@ -57,7 +58,7 @@ export function SjDashboard({ s, openKk }: { s: SjState; openKk: (o: { quick?: Q
         <Stat k="% Sudah" v={pct1(t.n ? (t.done / t.n) * 100 : null)} />
       </div>
       <LocalTable title="Ringkasan per Business Partner" stateKey="sj-dash-bp" rows={rows} cols={cols} rowKey={(r) => String(r.bp)}
-        defaultSort={{ k: "total", dir: -1 }} search={["bp"]} emptyText="Tidak ada SJ pada filter ini." />
+        defaultSort={{ k: "total", dir: -1 }} search={["bp", "mg"]} emptyText="Tidak ada SJ pada filter ini." />
     </div>
   );
 }

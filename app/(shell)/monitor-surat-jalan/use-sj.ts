@@ -8,7 +8,7 @@ import { useViewState } from "@/lib/ui/view-state";
 
 // Data Monitor Surat Jalan di browser: SJ dari laporan Serah Terima + penerimaan tersimpan + daftar Receiver → satu baris per SJ.
 // Tidak bergantung pada Aging (Fase 85). BP/Area yang tidak dicentang di Setting tidak tampil (Fase 86, bersama semua user).
-// Dashboard & Kertas Kerja memakai filter periode/Area/Business Partner yang SAMA (state bersama) sehingga angka selalu cocok.
+// Dashboard & Kertas Kerja memakai filter periode/Area/Business Partner/Marketing Group yang SAMA (state bersama) sehingga angka selalu cocok.
 export function useSj() {
   const ds = useDataset("sj");
   const today = todayJakarta();
@@ -24,7 +24,8 @@ export function useSj() {
   const [period, setPeriod] = useViewState<{ from: string; to: string }>("sj:period2", { from: "", to: "" });
   const [area, setArea] = useViewState("sj:area", "");
   const [bp, setBp] = useViewState("sj:bp", "");
-  const filter = useMemo<SjFilter>(() => ({ from: period.from, to: period.to, area, bp }), [period, area, bp]);
+  const [mg, setMg] = useViewState("sj:mg", "");
+  const filter = useMemo<SjFilter>(() => ({ from: period.from, to: period.to, area, bp, mg }), [period, area, bp, mg]);
   const filtered = useMemo(() => filterRows(visible, filter), [visible, filter]);
   const choices = useMemo(() => filterChoices(visible, filter), [visible, filter]);
 
@@ -33,6 +34,7 @@ export function useSj() {
     setPeriod: (from: string, to: string) => setPeriod({ from, to }),
     setArea,
     setBp,
+    setMg,
     canManage: data?.canManage === true,
     lastUpload: data?.uploads[0] ?? null,
     docsAt: data?.docsAt ?? null,
