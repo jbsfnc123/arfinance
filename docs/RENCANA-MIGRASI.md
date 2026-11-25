@@ -1086,3 +1086,11 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   (`bg-fg/[0.05]`) + % Diterima.
 - Migrasi `20261125100000_sj_visibility_mg.sql`: `sj_visibility.kind` + `'mg'`, `sj_visibility_set` menerima `mg`.
   Setting: daftar centang Marketing Group (A-Z) di antara Area & Business Partner; `applyVisibility` menyaring `mgOf`.
+
+## Dashboard Collection: BP Outstanding menggantikan Alokasi Target & Rekonsiliasi (Fase 89, 2026-11-25)
+- Kartu "Alokasi Target · per Tanggal" & "Rekonsiliasi Terkumpul vs Allocated in Target" dihapus dari Dashboard
+  (perhitungannya tetap ada untuk workbook Excel closing).
+- Kartu baru "Business Partner Outstanding" (LocalTable): invoice target bulan terpilih yang belum lunas per BP —
+  Marketing, Collection, Jml Inv, Outstanding, Overdue (days > 0 per cut off), Not Overdue; mode All/Overdue/Not Overdue
+  (saring + urut nilai mode), filter Marketing & Collection (tingkat invoice). Data: field TAMBAHAN `openInvoices` di
+  evaluator closing-v1 (aritmetika lama tidak berubah) + fungsi murni `bpOutstanding` (spv-summary.ts).

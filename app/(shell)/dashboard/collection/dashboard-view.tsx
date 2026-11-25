@@ -1,16 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { EChartsOption } from "echarts";
 import { useCollectionPeriod } from "./use-period";
 import { ClosingControls } from "./closing-controls";
 import { closingReport } from "@/lib/modules/collection/closing";
-import { allocationSeries, reconcileCollected } from "@/lib/modules/collection/reconcile";
-import { DataTableModal, type TableSpec } from "@/components/data-table-modal";
+import { LocalTable, type LCol } from "@/lib/local/table";
 import { todayJakarta } from "@/lib/parsers/date";
 import { fmtTimestamp, monthLabel, rupiah } from "@/lib/format";
 import { AGING_BUCKETS } from "@/lib/modules/collection/aging";
-import { round1, type GroupRow, type SpvSummary } from "@/lib/modules/collection/spv-summary";
+import { bpOutstanding, round1, type BpOutMode, type BpOutRow, type GroupRow, type SpvSummary } from "@/lib/modules/collection/spv-summary";
 import { Chart } from "@/components/chart";
 import { agingColors, chartTheme, pctColor, seriesColors } from "@/lib/ui/palette";
 import { useResolvedTheme } from "@/lib/ui/prefs";
@@ -29,8 +28,6 @@ export function DashboardView() {
   const months = period.data?.months ?? [month];
   const report = useMemo(() => period.data ? closingReport(period.data.source) : null, [period.data]);
   const data = report?.data ?? null;
-  const alloc = report?.alloc ?? null;
-  const recon = report?.recon ?? null;
   const loading = period.loading;
   const reload = () => { void period.reload(); };
   const noData = !data && !loading;
@@ -75,10 +72,9 @@ export function DashboardView() {
             <DonutCard className="col-span-12 md:col-span-6 xl:col-span-4" title="Pencapaian" d={data} kind="pencapaian" />
             <DonutCard className="col-span-12 md:col-span-6 xl:col-span-4" title="Terkumpul + Jadwal Bayar" d={data} kind="forecast" />
             <AgingCard className="col-span-12 xl:col-span-4" d={data} />
-            <AllocationCard className="col-span-12 xl:col-span-7" a={alloc} />
+            <BpOutstandingCard className="col-span-12" d={data} />
             <TopOverdue className="col-span-12 xl:col-span-5" d={data} />
-            {recon && <ReconCard className="col-span-12" r={recon} />}
-            <Breakdown className="col-span-12" d={data} />
+            <Breakdown className="col-span-12 xl:col-span-7" d={data} />
           </div>
         </div>
       )}
@@ -346,80 +342,55 @@ function Breakdown({ d, className }: { d: SpvSummary; className?: string }) {
   );
 }
 
-const juta = (n: number | null) => (n === null ? null : Math.round(n / 1e4) / 100);
+const BP_MODES: { k: BpOutMode; l: string }[] = [{ k: "all", l: "All" }, { k: "overdue", l: "Overdue" }, { k: "not", l: "Not Overdue" }];
+const BP_COLS: LCol<BpOutRow>[] = [
+  { k: "bp", l: "Business Partner", w: 240 },
+  { k: "marketing", l: "Marketing" },
+  { k: "collection", l: "Collection" },
+  { k: "count", l: "Jml Inv", n: true, sum: true },
+  { k: "outstanding", l: "Outstanding (Rp)", n: true, sum: true },
+  { k: "overdue", l: "Overdue (Rp)", n: true, sum: true },
+  { k: "notOverdue", l: "Not Overdue (Rp)", n: true, sum: true },
+];
+const BP_SORT: Record<BpOutMode, keyof BpOutRow & string> = { all: "outstanding", overdue: "overdue", not: "notOverdue" };
 
-// Pengganti "Jadwal Bayar per tanggal": pergerakan Alokasi Target per tanggal (data Mutasi vs Realisasi).
-function AllocationCard({ a, className }: { a: ReturnType<typeof allocationSeries> | null; className?: string }) {
-  const S = seriesColors(useResolvedTheme());
-  const t = chartTheme();
-  if (!a) return <SkeletonChart className={className} height={300} />;
-  const option: EChartsOption = {
-    grid: { left: 8, right: 16, top: 12, bottom: 32, containLabel: true },
-    tooltip: { trigger: "axis", valueFormatter: (x) => (x == null ? "-" : `${Number(x).toLocaleString("id-ID")} jt`) },
-    legend: { type: "scroll", bottom: 0, icon: "roundRect", itemWidth: 10, itemHeight: 6, textStyle: { color: t.text, fontSize: 11 } },
-    xAxis: { type: "category", data: a.days.map((d) => String(Number(d.date.slice(8)))), axisLabel: { color: t.text }, axisLine: { lineStyle: { color: t.grid } } },
-    yAxis: { type: "value", splitLine: { lineStyle: { color: t.grid } }, axisLabel: { color: t.text, formatter: (v: number) => `${v.toLocaleString("id-ID")} jt` } },
-    series: [
-      { name: "Alloc in Target / hari", type: "bar", data: a.days.map((d) => juta(d.allocT)), itemStyle: { color: S.bar, borderRadius: [3, 3, 0, 0] }, barMaxWidth: 14 },
-      { name: "Kumulatif Alloc in Target", type: "line", symbolSize: 4, data: a.days.map((d) => juta(d.cumAllocT)), itemStyle: { color: S.success }, lineStyle: { width: 3 } },
-      { name: "Kumulatif Allocated", type: "line", symbolSize: 3, data: a.days.map((d) => juta(d.cumAlloc)), itemStyle: { color: S.warning }, lineStyle: { type: "dashed" } },
-      { name: "Target", type: "line", symbol: "none", data: a.days.map(() => juta(a.target)), itemStyle: { color: S.danger }, lineStyle: { type: "dotted" } },
-    ],
-  };
+// Fase 89: Business Partner yang masih outstanding (invoice target bulan terpilih) — filter All/Overdue/Not Overdue,
+// Marketing & Collection; urutan bawaan = nilai sesuai mode, terbesar dulu.
+function BpOutstandingCard({ d, className }: { d: SpvSummary; className?: string }) {
+  const [mode, setMode] = useViewState<BpOutMode>("dash-coll:bp-mode", "all");
+  const [mkt, setMkt] = useViewState("dash-coll:bp-mkt", "");
+  const [coll, setColl] = useViewState("dash-coll:bp-coll", "");
+  const out = useMemo(() => bpOutstanding(d.openInvoices ?? [], { mode, mkt, coll }), [d.openInvoices, mode, mkt, coll]);
+  const tot = out.rows.reduce((t, r) => t + r.outstanding, 0);
   return (
-    <section className={`${card} p-4 ${className ?? ""}`}>
-      <CardHead title="Alokasi Target · per Tanggal"
-        sub={<>Allocated in Target <b className="text-fg">{rupiah(a.totalAllocT)}</b> dari target {rupiah(a.target)} ({a.target ? round1((a.totalAllocT / a.target) * 100) : 0}%)</>} />
-      <Chart option={option} height={300} />
-    </section>
-  );
-}
-
-// Rekonsiliasi Terkumpul (target − sisa aging) vs Allocated in Target (pembayaran ERP) + penyebab selisih.
-function ReconCard({ r, className }: { r: ReturnType<typeof reconcileCollected>; className?: string }) {
-  const [spec, setSpec] = useState<TableSpec | null>(null);
-  const ok = Math.abs(r.selisih) < 1;
-  const stat = (label: string, value: string, cls = "") => (
-    <div className="rounded-xl bg-surface-2/60 px-3 py-2">
-      <div className="text-[11px] uppercase tracking-wide text-fg-2">{label}</div>
-      <div className={`text-sm font-semibold tabular-nums ${cls}`}>{value}</div>
-    </div>
-  );
-  return (
-    <section className={`${card} overflow-hidden ${className ?? ""}`}>
-      <div className="px-4 pt-4">
-        <CardHead title="Rekonsiliasi Terkumpul vs Allocated in Target" />
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          {stat("Terkumpul", rupiah(r.terkumpul))}
-          {stat("Allocated in Target", rupiah(r.allocT))}
-          {stat("Selisih", rupiah(r.selisih), ok ? "text-success" : "text-warning")}
-        </div>
+    <section className={className} aria-labelledby="bp-out-title">
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-3">
+        <h2 id="bp-out-title" className={cardTitle}>Business Partner Outstanding</h2>
+        <span className="text-xs text-fg-2">{out.rows.length.toLocaleString("id-ID")} BP · outstanding {rupiah(tot)} · invoice target {monthLabel(d.month)} yang belum lunas</span>
       </div>
-      <table className={`mt-3 ${tableCls}`}>
-        <thead><tr><th className={th}>Kemungkinan penyebab</th><th className={`${th} text-right`}>Invoice</th><th className={`${th} text-right`}>Selisih</th></tr></thead>
-        <tbody>
-          {r.categories.map((c) => (
-            <tr key={c.category} className="cursor-pointer"
-              onClick={() => setSpec({
-                title: c.label,
-                cols: [
-                  { k: "invoice_no", l: "Invoice" }, { k: "pengganti", l: "Invoice Pengganti" }, { k: "no_sj", l: "No SJ" },
-                  { k: "business_partner", l: "Business Partner" },
-                  { k: "target", l: "Target", n: true }, { k: "sisa", l: "Sisa Aging", n: true },
-                  { k: "terkumpul", l: "Terkumpul", n: true }, { k: "dibayar", l: "Dibayar (bulan ini)", n: true },
-                  { k: "dibayarLain", l: "Dibayar (bulan lain)", n: true }, { k: "selisih", l: "Selisih", n: true },
-                ],
-                rows: c.rows,
-              })}>
-              <td className={td}><span className="flex items-center gap-2"><Icon name="chevron_right" size={16} className="text-fg-2" />{c.label}</span></td>
-              <td className={`${td} text-right tabular-nums`}>{c.count.toLocaleString("id-ID")}</td>
-              <td className={`${td} text-right tabular-nums`}>{rupiah(c.selisih)}</td>
-            </tr>
-          ))}
-          {!r.categories.length && <tr><td className={emptyTd} colSpan={3}>Tidak ada selisih.</td></tr>}
-        </tbody>
-      </table>
-      <DataTableModal spec={spec} onClose={() => setSpec(null)} />
+      <LocalTable title="Business Partner Outstanding" stateKey={`dash-coll-bp-${mode}`} rows={out.rows} cols={BP_COLS} rowKey={(r) => r.bp}
+        defaultSort={{ k: BP_SORT[mode], dir: -1 }} search={["bp", "marketing", "collection"]} fill={false} maxHeight="max-h-[60vh]"
+        emptyText="Tidak ada Business Partner outstanding."
+        toolbar={(
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="flex gap-0.5 rounded-[10px] bg-fill-3 p-[3px]" role="group" aria-label="Status jatuh tempo">
+              {BP_MODES.map((m) => (
+                <button key={m.k} type="button" onClick={() => setMode(m.k)} aria-pressed={mode === m.k}
+                  className={`rounded-[8px] px-3 py-1 text-xs transition-colors ${mode === m.k ? "bg-surface font-medium text-fg shadow-sm" : "text-fg-2 hover:text-fg"}`}>
+                  {m.l}
+                </button>
+              ))}
+            </span>
+            <select value={mkt} onChange={(e) => setMkt(e.target.value)} className={`${inputCls} !w-auto !py-1 text-xs`} aria-label="Filter Marketing">
+              <option value="">Marketing: semua</option>
+              {out.marketingList.map((m) => <option key={m}>{m}</option>)}
+            </select>
+            <select value={coll} onChange={(e) => setColl(e.target.value)} className={`${inputCls} !w-auto !py-1 text-xs`} aria-label="Filter Collection">
+              <option value="">Collection: semua</option>
+              {out.collectionList.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </span>
+        )} />
     </section>
   );
 }

@@ -11,7 +11,7 @@ export const MENU_HELP: MenuHelp[] = [
     "Terkumpul + Jadwal Bayar = perkiraan pencapaian bila semua jadwal bayar terealisasi.",
     "10 BP · Jatuh Tempo Terlama = invoice target yang belum lunas, diurutkan dari umur jatuh tempo terlama.",
     "Rincian Pencapaian = target, terkumpul, sisa & jadwal bayar per kelompok (Marketing / Branch / Collection).",
-    "Rekonsiliasi Terkumpul vs Allocated in Target: Terkumpul = target − sisa aging; Allocated in Target = pembayaran ERP bulan ini yang masuk ke invoice target. Klik baris untuk rincian invoice.",
+    "Business Partner Outstanding = BP yang masih punya invoice target belum lunas bulan terpilih: Marketing, Collection, Outstanding, Overdue (lewat jatuh tempo per cut off) & Not Overdue. All diurut outstanding terbesar; Overdue / Not Overdue hanya menampilkan BP yang punya nilai itu dan diurut nilainya. Filter Marketing & Collection; tabel bisa dicari & diekspor Excel.",
     "Bila kosong: belum ada data Aging/target — upload lewat Pengaturan › Pusat Upload Data / Upload Target Bulanan.",
     "Closing Bulan mengunci angka bulan itu (snapshot); bulan yang sudah closing tidak berubah walau data baru di-upload. Riwayat Closing menampilkan revisi.",
   ] },

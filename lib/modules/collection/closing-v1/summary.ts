@@ -104,5 +104,7 @@ export function computeSpvSummary(input: {
     topOverdue: sorted.slice(0, 10), topOverdueByMarket: byMkt, forecastByDate,
     marketingList: [...new Set(r2.map((r) => r.mkt))].sort(),
     lastTagihanUpdate: input.lastTagihanUpdate,
+    // Fase 89: field TAMBAHAN (tidak mengubah aritmetika lama) untuk kartu Business Partner Outstanding.
+    openInvoices: belum.map((r) => ({ bp: r.bp, mkt: r.mkt, coll: r.coll, sisa: r.sisa, days: r.days })),
   };
 }
