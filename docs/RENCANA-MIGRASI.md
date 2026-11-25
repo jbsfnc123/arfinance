@@ -1094,3 +1094,7 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   Marketing, Collection, Jml Inv, Outstanding, Overdue (days > 0 per cut off), Not Overdue; mode All/Overdue/Not Overdue
   (saring + urut nilai mode), filter Marketing & Collection (tingkat invoice). Data: field TAMBAHAN `openInvoices` di
   evaluator closing-v1 (aritmetika lama tidak berubah) + fungsi murni `bpOutstanding` (spv-summary.ts).
+
+## Mitra10: kolom Kuitansi No di Kertas Kerja (Fase 90, 2026-11-25)
+- `WorksheetRow.kuitansi_no` = No Kuitansi kwitansi pertama invoice (sama dengan Kuitansi Date). Kolom Kertas Kerja
+  "Kuitansi No" tersembunyi bawaan (`hideKey` m10-kk-v3, pengaturan sembunyi kolom kembali ke bawaan sekali), bisa dicari.

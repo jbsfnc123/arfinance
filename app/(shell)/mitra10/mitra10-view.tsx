@@ -50,6 +50,7 @@ const KK_COLS: LCol<WorksheetRow>[] = [
   // Tanda Tolakan / LTKP / Litigasi dari tombol (Fase 82), terpisah dari Keterangan.
   { k: "tanda", l: "Tanda", badge: { Tolakan: "bg-accent/15 text-accent", LTKP: WAIT, Litigasi: BAD, Normal: "bg-surface-2 text-fg-2" } },
   // Kuitansi Date (Kwitansi pertama invoice ini) = Tgl Tukar Faktur di Daftar Tagihan (metode "Kwitansi EDI").
+  { k: "kuitansi_no", l: "Kuitansi No" }, // Fase 90 — tersembunyi bawaan
   { k: "tf_date", l: "Kuitansi Date", d: true },
   { k: "jadwal_bayar", l: "Jadwal Bayar", d: true },
 ];
@@ -206,9 +207,9 @@ export function Mitra10View() {
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard stateKey="mitra10" m={m} />}
         {tab === "kk" && (
-          <LocalTable title="Kertas Kerja" stateKey={KK_KEY} hideKey="m10-kk-v2" defaultHidden={["jadwal_bayar"]} rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
+          <LocalTable title="Kertas Kerja" stateKey={KK_KEY} hideKey="m10-kk-v3" defaultHidden={["jadwal_bayar", "kuitansi_no"]} rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             onRowsChange={setShown}
-            search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan", "tanda"]}
+            search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan", "tanda", "kuitansi_no"]}
             filters={[
               { k: "gr", l: "GR", options: ["Done", "Pending"] },
               { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },

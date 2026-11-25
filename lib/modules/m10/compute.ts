@@ -31,6 +31,8 @@ export function ketOptions(rows: { ket_isi: string }[]) {
 export type WorksheetRow = Worksheet & {
   username: string; bp_short: string; keterangan: string | null; ket_isi: string; tanda: Tanda; gr: "Done" | "Pending"; tukar_faktur: "Done" | "Pending"; selisih: number;
   status: "Outstanding" | "Lunas"; jadwal_bayar: string | null; lama_tf: number | null; tf_date: string | null;
+  /** Fase 90: No Kuitansi dari kwitansi pertama invoice (sama dengan Kuitansi Date / tf_date). */
+  kuitansi_no: string | null;
 };
 export type GrRow = Gr & { po_aging: string; check_status: "Done" | "Check" };
 export type KwRow = Kwitansi & { jadwal_bayar: string | null; aging: number; selisih: number };
@@ -101,6 +103,7 @@ export function computeM10(input: { worksheet: Worksheet[]; gr: Gr[]; kwitansi: 
       jadwal_bayar: (w.invoice_no ? promised.get(w.invoice_no) : undefined) ?? (first?.kuitansi_no ? sched.get(first.kuitansi_no) ?? null : null),
       lama_tf: first?.kuitansi_date && w.invoice_date ? daysBetween(first.kuitansi_date, w.invoice_date) : null,
       tf_date: first?.kuitansi_date ?? null,
+      kuitansi_no: first?.kuitansi_no ?? null,
     };
   });
 
