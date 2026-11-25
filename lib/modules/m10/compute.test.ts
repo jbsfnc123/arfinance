@@ -51,9 +51,9 @@ describe("Mitra10 compute", () => {
   });
 
   it("Kertas Kerja: GR, Tukar Faktur (>10.000), Selisih, Status, Jadwal, Lama TF", () => {
-    expect(c.worksheet[0]).toMatchObject({ username: "Pengu338", gr: "Done", tukar_faktur: "Done", selisih: 0, status: "Outstanding", jadwal_bayar: "2026-09-25", lama_tf: 7 });
+    expect(c.worksheet[0]).toMatchObject({ username: "Pengu338", gr: "Done", tukar_faktur: "Done", selisih: 0, status: "Outstanding", jadwal_bayar: "2026-09-25", lama_tf: 7, kuitansi_no: "KW1", tf_date: "2026-09-10" });
     expect(c.worksheet[1]).toMatchObject({ username: "kosong", gr: "Done", tukar_faktur: "Pending", selisih: 40000, status: "Outstanding" });
-    expect(c.worksheet[2]).toMatchObject({ gr: "Pending", status: "Lunas", lama_tf: null });
+    expect(c.worksheet[2]).toMatchObject({ gr: "Pending", status: "Lunas", lama_tf: null, kuitansi_no: null });
   });
 
   it("Tanda dari row_flags, bukan Keterangan; filter Keterangan = isi teks apa adanya (Fase 82)", () => {
