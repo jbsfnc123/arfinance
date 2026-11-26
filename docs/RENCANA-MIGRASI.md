@@ -1098,3 +1098,7 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
 ## Mitra10: kolom Kuitansi No di Kertas Kerja (Fase 90, 2026-11-25)
 - `WorksheetRow.kuitansi_no` = No Kuitansi kwitansi pertama invoice (sama dengan Kuitansi Date). Kolom Kertas Kerja
   "Kuitansi No" tersembunyi bawaan (`hideKey` m10-kk-v3, pengaturan sembunyi kolom kembali ke bawaan sekali), bisa dicari.
+
+## Mitra10: header Receiving + filter Jadwal Bayar (Fase 91, 2026-11-26)
+- Kertas Kerja: kolom/filter "GR" berganti label "Receiving" (data tetap kolom `gr`); filter rentang Jadwal Bayar
+  (`useDateRange("kk-jb")`) di toolbar, berlaku walau kolom Jadwal Bayar tersembunyi.

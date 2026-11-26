@@ -44,7 +44,7 @@ const KK_COLS: LCol<WorksheetRow>[] = [
   { k: "username", l: "Username" }, { k: "bp_short", l: "Business Partner" }, { k: "invoice_no", l: "Invoice No" },
   { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
   { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
-  { k: "gr", l: "GR", badge: { Done: OK, Pending: WAIT } },
+  { k: "gr", l: "Receiving", badge: { Done: OK, Pending: WAIT } },
   { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
   { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 200 },
   // Tanda Tolakan / LTKP / Litigasi dari tombol (Fase 82), terpisah dari Keterangan.
@@ -130,9 +130,12 @@ export function Mitra10View() {
   const [to, setTo] = useViewState("mitra10:kk:to", "");
   const [user, setUser] = useViewState("mitra10:kk:user", "");
   const users = useMemo(() => [...new Set((c?.worksheet ?? []).map((r) => r.username))].sort(), [c]);
+  // Fase 91: filter rentang Jadwal Bayar (berlaku walau kolom Jadwal Bayar disembunyikan).
+  const jbRange = useDateRange("kk-jb");
   // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
   const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
-    (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user)), [c, from, to, user]);
+    (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user) &&
+    jbRange.inRange(r.jadwal_bayar)), [c, from, to, user, jbRange.from, jbRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
   // Filter tanggal: Receiving (GR Date, teks "yyyy.MM.dd" dari EDI → ISO), Kwitansi (Kuitansi Date), Jadwal Bayar.
   const grRange = useDateRange("gr"), kwRange = useDateRange("kw"), jadwalRange = useDateRange("jadwal");
   const grRows = useMemo(() => (c?.gr ?? []).filter((r) => grRange.inRange(parseDate(r.gr_date))), [c, grRange.from, grRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -211,7 +214,7 @@ export function Mitra10View() {
             onRowsChange={setShown}
             search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan", "tanda", "kuitansi_no"]}
             filters={[
-              { k: "gr", l: "GR", options: ["Done", "Pending"] },
+              { k: "gr", l: "Receiving", options: ["Done", "Pending"] },
               { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },
               { k: "tanda", l: "Tanda", options: TANDA },
               { k: "ket_isi", l: "Keterangan", options: ketOpts },
@@ -230,6 +233,7 @@ export function Mitra10View() {
                   {users.map((u) => <option key={u}>{u}</option>)}
                 </select>
                 {(from || to || user) && <button type="button" className={btnGhost} onClick={() => { setFrom(""); setTo(""); setUser(""); }}>Reset</button>}
+                <DateRange label="Jadwal Bayar" r={jbRange} />
               </span>
             )}
             selectable
