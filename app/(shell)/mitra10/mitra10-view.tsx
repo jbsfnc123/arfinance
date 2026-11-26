@@ -21,6 +21,8 @@ import { useRowMarks } from "@/lib/ui/use-row-marks";
 import { RowMarkButton } from "@/components/row-mark-button";
 import { SiapTfButton } from "./siap-tf";
 import { parseDate } from "@/lib/parsers/date";
+import { fmtDate } from "@/lib/format";
+import { MultiSelectFilter } from "@/components/multi-select-filter";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
@@ -130,12 +132,23 @@ export function Mitra10View() {
   const [to, setTo] = useViewState("mitra10:kk:to", "");
   const [user, setUser] = useViewState("mitra10:kk:user", "");
   const users = useMemo(() => [...new Set((c?.worksheet ?? []).map((r) => r.username))].sort(), [c]);
-  // Fase 91: filter rentang Jadwal Bayar (berlaku walau kolom Jadwal Bayar disembunyikan).
-  const jbRange = useDateRange("kk-jb");
   // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
-  const kkRows = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
-    (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user) &&
-    jbRange.inRange(r.jadwal_bayar)), [c, from, to, user, jbRange.from, jbRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
+  const kkBase = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
+    (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user)), [c, from, to, user]);
+  // Fase 92: filter Jadwal Bayar = daftar tanggal distinct (centang, bisa > 1, Pilih semua); null = semua.
+  // Berlaku walau kolom Jadwal Bayar disembunyikan. "" = invoice yang belum punya Jadwal Bayar.
+  const [jbSel, setJbSel] = useViewState<string[] | null>("mitra10:kk:jb", null);
+  const jbOpts = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const r of kkBase) { const v = r.jadwal_bayar ?? ""; n.set(v, (n.get(v) ?? 0) + 1); }
+    return [...n].sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)))
+      .map(([value, count]) => ({ value, count, label: value ? fmtDate(value) : "(Tanpa Jadwal)" }));
+  }, [kkBase]);
+  const kkRows = useMemo(() => {
+    if (!jbSel) return kkBase;
+    const s = new Set(jbSel);
+    return kkBase.filter((r) => s.has(r.jadwal_bayar ?? ""));
+  }, [kkBase, jbSel]);
   // Filter tanggal: Receiving (GR Date, teks "yyyy.MM.dd" dari EDI → ISO), Kwitansi (Kuitansi Date), Jadwal Bayar.
   const grRange = useDateRange("gr"), kwRange = useDateRange("kw"), jadwalRange = useDateRange("jadwal");
   const grRows = useMemo(() => (c?.gr ?? []).filter((r) => grRange.inRange(parseDate(r.gr_date))), [c, grRange.from, grRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -233,7 +246,7 @@ export function Mitra10View() {
                   {users.map((u) => <option key={u}>{u}</option>)}
                 </select>
                 {(from || to || user) && <button type="button" className={btnGhost} onClick={() => { setFrom(""); setTo(""); setUser(""); }}>Reset</button>}
-                <DateRange label="Jadwal Bayar" r={jbRange} />
+                <MultiSelectFilter label="Jadwal Bayar" unit="tanggal" options={jbOpts} selected={jbSel} onChange={setJbSel} />
               </span>
             )}
             selectable

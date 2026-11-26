@@ -1102,3 +1102,9 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
 ## Mitra10: header Receiving + filter Jadwal Bayar (Fase 91, 2026-11-26)
 - Kertas Kerja: kolom/filter "GR" berganti label "Receiving" (data tetap kolom `gr`); filter rentang Jadwal Bayar
   (`useDateRange("kk-jb")`) di toolbar, berlaku walau kolom Jadwal Bayar tersembunyi.
+
+## Mitra10: filter Jadwal Bayar multi-centang (Fase 92, 2026-11-26)
+- Rentang Jadwal Bayar Fase 91 diganti `components/multi-select-filter.tsx` (generik, gaya AutoFilter Excel):
+  daftar tanggal distinct + jumlah invoice, centang > 1, Pilih semua (indeterminate), cari, Reset; opsi "(Tanpa Jadwal)".
+- State `useViewState("mitra10:kk:jb")`: `null` = semua, array = hanya nilai itu, `[]` = kosong; semua dicentang → `null`.
+- Opsi dihitung dari `kkBase` (outstanding + Invoice Date + Username) sebelum filter Jadwal Bayar.
