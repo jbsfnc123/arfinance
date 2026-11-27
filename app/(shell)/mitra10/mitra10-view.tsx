@@ -40,7 +40,7 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
-// Kunci state tabel Kertas Kerja (cari/filter/urutan). Tombol Siap Tukar Faktur menulis filter ke kunci yang SAMA —
+// Kunci state tabel Kertas Kerja (cari/filter/urutan). Tombol Siap Kwitansi menulis filter ke kunci yang SAMA —
 // jangan diturunkan dari hideKey (hideKey boleh berganti versi untuk mereset kolom tersembunyi bawaan).
 const KK_KEY = "m10-kk";
 
@@ -53,7 +53,7 @@ const KK_COLS: LCol<WorksheetRow>[] = [
   { k: "invoice_date", l: "Invoice Date", d: true }, { k: "due_date", l: "Due Date", d: true }, { k: "open_amt", l: "Open Amt", n: true },
   { k: "no_po", l: "No PO" }, { k: "no_sj", l: "No SJ" },
   { k: "gr", l: "Receiving", badge: { Done: OK, Pending: WAIT } },
-  { k: "tukar_faktur", l: "Tukar Faktur", badge: { Done: OK, Pending: WAIT } },
+  { k: "tukar_faktur", l: "Kwitansi", badge: { Done: OK, Pending: WAIT } },
   { k: "selisih", l: "Selisih", n: true }, { k: "keterangan", l: "Keterangan", edit: "text", w: 200 },
   // Tanda Tolakan / LTKP / Litigasi dari tombol (Fase 82), terpisah dari Keterangan.
   { k: "tanda", l: "Tanda", badge: { Tolakan: "bg-accent/15 text-accent", LTKP: WAIT, Litigasi: BAD, Normal: "bg-surface-2 text-fg-2" } },
@@ -251,7 +251,7 @@ export function Mitra10View() {
             search={["invoice_no", "business_partner", "bp_short", "no_sj", "no_po", "username", "keterangan", "tanda", "kuitansi_no"]}
             filters={[
               { k: "gr", l: "Receiving", options: ["Done", "Pending"] },
-              { k: "tukar_faktur", l: "Tukar Faktur", options: ["Done", "Pending"] },
+              { k: "tukar_faktur", l: "Kwitansi", options: ["Done", "Pending"] },
               { k: "tanda", l: "Tanda", options: TANDA },
               { k: "ket_isi", l: "Keterangan", options: ketOpts },
             ]}
@@ -264,7 +264,7 @@ export function Mitra10View() {
             )}
             toolbar={(
               <span className="flex flex-wrap items-center gap-2 text-sm">
-                <SiapTfButton stateKey={KK_KEY} />
+                <SiapTfButton stateKey={KK_KEY} label="Siap Kwitansi" />
                 <TandaFilter stateKey={KK_KEY} counts={tandaCounts} />
                 <span className="text-fg-2">Invoice Date</span>
                 <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} !w-auto`} />

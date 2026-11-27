@@ -1132,3 +1132,7 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
 - Supabase `20261127130000_bot_progress.sql`: kolom `bot_runs.progress`; `bot_runs_recent` ikut progres; `bot_run_finish` mengosongkan.
 - UI: `progressView` (lib/modules/m10/bot.ts) + `BotProgress` (chip KPI + Batalkan) di baris judul Kertas Kerja & kartu Upload Faktur.
   Perbaikan: interval polling `use-bot` hanya diganti saat ada/tidaknya run aktif berubah (sebelumnya tiap objek run baru).
+
+## Mitra10: label "Tukar Faktur" → "Kwitansi" di Kertas Kerja (Fase 95, 2026-11-27)
+- Kertas Kerja Mitra10: kolom & filter **Tukar Faktur** → **Kwitansi**; tombol **Siap Tukar Faktur** → **Siap Kwitansi** (prop `label` baru di `SiapTfButton`; RKM tetap "Siap Tukar Faktur"). Ekspor Excel ikut label kolom.
+- Hanya label — kunci data `tukar_faktur`, filter tersimpan & tombol Siap tetap kompatibel. Dashboard, judul menu & RKM tidak diubah.

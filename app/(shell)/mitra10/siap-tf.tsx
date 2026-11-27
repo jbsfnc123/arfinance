@@ -9,7 +9,8 @@ import { Icon } from "@/components/icons";
 // termasuk bila dipilih lewat dropdown — dan mati saat dilepas atau di-Reset.
 // PENTING: LocalTable-nya wajib diberi `stateKey` yang sama persis dengan prop `stateKey` tombol ini. Tanpa stateKey,
 // LocalTable memakai hideKey sebagai kunci state, sehingga mengganti hideKey diam-diam memutus tombol (regresi Fase 76).
-export function SiapTfButton({ stateKey }: { stateKey: string }) {
+// Label: Mitra10 "Siap Kwitansi" (Fase 95), RKM tetap "Siap Tukar Faktur".
+export function SiapTfButton({ stateKey, label = "Siap Tukar Faktur" }: { stateKey: string; label?: string }) {
   const [f, setF] = useViewState<Record<string, string>>(`table:${stateKey}:f`, {});
   const active = f.gr === "Done" && f.tukar_faktur === "Pending";
   function toggle() {
@@ -25,7 +26,7 @@ export function SiapTfButton({ stateKey }: { stateKey: string }) {
   return (
     <button type="button" onClick={toggle} aria-pressed={active}
       className={`${btnGhost} ${active ? "border-accent bg-accent/15 text-accent" : ""}`}>
-      <Icon name="task_alt" size={16} />Siap Tukar Faktur
+      <Icon name="task_alt" size={16} />{label}
     </button>
   );
 }
