@@ -62,6 +62,8 @@ export type RunEvent =
   | { t: "start"; at: string; runId: string; request: RunRequest; pid: number }
   | { t: "log"; at: string; level: "info" | "warn" | "error" | "ok"; msg: string; job?: JobId }
   | { t: "job"; at: string; result: JobResult }
+  /** Status per invoice Upload Faktur (juga saat uji coba) — dibaca mode cloud untuk dikembalikan ke AR Workspace. */
+  | { t: "item"; at: string; job?: JobId; invoice: string; status: string; ok: boolean }
   | { t: "end"; at: string; status: RunStatus };
 
 export type RunRecord = {

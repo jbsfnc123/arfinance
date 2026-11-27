@@ -97,7 +97,9 @@ export class RunContext {
           executablePath: b.path,
           headless: this.config.browser.headless,
           defaultViewport: { width: 1440, height: 900 },
-          args: ["--window-size=1440,900", "--no-first-run", "--no-default-browser-check", "--disable-popup-blocking"],
+          args: ["--window-size=1440,900", "--no-first-run", "--no-default-browser-check", "--disable-popup-blocking",
+            // Runner Linux (GitHub Actions) tidak punya sandbox user namespace.
+            ...(process.platform === "linux" ? ["--no-sandbox"] : [])],
         });
         this.root.info(`Browser: ${b.name}${this.config.browser.headless ? " (tanpa tampilan)" : ""}`);
         s.browser = browser;

@@ -350,6 +350,7 @@ export async function ediUploadFakturJob(ctx: RunContext, p: JobParams): Promise
     const good = (fill ? isFilled(status) : uploaded(status)) || status.includes("(uji coba)");
     if (good) ok++; else failed.push(item.invoice);
     ctx.log(good ? "ok" : "warn", `${item.invoice}: ${status}`);
+    ctx.emit({ t: "item", at: new Date().toISOString(), job: ctx.job, invoice: item.invoice, status, ok: good });
     if (!ctx.opts.dryRun) { if (fill) patchInvoice(item.invoice, { status }); else patchItem(item.invoice, { status }); }
   }
   await ediLogout(page);

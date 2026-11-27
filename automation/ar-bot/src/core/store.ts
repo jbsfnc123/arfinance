@@ -13,6 +13,8 @@ let secretsCache: Secrets | null = null;
 
 export function loadSecrets(): Secrets {
   if (secretsCache) return secretsCache;
+  // Mode cloud (Fase 93): rahasia dari env (GitHub Actions Secrets), tanpa DPAPI/secrets.dat.
+  if (process.env.ARBOT_SECRETS) return (secretsCache = JSON.parse(process.env.ARBOT_SECRETS) as Secrets);
   if (!fs.existsSync(P.secrets)) return (secretsCache = {});
   secretsCache = JSON.parse(unprotect(fs.readFileSync(P.secrets, "utf8"))) as Secrets;
   return secretsCache;
