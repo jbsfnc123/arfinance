@@ -180,6 +180,8 @@ export function LocalTable<T>(props: {
   maxHeight?: string;  // kelas tinggi saat fill=false
   minHeight?: number;  // batas bawah tinggi saat fill (default 320)
   noExport?: boolean;
+  /** Tombol tambahan tepat sebelum tombol Excel (kanan atas), mis. Import to BOT Mitra10 (Fase 93): baris tercentang + baris tampil. */
+  exportExtra?: (selected: T[], shown: T[]) => React.ReactNode;
   defaultSort?: { k: string; dir: 1 | -1 }; // urutan bila user belum mengklik header
   defaultFilter?: Record<string, string>; // filter awal selama user belum mengatur sendiri (mis. Status = Belum TF)
   defaultLimit?: number;  // tampilkan N teratas selama cari/filter belum aktif (mis. 20 terlama)
@@ -391,6 +393,7 @@ export function LocalTable<T>(props: {
           {props.onAdd && (
             <button type="button" className={btnGhost} onClick={props.onAdd}><Icon name="add" size={16} />Tambah baris</button>
           )}
+          {props.exportExtra?.(selected, allRows)}
           {!props.noExport && (
             <button type="button" className={btnGhost} onClick={exportXlsx}><Icon name="download" size={16} />Excel</button>
           )}

@@ -23,9 +23,15 @@ import { SiapTfButton } from "./siap-tf";
 import { parseDate } from "@/lib/parsers/date";
 import { fmtDate } from "@/lib/format";
 import { MultiSelectFilter } from "@/components/multi-select-filter";
+import { Icon } from "@/components/icons";
+import { useBot } from "./use-bot";
+import { M10Bot } from "./m10-bot";
+import { BotHeader } from "./bot-header";
+import { importPo, toPoRows } from "./faktur-local";
 
 const TABS = [
   { key: "dash", label: "Dashboard", icon: "monitoring" },
+  { key: "bot", label: "BOT", icon: "smart_toy" }, // Fase 93: bot cloud EDI Mitra10
   { key: "kk", label: "Kertas Kerja", icon: "table" },
   { key: "gr", label: "Receiving", icon: "inventory" },
   { key: "kw", label: "Kwitansi", icon: "receipt_long" },
@@ -132,6 +138,20 @@ export function Mitra10View() {
   const [to, setTo] = useViewState("mitra10:kk:to", "");
   const [user, setUser] = useViewState("mitra10:kk:user", "");
   const users = useMemo(() => [...new Set((c?.worksheet ?? []).map((r) => r.username))].sort(), [c]);
+  // Fase 93: bot cloud EDI (tab BOT + tombol kanan atas Kertas Kerja). Akun = Username EDI yang ada di data.
+  const bot = useBot();
+  const ediUsers = useMemo(() => users.filter(Boolean), [users]);
+  // Import to BOT: baris tercentang, atau semua baris tampil bila tidak ada yang dicentang → data PO Upload Faktur Pajak.
+  async function importToBot(sel: WorksheetRow[], shown: WorksheetRow[]) {
+    const src = sel.length ? sel : shown;
+    if (!src.length) { toast("Tidak ada baris untuk dikirim ke BOT.", "danger"); return; }
+    try {
+      const r = await importPo(toPoRows(src));
+      toast(`${r.rows.toLocaleString("id-ID")} invoice dikirim ke BOT › Upload Faktur Pajak${r.fakturItems ? ` · ${r.matched} cocok dengan PDF faktur` : ""}.`, "success", 6000);
+    } catch (e) {
+      toast(`Import to BOT gagal: ${(e as Error).message}`, "danger", 6000);
+    }
+  }
   // Kertas Kerja hanya menampilkan invoice outstanding; yang sudah lunas otomatis hilang.
   const kkBase = useMemo(() => (c?.worksheet ?? []).filter((r) => r.status === "Outstanding" &&
     (!from || (r.invoice_date ?? "") >= from) && (!to || (r.invoice_date ?? "") <= to) && (!user || r.username === user)), [c, from, to, user]);
@@ -218,10 +238,13 @@ export function Mitra10View() {
           </div>
         )}
         {m.error && <span className="text-sm text-danger">Gagal memuat: {m.error.message}</span>}
+        {/* Fase 93: tombol BOT ringkas di ruang kosong kanan atas (Kertas Kerja). */}
+        {tab === "kk" && <BotHeader bot={bot} users={ediUsers} />}
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <div className="mt-4">
         {tab === "dash" && <M10Dashboard stateKey="mitra10" m={m} />}
+        {tab === "bot" && <M10Bot bot={bot} users={ediUsers} />}
         {tab === "kk" && (
           <LocalTable title="Kertas Kerja" stateKey={KK_KEY} hideKey="m10-kk-v3" defaultHidden={["jadwal_bayar", "kuitansi_no"]} rows={kkRows} cols={KK_COLS} rowKey={(r) => r.id} loading={m.loading}
             onRowsChange={setShown}
@@ -233,6 +256,12 @@ export function Mitra10View() {
               { k: "ket_isi", l: "Keterangan", options: ketOpts },
             ]}
             onEdit={(r, _k, v) => setKeterangan([r], String(v ?? ""))}
+            exportExtra={(sel, shown) => (
+              <button type="button" className={btnGhost} onClick={() => void importToBot(sel, shown)}
+                title="Kirim Invoice No, No PO, No SJ & Open Amt ke BOT › Upload Faktur Pajak (baris tercentang; bila tidak ada, semua baris tampil)">
+                <Icon name="smart_toy" size={16} />Import to BOT{sel.length ? ` (${sel.length})` : ""}
+              </button>
+            )}
             toolbar={(
               <span className="flex flex-wrap items-center gap-2 text-sm">
                 <SiapTfButton stateKey={KK_KEY} />

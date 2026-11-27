@@ -1108,3 +1108,18 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
   daftar tanggal distinct + jumlah invoice, centang > 1, Pilih semua (indeterminate), cari, Reset; opsi "(Tanpa Jadwal)".
 - State `useViewState("mitra10:kk:jb")`: `null` = semua, array = hanya nilai itu, `[]` = kosong; semua dicentang → `null`.
 - Opsi dihitung dari `kkBase` (outstanding + Invoice Date + Username) sebelum filter Jadwal Bayar.
+
+## Mitra10: tab BOT — bot cloud EDI dari AR Workspace (Fase 93, 2026-11-27)
+- Repo privat `jbsfnc123/ARBOT` (GitHub Actions, gratis 2.000 mnt/bln): `arbot-run.yml` checkout `arfinance` (sparse
+  `automation/ar-bot` + `lib`), `npm ci`, `node scripts/build-cloud.mjs`, `runner.mjs --cloud`. Secrets: `ARBOT_CONFIG`
+  (akun EDI + koneksi AR Workspace) & `ARBOT_SECRETS` (botPassword, edi:<id>) — disalin dari AR Bot lokal (DPAPI → sealed box).
+- AR Bot: inti run dipindah ke `src/runner/run.ts` (`executeRun`); `src/runner/cloud.ts` = mode cloud (rahasia dari env,
+  Chrome Linux `--no-sandbox`, akun = username EDI, whitelist param, sheet kerja faktur dari params, log tiap 5–15 dtk,
+  status cancelled → file .cancel, event `item` = status per invoice). Mode lokal tidak berubah.
+- Supabase `20261127100000_bot_runs.sql`: `bot_runs` + RPC `bot_run_request` (menu rek.mitra10, satu run aktif, run basi
+  ditandai gagal), `bot_run_dispatch_failed`, `bot_run_cancel`, `bot_runs_recent`; runner (akun sistem): `bot_run_start/log/finish`.
+  Bucket privat `bot-transit` (PDF faktur transit; unggah peminta run queued, baca/hapus akun bot; runner menghapus setelah run).
+- API `/api/bot/dispatch` & `/api/bot/cancel` (token `ARBOT_GH_TOKEN` di env Vercel; `ARBOT_CODE_REF` = branch kode bot).
+- UI: tab BOT (`m10-bot.tsx`: 4 kartu job + Upload Faktur Pajak + Riwayat Run), tombol ringkas kanan atas Kertas Kerja
+  (`bot-header.tsx`, popover `BotJobForm`), `LocalTable.exportExtra` → Import to BOT. Faktur: `lib/modules/m10/faktur.ts`
+  (logika bersama AR Bot), pecah PDF di browser `faktur-browser.ts`, data kerja di IndexedDB `faktur-local.ts`.

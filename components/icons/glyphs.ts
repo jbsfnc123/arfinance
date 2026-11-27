@@ -133,6 +133,9 @@ export const GLYPHS: Record<string, string> = {
   file_swap: `${FILE}<path d="M8 12.5h7"/><path d="m13 10.5 2 2-2 2"/><path d="M16 17H9"/><path d="m11 15-2 2 2 2"/>`,
   receipt_check: `<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/>`,
   dot: `<circle cx="12" cy="12" r="3" fill="currentColor"/>`,
+  // Fase 93: tab BOT Mitra10.
+  smart_toy: `<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>`,
+  play_arrow: `<path d="M7 4.5v15a.5.5 0 0 0 .77.42l11.5-7.5a.5.5 0 0 0 0-.84L7.77 4.08A.5.5 0 0 0 7 4.5z"/>`,
 };
 
 /** Glyph dengan varian terisi (mis. pin tersemat). */

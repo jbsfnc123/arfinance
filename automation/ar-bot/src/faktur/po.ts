@@ -1,6 +1,7 @@
 // Cocokkan data No PO / No SJ / Open Amt (Excel, CSV, atau teks tempelan dari Excel) ke daftar faktur — port parse_po_excel.js.
 import * as XLSX from "xlsx";
 import type { FakturItem } from "./split";
+import { applyPoList, type PoRow } from "@/lib/modules/m10/faktur";
 import { compareAmount, DEFAULT_TOLERANCE, parseAmount, type AmountCheck } from "./amount";
 
 /** Baris tabel dari file (xlsx/xls/csv) atau teks tempel (tab / ; / , dipisah). */
@@ -34,24 +35,14 @@ export function applyPo(items: FakturItem[], rows: unknown[][], opts: { select?:
   if (rows.length < 2) throw new Error("Data kosong atau hanya berisi header.");
   const c = findPoColumns(rows[0]);
   if (c.inv < 0) throw new Error("Kolom 'Invoice No' tidak ditemukan pada baris header.");
-  const next = items.map((i) => ({ ...i, in_po: false }));
-  const byInv = new Map(next.map((i) => [i.invoice.trim().toUpperCase(), i]));
-  let matched = 0, excelRows = 0;
-  const unmatched: string[] = [];
-  for (const row of rows.slice(1)) {
-    const inv = String(row[c.inv] ?? "").trim();
-    if (!inv) continue;
-    excelRows++;
-    const it = byInv.get(inv.toUpperCase());
-    if (!it) { unmatched.push(inv); continue; }
-    if (!it.in_po) matched++;
-    it.in_po = true;
-    it.no_po = c.po >= 0 ? String(row[c.po] ?? "").trim() : "";
-    it.no_sj = c.sj >= 0 ? String(row[c.sj] ?? "").trim() : "";
-    it.open_amt = c.amt >= 0 ? toAmount(row[c.amt]) : 0;
-  }
-  if (opts.select) for (const it of next) it.checked = !!it.in_po;
-  return { items: next, matched, dataRows: rows.length - 1, excelRows, unmatchedExcel: unmatched, notInPo: next.filter((i) => !i.in_po).length };
+  // Baris tabel → data PO terstruktur; pencocokan memakai fungsi bersama AR Workspace (Import to BOT, Fase 93).
+  const list: PoRow[] = rows.slice(1).map((row) => ({
+    invoice: String(row[c.inv] ?? "").trim(),
+    no_po: c.po >= 0 ? String(row[c.po] ?? "").trim() : "",
+    no_sj: c.sj >= 0 ? String(row[c.sj] ?? "").trim() : "",
+    open_amt: c.amt >= 0 ? toAmount(row[c.amt]) : 0,
+  }));
+  return { ...applyPoList(items, list, opts), dataRows: rows.length - 1 };
 }
 
 /**
