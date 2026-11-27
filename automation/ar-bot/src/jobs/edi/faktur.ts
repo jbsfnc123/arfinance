@@ -331,13 +331,18 @@ export async function ediUploadFakturJob(ctx: RunContext, p: JobParams): Promise
   if (!queue.length) return { status: "skipped", summary: fill ? "Tidak ada invoice tercentang yang belum terisi." : "Tidak ada faktur tercentang yang belum terunggah." };
   const modeLabel = fill ? "Isi No Invoice (cari No PO, tanpa upload FP)" : notFound ? "Isi No Invoice+Upload FP (cari No PO)" : "Upload FP (cari No Invoice)";
   ctx.info(`Akun ${acc.label || acc.username} · mode ${modeLabel} · ${queue.length} ${fill ? "invoice" : "faktur"}${ctx.opts.dryRun ? ` · UJI COBA (tanpa ${fill ? "simpan" : "unggah"})` : ""}`);
+  // Progres (Fase 94): Login › Buka Draft › Isi No Invoice / Proses faktur done/total.
+  ctx.progress({ steps: ["Login", "Buka Draft", fill ? "Isi No Invoice" : "Proses faktur"], step: 0, account: 1, accounts: 1 });
   const page = await ediPage(ctx);
   await ediLogin(ctx, page, acc);
+  ctx.progress({ step: 1 });
   await openDraft(ctx, page);
+  ctx.progress({ step: 2, done: 0, total: queue.length });
   let ok = 0;
   const failed: string[] = [];
   for (const [i, item] of queue.entries()) {
     ctx.check();
+    ctx.progress({ done: i + 1 });
     ctx.info(`[${i + 1}/${queue.length}] Invoice ${item.invoice}${"faktur" in item ? ` · Faktur ${item.faktur}` : ` · PO ${item.no_po || "-"} · SJ ${item.no_sj || "-"}`}`);
     let status: string;
     try {

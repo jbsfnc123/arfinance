@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import puppeteer, { type Browser, type BrowserContext, type CDPSession, type Page } from "puppeteer-core";
 import { redact } from "~/shared/catalog";
-import type { Config, JobId, RunEvent, Secrets } from "~/shared/types";
+import type { Config, JobId, Progress, RunEvent, Secrets } from "~/shared/types";
 import { findBrowser } from "~/core/browser";
 import { P } from "~/core/paths";
 
@@ -20,6 +20,8 @@ type Shared = {
   browser: Browser | null;
   launching: Promise<Browser> | null;
   onCancel: (() => void)[];
+  /** Progres terakhir per job (Fase 94). */
+  progress: Map<string, Progress>;
 };
 
 export class RunContext {
@@ -44,7 +46,7 @@ export class RunContext {
     this.job = job;
     this.isolated = isolated;
     if (parent) { this.shared = parent.shared; return; }
-    this.shared = { cancelled: false, browser: null, launching: null, onCancel: [], timer: setInterval(() => this.pollCancel(), 700) };
+    this.shared = { cancelled: false, browser: null, launching: null, onCancel: [], progress: new Map(), timer: setInterval(() => this.pollCancel(), 700) };
   }
 
   /** Konteks untuk satu job. `isolated` = browser context sendiri (run paralel). */
@@ -70,6 +72,17 @@ export class RunContext {
     const clean = redact(msg, Object.values(this.secrets));
     this.emit({ t: "log", at: new Date().toISOString(), level, msg: clean, job: this.job });
     if (process.stdout.isTTY) console.log(clean);
+  }
+  /**
+   * Laporkan progres job ini (Fase 94, KPI Kertas Kerja). `steps` baru = mulai ulang; tanpa `steps` = perbarui progres
+   * terakhir (mis. hanya `step` / `done`). Mode lokal mengabaikan event ini.
+   */
+  progress(p: Partial<Progress>) {
+    const key = this.job ?? "";
+    const prev = this.shared.progress.get(key);
+    const next: Progress = p.steps ? { step: 0, ...p, steps: p.steps } : { ...(prev ?? { steps: [], step: 0 }), ...p };
+    this.shared.progress.set(key, next);
+    this.emit({ t: "progress", at: new Date().toISOString(), job: this.job, ...next });
   }
   info = (m: string) => this.log("info", m);
   warn = (m: string) => this.log("warn", m);

@@ -11,7 +11,7 @@ import type { JobParams } from "~/shared/types";
 import { delay, type RunContext } from "~/runner/ctx";
 import type { JobOut } from "../jasper/jobs";
 import { ediLogin, ediLogout, ediPage, openInvoices, pickAccounts } from "./session";
-import { inboxLimit, inboxModeOf, isAcceptSuccess, isSuccess, MODE_STATUS, nextWithStatus, rowLabel, type InboxRow } from "./inbox-pick";
+import { hasStatus, inboxLimit, inboxModeOf, isAcceptSuccess, isSuccess, MODE_STATUS, nextWithStatus, rowLabel, type InboxRow } from "./inbox-pick";
 
 /** Tunggu DataTable Inbox selesai memuat. */
 async function settle(page: Page) {
@@ -153,14 +153,19 @@ export async function ediInvoiceInboxJob(ctx: RunContext, p: JobParams): Promise
     ctx.check();
     const name = acc.label || acc.username;
     ctx.info(`Akun ${i + 1}/${accounts.length}: ${name}`);
+    // Progres (Fase 94): Login › Buka Inbox › Create Invoice / Accept PFI done/total.
+    ctx.progress({ steps: ["Login", "Buka Inbox", act === "Accept" ? "Accept PFI" : act], step: 0, account: i + 1, accounts: accounts.length });
     let page: Page | null = null;
     try {
       page = await ediPage(ctx);
       await ediLogin(ctx, page, acc);
+      ctx.progress({ step: 1 });
       await openInvoices(ctx, page, "einvoice-inbox");
       await page.waitForSelector("#pfiTable", { timeout: 20_000 });
       await searchStatus(ctx, page, status);
       const tried = new Set<string>(), logged = new Set<string>();
+      const total = Math.min(limit, (await readRows(page)).filter((r) => hasStatus(r.status, status)).length);
+      ctx.progress({ step: 2, done: 0, total });
       let count = 0;
       while (count < limit) {
         ctx.check();
@@ -169,6 +174,7 @@ export async function ediInvoiceInboxJob(ctx: RunContext, p: JobParams): Promise
         if (!row) break;
         tried.add(row.id);
         count++;
+        ctx.progress({ done: count, total: Math.max(total, count) });
         if (ctx.opts.dryRun) { listed++; ctx.info(`  [${count}] Akan di-${mode === "new" ? "accept" : "buat invoice"}: ${rowLabel(row)}`); continue; }
         ctx.info(`  [${count}] ${act}: ${rowLabel(row)}…`);
         let msg = "";

@@ -36,12 +36,14 @@ async function pushFile(ctx: RunContext, p: JobParams, key: string, file: string
 }
 
 /** Jalankan `fn` per akun dengan login/partner/logout; kumpulkan file & akun yang gagal. */
-async function perAccount(ctx: RunContext, accounts: Acc[], dir: string, fn: (page: Page, acc: Acc) => Promise<string>) {
+async function perAccount(ctx: RunContext, accounts: Acc[], dir: string, steps: string[], fn: (page: Page, acc: Acc) => Promise<string>) {
   const files: string[] = [], failed: string[] = [];
   for (const [i, acc] of accounts.entries()) {
     ctx.check();
     const name = acc.label || acc.username;
     ctx.info(`Akun ${i + 1}/${accounts.length}: ${name}`);
+    // Progres (Fase 94): langkah 0 = Login; callback job memajukan langkah berikutnya. Uji coba: langkah Upload dilewati.
+    ctx.progress({ steps, step: 0, account: i + 1, accounts: accounts.length, skipped: ctx.opts.dryRun ? [steps.length - 1] : undefined });
     let page: Page | null = null;
     try {
       page = await ediPage(ctx, dir);
@@ -58,6 +60,7 @@ async function perAccount(ctx: RunContext, accounts: Acc[], dir: string, fn: (pa
       await page?.close().catch(() => {});
     }
   }
+  ctx.progress({ step: steps.length });
   const summary = `${files.length}/${accounts.length} akun`;
   if (failed.length) throw new Error(`${failed.length} akun gagal (${summary} berhasil) — ${failed.join(" · ")}`);
   return { files, summary };
@@ -70,7 +73,8 @@ export async function ediGrJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
   const start = p.start || def.start, end = p.end || def.end;
   ctx.info(`Periode ${start} s/d ${end} · ${accounts.length} akun`);
   let newRows = 0, pushed = false;
-  const r = await perAccount(ctx, accounts, dir, async (page, acc) => {
+  const r = await perAccount(ctx, accounts, dir, ["Login", "Download CSV", "Upload CSV"], async (page, acc) => {
+    ctx.progress({ step: 1 });
     await openEdiReport(page, "gr-report-detail");
     await page.waitForSelector("#startDate", { timeout: 20_000 });
     await page.evaluate((s: string, e: string) => {
@@ -98,6 +102,7 @@ export async function ediGrJob(ctx: RunContext, p: JobParams): Promise<JobOut> {
     ctx.info(`Terunduh: ${path.basename(final)}`);
     const parsed = inspectM10Gr(fs.readFileSync(final, "utf8"));
     ctx.info(`Baca: ${num(parsed.lines)} baris CSV · ${num(parsed.rows.length)} baris GR · ${num(parsed.sjCount)} SJ NO`);
+    ctx.progress({ step: 2 });
     const sent = await pushFile(ctx, p, `edi.gr:${acc.id}`, final, async () => {
       const added = await pushM10Gr(ctx, final, parsed);
       newRows += added;
@@ -116,7 +121,8 @@ export async function ediKwitansiJob(ctx: RunContext, p: JobParams): Promise<Job
   const month = (p.start || defaultDates("edi.kwitansi", todayJakarta())!.start).slice(0, 7);
   ctx.info(`Bulan ${month} · ${accounts.length} akun`);
   let newRows = 0, pushed = false;
-  const r = await perAccount(ctx, accounts, dir, async (page, acc) => {
+  const r = await perAccount(ctx, accounts, dir, ["Login", "Buat laporan", "Download CSV", "Upload CSV"], async (page, acc) => {
+    ctx.progress({ step: 1 });
     await openEdiReport(page, "invoice-summary");
     await page.waitForSelector("#bulan", { visible: true, timeout: 20_000 });
     await page.evaluate((m: string) => {
@@ -174,6 +180,7 @@ export async function ediKwitansiJob(ctx: RunContext, p: JobParams): Promise<Job
       await delay(10_000);
     }
     if (!clicked) throw new Error("file kwitansi belum muncul di Download List setelah 3 menit");
+    ctx.progress({ step: 2 });
     const file = await waitNewFile(ctx, dir, before, /invoice_summary.*\.csv$/i, 60);
     if (!file) throw new Error(`file ${clicked} tidak terunduh`);
     const final = path.join(dir, `Kwitansi ${safe(acc.label || acc.username)} ${month} ${stamp()}.csv`);
@@ -181,6 +188,7 @@ export async function ediKwitansiJob(ctx: RunContext, p: JobParams): Promise<Job
     ctx.info(`Terunduh: ${path.basename(final)}`);
     const parsed = inspectM10Kw(fs.readFileSync(final, "utf8"));
     ctx.info(`Baca: ${num(parsed.rows.length)} kwitansi · ${parsed.dupInFile} ganda dalam file`);
+    ctx.progress({ step: 3 });
     const sent = await pushFile(ctx, p, `edi.kwitansi:${acc.id}`, final, async () => {
       const k = await pushM10Kw(ctx, final, parsed, acc.username);
       newRows += k.added;

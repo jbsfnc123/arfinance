@@ -112,18 +112,24 @@ export async function ediOutboxInvoiceJob(ctx: RunContext, p: JobParams): Promis
     ctx.check();
     const name = acc.label || acc.username;
     ctx.info(`Akun ${i + 1}/${accounts.length}: ${name}`);
+    // Progres (Fase 94): Login › Buka Outbox › Create Kuitansi done/total invoice akun ini.
+    ctx.progress({ steps: ["Login", "Buka Outbox", "Create Kuitansi"], step: 0, account: i + 1, accounts: accounts.length });
     let page: Page | null = null;
     try {
       page = await ediPage(ctx);
       await ediLogin(ctx, page, acc);
+      ctx.progress({ step: 1 });
       await openInvoices(ctx, page, "einvoice-outbox");
       await page.waitForSelector("#tableInvoice", { timeout: 20_000 });
       await loadList(page);
       let prev: string[] | null = null;
+      let accTotal = -1, accDone = 0;
       for (let batch = 0; ; batch++) {
         ctx.check();
         await show100(page);
         const { rows, total } = await readRows(page);
+        if (accTotal < 0) accTotal = total;
+        ctx.progress({ step: 2, done: accDone, total: Math.max(accTotal, accDone) });
         const decision = nextBatchDecision(prev, rows.map((r) => r.id), batch);
         if (decision === "done") { ctx.info(batch ? "List Outbox Invoice sudah habis." : "Tidak ada invoice di Outbox › Invoice."); break; }
         if (decision === "stuck") {
@@ -145,6 +151,8 @@ export async function ediOutboxInvoiceJob(ctx: RunContext, p: JobParams): Promis
           break;
         }
         made += r.checked;
+        accDone += r.checked;
+        ctx.progress({ done: accDone, total: Math.max(accTotal, accDone) });
         batches++;
         ctx.log("ok", `  Batch ${batch + 1}: ${r.checked} invoice — ${r.msg}`);
         prev = rows.map((x) => x.id);

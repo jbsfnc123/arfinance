@@ -84,6 +84,18 @@ describe("logLines", () => {
   });
 });
 
+describe("lastProgress", () => {
+  it("event progress terakhir (dengan job), null bila belum ada", () => {
+    expect(cloud.lastProgress([{ t: "log", at: "a", level: "info", msg: "x" }])).toBeNull();
+    const ev: RunEvent[] = [
+      { t: "progress", at: "1", job: "edi.gr", steps: ["Login", "Download CSV", "Upload CSV"], step: 0, account: 1, accounts: 4 },
+      { t: "log", at: "2", level: "info", msg: "x" },
+      { t: "progress", at: "3", job: "edi.gr", steps: ["Login", "Download CSV", "Upload CSV"], step: 1, account: 1, accounts: 4 },
+    ];
+    expect(cloud.lastProgress(ev)).toEqual({ at: "3", job: "edi.gr", steps: ["Login", "Download CSV", "Upload CSV"], step: 1, account: 1, accounts: 4 });
+  });
+});
+
 describe("rahasia & browser cloud", () => {
   it("ARBOT_SECRETS dipakai tanpa DPAPI", async () => {
     vi.resetModules();

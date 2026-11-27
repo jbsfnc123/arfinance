@@ -85,6 +85,19 @@ export function logLines(events: RunEvent[]) {
   });
 }
 
+/** Progres terakhir (event `progress`) beserta job-nya, untuk KPI Kertas Kerja; null bila belum ada. */
+export function lastProgress(events: RunEvent[]) {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.t === "progress") {
+      const { t: _t, at, ...rest } = e;
+      void _t;
+      return { ...rest, at };
+    }
+  }
+  return null;
+}
+
 function readEvents(file: string): RunEvent[] {
   let text = "";
   try { text = fs.readFileSync(file, "utf8"); } catch { return []; }
@@ -132,20 +145,23 @@ export async function cloudMain(): Promise<boolean> {
   const runId = newRunId();
   const eventsFile = path.join(P.runs, `${runId}.jsonl`);
   const cancelFile = path.join(P.runs, `${runId}.cancel`);
-  // Kirim log tiap 5 dtk bila berubah, dan minimal tiap 15 dtk (sekaligus cek status: cancelled → berhenti).
+  // Kirim log + progres (Fase 94) tiap 3 dtk bila berubah, dan minimal tiap 15 dtk (sekaligus cek status: cancelled → berhenti).
   let lastSent = "", tick = 0, busy = false;
   const pump = async () => {
     if (busy) return;
     busy = true;
     try {
-      const log = logLines(readEvents(eventsFile)).slice(-300).join("\n");
-      if (log === lastSent && ++tick % 3) return;
-      lastSent = log;
-      const st = await rpc<string>("bot_run_log", { p_id: id, p_log: log }).catch(() => null);
+      const events = readEvents(eventsFile);
+      const log = logLines(events).slice(-300).join("\n");
+      const progress = lastProgress(events);
+      const key = `${log}\u0000${JSON.stringify(progress)}`;
+      if (key === lastSent && ++tick % 5) return;
+      lastSent = key;
+      const st = await rpc<string>("bot_run_progress", { p_id: id, p_log: log, p_progress: progress }).catch(() => null);
       if (st === "cancelled" && !fs.existsSync(cancelFile)) fs.writeFileSync(cancelFile, "1");
     } finally { busy = false; }
   };
-  const timer = setInterval(() => void pump(), 5000);
+  const timer = setInterval(() => void pump(), 3000);
 
   let record: RunRecord | null = null;
   let fatal: string | null = null;
