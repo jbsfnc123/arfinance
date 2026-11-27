@@ -7,7 +7,7 @@ import { isActive, type BotParams, type BotJobId, type BotRun } from "@/lib/modu
 
 // Mitra10 › BOT (Fase 93): antrean run bot cloud. Minta run (rpc bot_run_request: cek menu + satu run aktif), unggah PDF
 // transit bila Upload Faktur, lalu picu GitHub lewat /api/bot/dispatch. Riwayat di-poll tiap 4 dtk saat ada run aktif,
-// 30 dtk saat diam (hanya saat tab browser terlihat). Run Receiving/Kwitansi selesai → dataset m10 dimuat ulang.
+// 30 dtk saat diam (3 dtk saat aktif, Fase 94) (hanya saat tab browser terlihat). Run Receiving/Kwitansi selesai → dataset m10 dimuat ulang.
 export type BotRequest = { jobs: { id: BotJobId; params?: BotParams }[]; dryRun: boolean; files?: { name: string; blob: Blob }[] };
 export type Bot = ReturnType<typeof useBot>;
 
@@ -45,14 +45,16 @@ export function useBot() {
   }, [supabase]);
 
   const active = runs.find((r) => isActive(r.status)) ?? null;
+  // Interval hanya diganti saat ada/tidaknya run aktif berubah (boolean) — bukan tiap objek run baru hasil polling.
+  const hasActive = !!active;
+  useEffect(() => { void load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect -- muat riwayat run dari server saat dibuka
   useEffect(() => {
-    void load(); // eslint-disable-line react-hooks/set-state-in-effect -- muat riwayat run dari server saat dibuka & tiap ganti mode polling
-    const ms = active ? 4000 : 30000;
+    const ms = hasActive ? 3000 : 30000;
     const t = setInterval(() => { if (document.visibilityState === "visible") void load(); }, ms);
     const onVis = () => { if (document.visibilityState === "visible") void load(); };
     document.addEventListener("visibilitychange", onVis);
     return () => { clearInterval(t); document.removeEventListener("visibilitychange", onVis); };
-  }, [load, active]);
+  }, [load, hasActive]);
 
   const request = useCallback(async (req: BotRequest) => {
     setBusy(true);
@@ -62,6 +64,8 @@ export function useBot() {
         { p_jobs: req.jobs, p_dry_run: req.dryRun, p_transit: transit } as never);
       if (e) throw new Error(e.message);
       const id = Number(data);
+      // Tampilkan run (KPI "Menunggu bot…") segera, tanpa menunggu pemicu GitHub selesai (Fase 94).
+      void load();
       if (transit) {
         for (const f of req.files!) {
           const { error: ue } = await supabase.storage.from("bot-transit").upload(`${id}/${f.name}`, f.blob, { contentType: "application/pdf", upsert: false });

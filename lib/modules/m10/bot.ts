@@ -83,7 +83,45 @@ export type BotRun = {
   error: string | null;
   mine: boolean;
   requested_name: string;
+  progress?: BotProgressData | null;
 };
+
+/** Progres terstruktur dari runner (Fase 94): langkah aktif, akun i/n, done/total. */
+export type BotProgressData = {
+  job?: BotJobId; at?: string; steps: string[]; step: number;
+  done?: number; total?: number; account?: number; accounts?: number; skipped?: number[];
+};
+export type ProgressStep = { label: string; state: "done" | "now" | "todo" | "skip"; count?: string };
+export type ProgressView = { title: string; account?: string; steps: ProgressStep[]; note?: string };
+
+/** Judul KPI per job: Receiving / Kwitansi / Inbox Completed / Inbox New / Outbox / Upload Faktur. */
+export function progressTitle(run: BotRun, job?: BotJobId) {
+  const id = job ?? run.jobs[0]?.id;
+  const params = run.jobs.find((j) => j.id === id)?.params;
+  const base = id === "edi.invoice-inbox" ? `Inbox ${params?.inboxMode === "new" ? "New" : "Completed"}`
+    : id === "edi.upload-faktur" ? "Upload Faktur" : botJob(id as BotJobId)?.short ?? "BOT";
+  return run.dry_run ? `${base} (uji coba)` : base;
+}
+
+/**
+ * Tampilan KPI progres run aktif, mis. "Receiving · Akun 1/4 · ✓Login › Download CSV › Upload CSV" atau
+ * "Inbox Completed · Create Invoice 1/10". Sebelum progres pertama: catatan Menunggu / Menyiapkan bot.
+ */
+export function progressView(run: BotRun): ProgressView | null {
+  if (!isActive(run.status)) return null;
+  const p = run.progress;
+  if (!p || !p.steps?.length) {
+    return { title: progressTitle(run), steps: [], note: run.status === "queued" ? "Menunggu bot…" : "Menyiapkan bot…" };
+  }
+  const skipped = new Set(p.skipped ?? []);
+  const steps = p.steps.map((label, i): ProgressStep => {
+    const state = skipped.has(i) ? "skip" : i < p.step ? "done" : i === p.step ? "now" : "todo";
+    const count = i === p.step && p.total !== undefined ? `${p.done ?? 0}/${p.total}` : undefined;
+    return { label, state, count };
+  });
+  const account = p.accounts && p.accounts > 1 ? `Akun ${p.account ?? 1}/${p.accounts}` : undefined;
+  return { title: progressTitle(run, p.job), account, steps };
+}
 
 export const isActive = (s: RunStatus) => s === "queued" || s === "running";
 export const STATUS_LABEL: Record<RunStatus, string> = {

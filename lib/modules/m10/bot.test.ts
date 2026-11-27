@@ -1,7 +1,7 @@
 // Fase 93: katalog & bantu riwayat BOT Mitra10, logika faktur bersama (applyPoList / groupPages).
 import { describe, expect, it } from "vitest";
 import {
-  BOT_JOBS, confirmText, defaultParams, duration, fakturQueue, lastRunFor, mergeItemStatus, runSummary, type BotRun,
+  BOT_JOBS, confirmText, defaultParams, duration, fakturQueue, lastRunFor, mergeItemStatus, progressView, runSummary, type BotRun,
 } from "./bot";
 import { applyPoList, fakturFileName, groupPages, type FakturItem } from "./faktur";
 
@@ -46,6 +46,28 @@ describe("riwayat run", () => {
   it("status hasil run digabung ke daftar lokal (tanpa beda huruf)", () => {
     const items = [{ invoice: "INV1", status: "Ready" }, { invoice: "inv2", status: "Ready" }];
     expect(mergeItemStatus(items, [{ invoice: "INV2", status: "Uploaded & Sent", ok: true }]).map((i) => i.status)).toEqual(["Ready", "Uploaded & Sent"]);
+  });
+});
+
+describe("progressView (KPI Kertas Kerja, Fase 94)", () => {
+  it("run tidak aktif → null; sebelum progres → catatan", () => {
+    expect(progressView(run({ status: "success" }))).toBeNull();
+    expect(progressView(run({ status: "queued" }))).toMatchObject({ title: "Receiving", note: "Menunggu bot…", steps: [] });
+    expect(progressView(run({ status: "running" }))?.note).toBe("Menyiapkan bot…");
+  });
+  it("Receiving: akun i/n, langkah selesai/aktif/belum; uji coba melewati Upload CSV", () => {
+    const v = progressView(run({ status: "running", dry_run: true, progress: { job: "edi.gr", steps: ["Login", "Download CSV", "Upload CSV"], step: 1, account: 2, accounts: 4, skipped: [2] } }))!;
+    expect(v.title).toBe("Receiving (uji coba)");
+    expect(v.account).toBe("Akun 2/4");
+    expect(v.steps.map((s) => s.state)).toEqual(["done", "now", "skip"]);
+  });
+  it("Inbox Completed: hitungan done/total di langkah aktif; satu akun tanpa label akun", () => {
+    const v = progressView(run({ status: "running", jobs: [{ id: "edi.invoice-inbox", params: { inboxMode: "completed" } }],
+      progress: { job: "edi.invoice-inbox", steps: ["Login", "Buka Inbox", "Create Invoice"], step: 2, done: 1, total: 10, account: 1, accounts: 1 } }))!;
+    expect(v.title).toBe("Inbox Completed");
+    expect(v.account).toBeUndefined();
+    expect(v.steps[2]).toEqual({ label: "Create Invoice", state: "now", count: "1/10" });
+    expect(progressView(run({ status: "running", jobs: [{ id: "edi.invoice-inbox", params: { inboxMode: "new" } }] }))?.title).toBe("Inbox New");
   });
 });
 

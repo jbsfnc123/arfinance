@@ -14,6 +14,8 @@ vi.mock("@tanstack/react-virtual", () => ({
 vi.mock("@/lib/local/store", () => ({ patchLocal: vi.fn(), ensure: vi.fn(async () => {}), useDataset: () => ({ data: null }) }));
 
 import { BotJobForm } from "./bot-job-form";
+import { BotProgress } from "./bot-progress";
+import { useHistoryShown } from "./m10-bot";
 import type { Bot } from "./use-bot";
 import { LocalTable } from "@/lib/local/table";
 import type { BotRun } from "@/lib/modules/m10/bot";
@@ -92,5 +94,30 @@ describe("LocalTable exportExtra", () => {
     expect(btns.indexOf("Import to BOT")).toBe(btns.findIndex((t) => t === "Excel") - 1);
     await click(host.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!);
     expect(seen.at(-1)).toEqual([1, 3]);
+  });
+});
+
+describe("Fase 94: KPI progres & Riwayat Run", () => {
+  it("BotProgress: judul, akun, langkah aktif & hitungan; tidak tampil bila tidak ada run aktif", () => {
+    const r = { id: 11, status: "running", dry_run: false, jobs: [{ id: "edi.invoice-inbox", params: { inboxMode: "completed" } }], requested_at: "", started_at: null, finished_at: null,
+      progress: { job: "edi.invoice-inbox", steps: ["Login", "Buka Inbox", "Create Invoice"], step: 2, done: 1, total: 10, account: 2, accounts: 4 } } as unknown as BotRun;
+    act(() => root.render(<BotProgress run={r} bot={mkBot()} />));
+    const kpi = host.querySelector('[aria-label="Progres BOT"]')!;
+    expect(kpi.textContent).toMatch(/Inbox Completed.*Akun 2\/4.*Login.*Buka Inbox.*Create Invoice1\/10/);
+    expect(kpi.querySelector('[aria-current="step"]')?.textContent).toBe("Create Invoice1/10");
+    act(() => root.render(<BotProgress run={null} bot={mkBot()} />));
+    expect(host.querySelector('[aria-label="Progres BOT"]')).toBeNull();
+  });
+
+  it("Riwayat Run: bawaan tersembunyi, diingat per browser", () => {
+    localStorage.clear();
+    function H() { const [s, set] = useHistoryShown(); return <button type="button" onClick={() => set(!s)}>{s ? "shown" : "hidden"}</button>; }
+    act(() => root.render(<H />));
+    expect(host.textContent).toBe("hidden");
+    act(() => host.querySelector("button")!.click());
+    expect(host.textContent).toBe("shown");
+    expect(localStorage.getItem("mitra10:bot:history-shown")).toBe("1");
+    act(() => host.querySelector("button")!.click());
+    expect(localStorage.getItem("mitra10:bot:history-shown")).toBeNull();
   });
 });

@@ -15,10 +15,12 @@ const headers = (c: GhConfig) => ({ Authorization: `Bearer ${c.token}`, Accept: 
 
 /** Picu workflow untuk satu baris bot_runs. Galat = pesan singkat (tanpa token). */
 export async function dispatchRun(c: GhConfig, runId: number, fetcher: typeof fetch = fetch) {
+  // Batas 20 dtk: jaringan macet → galat jelas (run ditandai gagal) alih-alih menggantung & mengunci antrean.
   const res = await fetcher(`${API}/repos/${c.repo}/actions/workflows/arbot-run.yml/dispatches`, {
     method: "POST", headers: { ...headers(c), "Content-Type": "application/json" },
     body: JSON.stringify({ ref: "main", inputs: { run_id: String(runId), ref: c.ref } }),
-  });
+    signal: AbortSignal.timeout(20_000),
+  }).catch((e: Error) => { throw new Error(`GitHub tidak dapat dihubungi: ${e.name === "TimeoutError" ? "waktu habis (20 dtk)" : e.message}`); });
   if (res.status !== 204) {
     const txt = (await res.text().catch(() => "")).slice(0, 200);
     throw new Error(`GitHub menolak pemicu (HTTP ${res.status})${txt ? `: ${txt}` : ""}`);
@@ -27,6 +29,6 @@ export async function dispatchRun(c: GhConfig, runId: number, fetcher: typeof fe
 
 /** Batalkan run GitHub (bila sudah berjalan). 409 = sudah selesai → dianggap beres. */
 export async function cancelGhRun(c: GhConfig, ghRunId: number, fetcher: typeof fetch = fetch) {
-  const res = await fetcher(`${API}/repos/${c.repo}/actions/runs/${ghRunId}/cancel`, { method: "POST", headers: headers(c) });
+  const res = await fetcher(`${API}/repos/${c.repo}/actions/runs/${ghRunId}/cancel`, { method: "POST", headers: headers(c), signal: AbortSignal.timeout(20_000) });
   if (res.status !== 202 && res.status !== 409) throw new Error(`GitHub menolak pembatalan (HTTP ${res.status})`);
 }

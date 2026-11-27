@@ -30,3 +30,10 @@ describe("dispatchRun / cancelGhRun", () => {
     await expect(cancelGhRun(c, 5, (async () => new Response(null, { status: 404 })) as unknown as typeof fetch)).rejects.toThrow(/404/);
   });
 });
+
+describe("dispatchRun: jaringan gagal", () => {
+  it("fetch melempar → galat 'tidak dapat dihubungi' (run akan ditandai gagal)", async () => {
+    const f = vi.fn(async () => { throw Object.assign(new Error("aborted"), { name: "TimeoutError" }); });
+    await expect(dispatchRun({ token: "t", repo: "o/r", ref: "main" }, 1, f as unknown as typeof fetch)).rejects.toThrow(/tidak dapat dihubungi: waktu habis/);
+  });
+});

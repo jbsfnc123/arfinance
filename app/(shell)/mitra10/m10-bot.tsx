@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/icons";
 import { useToast } from "@/components/toast";
 import { btnGhost, card, cardTitle, emptyTd, tableCls, td, th } from "@/components/ui";
 import { BOT_JOBS, duration, isActive, runSummary, STATUS_LABEL, type BotRun } from "@/lib/modules/m10/bot";
-import { BotJobForm } from "./bot-job-form";
+import { BotProgress } from "./bot-progress";
 import { FakturPanel } from "./faktur-panel";
 import type { Bot } from "./use-bot";
 
@@ -14,28 +14,43 @@ const TONE: Record<BotRun["status"], string> = {
   partial: "bg-warning/20 text-warning", failed: "bg-danger/20 text-danger", cancelled: "bg-surface-2 text-fg-2",
 };
 
-// Tab BOT Mitra10 Tukar Faktur (Fase 93): 5 fitur EDI Mitra10 dijalankan bot cloud (GitHub Actions repo ARBOT), tanpa PC.
+// Riwayat Run tampil/sembunyi — diingat per browser (localStorage), bawaan tersembunyi (Fase 94).
+const HIST_KEY = "mitra10:bot:history-shown";
+const histListeners = new Set<() => void>();
+const readHist = () => { try { return localStorage.getItem(HIST_KEY) === "1"; } catch { return false; } };
+export function useHistoryShown(): [boolean, (v: boolean) => void] {
+  const shown = useSyncExternalStore((fn) => { histListeners.add(fn); return () => { histListeners.delete(fn); }; }, readHist, () => false);
+  return [shown, (v) => {
+    try { if (v) localStorage.setItem(HIST_KEY, "1"); else localStorage.removeItem(HIST_KEY); } catch { /* opsional */ }
+    histListeners.forEach((fn) => fn());
+  }];
+}
+
+// Tab BOT Mitra10 Tukar Faktur (Fase 93/94): Upload Faktur Pajak (bot cloud). Receiving, Kwitansi, Inbox, Outbox dijalankan
+// dari tombol BOT di kanan atas Kertas Kerja. Riwayat Run tersembunyi bawaan.
 export function M10Bot({ bot, users }: { bot: Bot; users: string[] }) {
+  const [shown, setShown] = useHistoryShown();
+  const fakturActive = bot.active?.jobs.some((j) => j.id === "edi.upload-faktur") ? bot.active : null;
   return (
     <div className="grid gap-4">
       <p className="flex items-start gap-2 text-xs text-fg-2">
         <Icon name="smart_toy" size={16} className="mt-px shrink-0 text-accent" />
-        Bot berjalan di cloud (tidak perlu AR Bot di PC). Satu run berjalan pada satu waktu; status & log tampil di Riwayat Run.
-        Uji Coba = hanya membaca/mencari, tanpa mengirim data atau mengubah apa pun di EDI.
+        Bot berjalan di cloud (tidak perlu AR Bot di PC). Update Receiving, Update Kwitansi, Inbox New/Completed & Outbox Create
+        Kuitansi dijalankan dari tombol BOT di kanan atas Kertas Kerja. Uji Coba = hanya membaca/mencari, tanpa mengirim data atau mengubah EDI.
       </p>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {BOT_JOBS.filter((j) => j.id !== "edi.upload-faktur").map((j) => (
-          <section key={j.id} className={`${card} p-4`} aria-label={j.label}>
-            <h2 className={`${cardTitle} mb-2 flex items-center gap-2`}><Icon name={j.icon} size={16} className="text-accent" />{j.label}</h2>
-            <BotJobForm id={j.id as Exclude<typeof j.id, "edi.upload-faktur">} bot={bot} users={users} />
-          </section>
-        ))}
-      </div>
       <section className={`${card} p-4`} aria-label="Upload Faktur Pajak">
-        <h2 className={`${cardTitle} mb-2 flex items-center gap-2`}><Icon name="upload_file" size={16} className="text-accent" />Upload Faktur Pajak</h2>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <h2 className={`${cardTitle} flex items-center gap-2`}><Icon name="upload_file" size={16} className="text-accent" />Upload Faktur Pajak</h2>
+          <BotProgress run={fakturActive} bot={bot} />
+        </div>
         <FakturPanel bot={bot} users={users} />
       </section>
-      <RunHistory bot={bot} />
+      <div>
+        <button type="button" className={btnGhost} aria-expanded={shown} onClick={() => setShown(!shown)}>
+          <Icon name={shown ? "visibility_off" : "history"} />{shown ? "Sembunyikan Riwayat Run" : `Tampilkan Riwayat Run (${bot.runs.length})`}
+        </button>
+      </div>
+      {shown && <RunHistory bot={bot} />}
     </div>
   );
 }

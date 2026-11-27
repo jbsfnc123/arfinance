@@ -1123,3 +1123,12 @@ auth, ACL/menu, `lib/modules`, parser, kalkulasi, import/export dan dependency t
 - UI: tab BOT (`m10-bot.tsx`: 4 kartu job + Upload Faktur Pajak + Riwayat Run), tombol ringkas kanan atas Kertas Kerja
   (`bot-header.tsx`, popover `BotJobForm`), `LocalTable.exportExtra` → Import to BOT. Faktur: `lib/modules/m10/faktur.ts`
   (logika bersama AR Bot), pecah PDF di browser `faktur-browser.ts`, data kerja di IndexedDB `faktur-local.ts`.
+
+## Mitra10: tab BOT ringkas + KPI progres bot (Fase 94, 2026-11-27)
+- Tab BOT hanya Upload Faktur Pajak; Receiving/Kwitansi/Inbox/Outbox lewat tombol BOT kanan atas Kertas Kerja. Riwayat Run
+  tersembunyi bawaan (tombol Tampilkan/Sembunyikan, localStorage `mitra10:bot:history-shown`).
+- Runner: event `progress` ({steps, step, done/total, account/accounts, skipped}) lewat `ctx.progress` di gr/kwitansi
+  (`perAccount`), inbox, outbox, faktur; mode cloud mengirim log + progres terakhir tiap 3 dtk via RPC baru `bot_run_progress`.
+- Supabase `20261127130000_bot_progress.sql`: kolom `bot_runs.progress`; `bot_runs_recent` ikut progres; `bot_run_finish` mengosongkan.
+- UI: `progressView` (lib/modules/m10/bot.ts) + `BotProgress` (chip KPI + Batalkan) di baris judul Kertas Kerja & kartu Upload Faktur.
+  Perbaikan: interval polling `use-bot` hanya diganti saat ada/tidaknya run aktif berubah (sebelumnya tiap objek run baru).
